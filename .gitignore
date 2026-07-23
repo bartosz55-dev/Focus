@@ -1,0 +1,49 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Build and Distribution Directories
+build/
+dist/
+*.spec
+*.egg-info/
+.eggs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Application Configuration and Settings
+.scenepack_generator_settings.json
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary Video/Image Test Outputs
+*.mp4
+*.mkv
+*.avi
+*.png
+*.jpg
+*.jpeg
+
+# Application workspaces
+Focus_Workspace/
+.agent/
