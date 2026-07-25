@@ -13,6 +13,7 @@ import time
 import platform
 import zipfile
 import gzip
+import multiprocessing
 from typing import List, Tuple
 import urllib.request
 import tkinter as tk
@@ -27,7 +28,7 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v0.87"
+APP_VERSION = "v0.88"
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -649,15 +650,19 @@ class ScenePackGenerator:
         self.mode = mode
         
         # Determine the directory where the script is located
-        self.app_dir = Path(os.path.expanduser('~/Library/Application Support/Focus'))
+        if platform.system() == "Windows":
+            self.app_dir = Path(os.environ.get('APPDATA', os.path.expanduser('~'))) / "Focus"
+        else:
+            self.app_dir = Path(os.path.expanduser('~/Library/Application Support/Focus'))
         self.app_dir.mkdir(parents=True, exist_ok=True)
             
         self.anime_cascade_path = self.app_dir / "lbpcascade_animeface.xml"
         
         self.bin_dir = self.app_dir / "bin"
         self.bin_dir.mkdir(parents=True, exist_ok=True)
-        self.ffmpeg_path = self.bin_dir / "ffmpeg"
-        self.ffprobe_path = self.bin_dir / "ffprobe"
+        exe_suffix = ".exe" if platform.system() == "Windows" else ""
+        self.ffmpeg_path = self.bin_dir / f"ffmpeg{exe_suffix}"
+        self.ffprobe_path = self.bin_dir / f"ffprobe{exe_suffix}"
 
     def _check_and_download_ffmpeg(self):
         if self.ffmpeg_path.exists() and self.ffprobe_path.exists():
@@ -668,8 +673,26 @@ class ScenePackGenerator:
             self.ffprobe_path = Path(shutil.which("ffprobe"))
             return
             
-        if platform.system() != "Darwin":
-            self.log_queue.put(("log", "Warning: Auto-download for FFmpeg is currently only supported on macOS. Please install FFmpeg manually."))
+        if platform.system() not in ["Darwin", "Windows"]:
+            self.log_queue.put(("log", "Warning: Auto-download for FFmpeg is currently only supported on macOS and Windows. Please install FFmpeg manually."))
+            return
+
+        if platform.system() == "Windows":
+            if not self.ffmpeg_path.exists() or not self.ffprobe_path.exists():
+                self.log_queue.put(("log", "Downloading FFmpeg for Windows (this may take a minute)..."))
+                url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+                zip_path = self.bin_dir / "ffmpeg_win.zip"
+                urllib.request.urlretrieve(url, zip_path)
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    for file_info in zip_ref.infolist():
+                        if file_info.filename.endswith('ffmpeg.exe'):
+                            file_info.filename = 'ffmpeg.exe'
+                            zip_ref.extract(file_info, self.bin_dir)
+                        elif file_info.filename.endswith('ffprobe.exe'):
+                            file_info.filename = 'ffprobe.exe'
+                            zip_ref.extract(file_info, self.bin_dir)
+                zip_path.unlink()
+                self.log_queue.put(("log", "FFmpeg downloaded successfully."))
             return
 
         if not self.ffmpeg_path.exists():
@@ -1364,7 +1387,10 @@ class FocusApp(ctk.CTk):
         self.title(f"Focus - Automated Facial Scenepack Generator ({APP_VERSION})")
         self.geometry("950x750")
         
-        self.settings_file = Path.home() / ".scenepack_generator_settings.json"
+        if platform.system() == "Windows":
+            self.settings_file = Path(os.environ.get('APPDATA', os.path.expanduser('~'))) / "Focus" / ".scenepack_generator_settings.json"
+        else:
+            self.settings_file = Path.home() / ".scenepack_generator_settings.json"
         self.settings = self.load_settings()
         
         # Variables - Declare ALL Tkinter variables right after loading settings!
@@ -1835,7 +1861,14 @@ class FocusApp(ctk.CTk):
         title.pack(pady=(20, 10))
 
         history_text = (
-            f"{APP_VERSION} - Prepared repository for open-source GitHub release: sanitized local system paths, generated requirements.txt, .gitignore, and comprehensive README with legal liability disclaimers.\n\n"
+            f"=== Focus {APP_VERSION} Changelog ===\n\n"
+            "v0.88 - Full cross-platform port for Windows 10/11 & macOS.\n"
+            "      - Automated downloading of Windows `.exe` FFmpeg static binaries.\n"
+            "      - Cross-platform system paths (`AppData` vs `Library`).\n"
+            "      - Implemented OS-specific commands (explorer/startfile vs open).\n"
+            "      - Updated build script to auto-generate `.ico` icons for Windows.\n"
+            "      - Multi-processing stability patch (`freeze_support`) for Windows builds.\n\n"
+            "v0.87 - Prepared repository for open-source GitHub release: sanitized local system paths, generated requirements.txt, .gitignore, and comprehensive README with legal liability disclaimers.\n\n"
             "v0.86 - Fixed FFmpeg sub-sampling rendering errors (black line artifacts) when generating 9:16 crops, fixed language selector positioning bug, updated tutorial instructions, and unified interface color elements.\n\n"
             "v0.85 - Implemented auto-scrolling log window and dynamic percent progress buttons to prevent interface stagnation during long video rendering and face scanning.\n\n"
             "v0.84 - Implemented Target Speaker Voice Fingerprinting: profiles character voice from verified face frames and filters out non-target speakers, narrators, and intros.\n\n"
@@ -1924,7 +1957,7 @@ class FocusApp(ctk.CTk):
         textbox.insert("1.0", history_text)
         textbox.configure(state="disabled")
         
-        btn_close = ctk.CTkButton(self.changelog_win, text=t["changelog_close"], command=self.changelog_win.destroy, width=120)
+        btn_close = ctk.CTkButton(self.changelog_win, text=cl_close, command=self.changelog_win.destroy, width=120)
         btn_close.pack(pady=(5, 15))
 
     def load_settings(self):
@@ -2057,6 +2090,28 @@ class FocusApp(ctk.CTk):
         self._apply_theme(actual_theme)
         self.update_dynamic_app_icon(theme_color_name=actual_theme)
         self.save_current_settings()
+    def _apply_theme(self, theme_name: str):
+        # Resolve localized theme strings to canonical English filenames
+        canonical_colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "pink"]
+        for lang_dict in TRANSLATIONS.values():
+            if "colors" in lang_dict and theme_name in lang_dict["colors"]:
+                idx = lang_dict["colors"].index(theme_name)
+                theme_name = canonical_colors[idx]
+                break
+
+        if theme_name in ["blue", "green", "dark-blue"]:
+            ctk.set_default_color_theme(theme_name)
+        else:
+            if hasattr(sys, '_MEIPASS'):
+                base_dir = Path(sys._MEIPASS)
+            else:
+                base_dir = Path(__file__).parent
+            theme_path = base_dir / "themes" / f"{theme_name}.json"
+            if theme_path.exists():
+                ctk.set_default_color_theme(str(theme_path))
+            else:
+                logging.error(f"Theme file not found: {theme_path}")
+                ctk.set_default_color_theme("blue")
 
     def change_language_event(self, selected_language: str):
         self.settings["language"] = selected_language
@@ -2550,42 +2605,6 @@ class FocusApp(ctk.CTk):
         logging.info(msg)
         self.lbl_gallery_status.configure(text=msg, text_color="#3b82f6")
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        ctk.set_appearance_mode(new_appearance_mode)
-        self.save_current_settings()
-
-    def _apply_theme(self, theme_name: str):
-        # Resolve localized theme strings (e.g. "pomarańczowy", "оранжевый") to canonical English filenames
-        canonical_colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "pink"]
-        for lang_dict in TRANSLATIONS.values():
-            if "colors" in lang_dict and theme_name in lang_dict["colors"]:
-                idx = lang_dict["colors"].index(theme_name)
-                theme_name = canonical_colors[idx]
-                break
-
-        if theme_name in ["blue", "green", "dark-blue"]:
-            ctk.set_default_color_theme(theme_name)
-        else:
-            if hasattr(sys, '_MEIPASS'):
-                base_dir = Path(sys._MEIPASS)
-            else:
-                base_dir = Path(__file__).parent
-            theme_path = base_dir / "themes" / f"{theme_name}.json"
-            if theme_path.exists():
-                ctk.set_default_color_theme(str(theme_path))
-            else:
-                logging.error(f"Theme file not found: {theme_path}")
-                ctk.set_default_color_theme("blue")
-
-    def change_theme_event(self, new_theme: str):
-        self._apply_theme(new_theme)
-        self.save_current_settings()
-        lang = self.settings.get("language", "English")
-        msg = f"Theme updated to '{new_theme}'. Please restart the application for all elements to fully apply the new colors."
-        if lang == "Polski":
-            msg = f"Motyw został zmieniony na '{new_theme}'. Uruchom ponownie aplikację, aby wszystkie elementy w pełni zastosowały nowe kolory."
-        messagebox.showinfo("Theme Change", msg)
-
     def _animate_progress_bar(self, target_val: float):
         """Sets the target progress for the background animation loop."""
         self._target_progress = target_val
@@ -2662,7 +2681,11 @@ class FocusApp(ctk.CTk):
                 self._animate_reveal(target_height=350)
                 if self.play_sound_var.get():
                     try:
-                        subprocess.Popen(['afplay', '/System/Library/Sounds/Glass.aiff'])
+                        if platform.system() == "Darwin":
+                            subprocess.Popen(['afplay', '/System/Library/Sounds/Glass.aiff'])
+                        elif platform.system() == "Windows":
+                            import winsound
+                            winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)
                     except Exception as e:
                         logging.error(f"Failed to play notification sound: {e}")
             elif msg_type == "gallery_status":
@@ -2697,7 +2720,10 @@ class FocusApp(ctk.CTk):
         v_path = self.video_path_var.get()
         if v_path and os.path.isfile(v_path):
             try:
-                subprocess.Popen(['open', v_path])
+                if platform.system() == "Windows":
+                    os.startfile(v_path)
+                else:
+                    subprocess.Popen(['open', v_path])
             except Exception as e:
                 logging.error(f"Failed to open original video: {e}")
 
@@ -2705,7 +2731,10 @@ class FocusApp(ctk.CTk):
         o_path = self.output_path_var.get()
         if o_path and os.path.isfile(o_path):
             try:
-                subprocess.Popen(['open', o_path])
+                if platform.system() == "Windows":
+                    os.startfile(o_path)
+                else:
+                    subprocess.Popen(['open', o_path])
             except Exception as e:
                 logging.error(f"Failed to open generated scenepack: {e}")
 
@@ -2905,5 +2934,6 @@ class FocusApp(ctk.CTk):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     app = FocusApp()
     app.mainloop()

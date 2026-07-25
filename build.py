@@ -4,9 +4,12 @@ import sys
 import shutil
 from pathlib import Path
 
+import platform
+
 try:
     import face_recognition_models
     import customtkinter
+    from PIL import Image
 except ImportError as e:
     print(f"Error: Missing dependency. Please ensure all packages are installed in your environment before building. Details: {e}")
     sys.exit(1)
@@ -27,11 +30,9 @@ args = [
     '--windowed',      # Don't open a terminal window when launching the built app
     '--noconfirm',     # Overwrite output directory if it exists
     '--clean',         # Clean PyInstaller cache and remove temporary files before building
-    '--strip',         # Strip debug symbols from binaries on macOS/Linux
     f'--add-data={frm_path}{sep}face_recognition_models',
     f'--add-data={ctk_path}{sep}customtkinter',
     f'--add-data=themes{sep}themes',
-    '--osx-bundle-identifier=com.focus.app',
     '--exclude-module=tkinter.test',
     '--exclude-module=matplotlib',
     '--exclude-module=IPython',
@@ -40,17 +41,41 @@ args = [
     '--exclude-module=distutils',
 ]
 
+if platform.system() != "Windows":
+    args.append('--strip')  # Strip debug symbols from binaries on macOS/Linux
+
+if platform.system() == "Darwin":
+    args.append('--osx-bundle-identifier=com.focus.app')
+
 # Dynamic macOS & Application Icon Support
 icns_path = Path("icon.icns")
 png_path = Path("icon.png")
+ico_path = Path("icon.ico")
 
-if icns_path.exists():
-    print(f"Found native macOS application icon: {icns_path.name}")
-    args.append(f'--icon={icns_path.name}')
-    args.append(f'--add-data={icns_path.name}{sep}.')
-elif png_path.exists():
-    print(f"Found application icon PNG: {png_path.name}")
-    args.append(f'--icon={png_path.name}')
+if platform.system() == "Windows":
+    if not ico_path.exists():
+        # Try to generate it
+        if png_path.exists():
+            img = Image.open(png_path)
+            img.save(ico_path)
+            print("Generated icon.ico from icon.png")
+        elif icns_path.exists():
+            img = Image.open(icns_path)
+            img.save(ico_path)
+            print("Generated icon.ico from icon.icns")
+            
+    if ico_path.exists():
+        args.append(f'--icon={ico_path.name}')
+        args.append(f'--add-data={ico_path.name}{sep}.')
+else:
+    # macOS/Linux icon setup
+    if icns_path.exists():
+        print(f"Found native macOS application icon: {icns_path.name}")
+        args.append(f'--icon={icns_path.name}')
+        args.append(f'--add-data={icns_path.name}{sep}.')
+    elif png_path.exists():
+        print(f"Found application icon PNG: {png_path.name}")
+        args.append(f'--icon={png_path.name}')
 
 if png_path.exists():
     args.append(f'--add-data={png_path.name}{sep}.')
