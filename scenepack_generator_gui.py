@@ -28,7 +28,7 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v0.94"
+APP_VERSION = "v0.95"
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -39,6 +39,17 @@ THEME_COLORS = {
     "indigo": "#3F51B5",
     "violet": "#9B59B6",
     "pink": "#E91E63"
+}
+
+THEME_HOVER_COLORS = {
+    "red": "#A31A29",
+    "orange": "#C8691A",
+    "yellow": "#D4AC0D",
+    "green": "#25A25A",
+    "blue": "#2874A6",
+    "indigo": "#303F9F",
+    "violet": "#7D3C98",
+    "pink": "#C2185B"
 }
 
 TRANSLATIONS = {
@@ -1798,6 +1809,9 @@ class FocusApp(ctk.CTk):
         # Start Custom Animation Loops
         self._pulse_button_animation()
         self._smooth_progress_update()
+        
+        # Ensure all UI elements reflect the active color theme upon startup
+        self.update_ui_theme_colors(self.settings.get("color_theme", "blue"))
 
     def _pulse_button_animation(self):
         """Creates a breathing glow effect on the main scan button when idle."""
@@ -1916,6 +1930,7 @@ class FocusApp(ctk.CTk):
 
         history_text = (
             f"=== Focus {APP_VERSION} Changelog ===\n\n"
+            "v0.95 - Consolidated Windows build to a single standalone `Focus.exe` (`--onefile` mode) eliminating redundant launcher files and DLL clutter. Fixed UI color theme persistence by implementing dynamic re-theming across all interactive widgets (buttons, progress bars, borders, sliders, switches) immediately upon theme selection and view navigation without requiring an application restart.\n\n"
             "v0.94 - Fix OpenCV CascadeClassifier & haarcascades missing attribute error in PyInstaller builds (Anime mode & profile detection) by adding full cv2 binary/data collection flags, and added Windows VBScript (`Uruchom_Focus.vbs`) zero-console launcher for instant execution without black cmd flash.\n\n"
             "v0.93 - Zero-Terminal Automated Launchers: added double-clickable `Uruchom_Focus.command` (macOS Gatekeeper auto-clear) and `Uruchom_Focus.bat` (Windows) for instant terminal-free execution after download.\n\n"
             "v0.92 - CI/CD Release Trigger Fix: restored `- 'v*'` pattern under `tags:` in `build-and-release.yml` to trigger automated Release creation upon git tag push.\n\n"
@@ -2175,6 +2190,68 @@ class FocusApp(ctk.CTk):
             else:
                 logging.error(f"Theme file not found: {theme_path}")
                 ctk.set_default_color_theme("blue")
+                theme_name = "blue"
+
+        # Dynamically update existing UI widgets to reflect new color theme without requiring app restart
+        self.update_ui_theme_colors(theme_name)
+
+    def update_ui_theme_colors(self, theme_name: str):
+        if not hasattr(self, 'btn_sel_video'):
+            return
+        hex_color = THEME_COLORS.get(theme_name, "#3498DB")
+        hover_hex = THEME_HOVER_COLORS.get(theme_name, "#2874A6")
+        
+        # Update buttons
+        for btn_name in ['btn_sel_video', 'btn_sel_ref', 'btn_sel_output', 'btn_auto_tune', 'btn_scan_gallery']:
+            btn = getattr(self, btn_name, None)
+            if btn:
+                try:
+                    btn.configure(fg_color=hex_color, hover_color=hover_hex)
+                except Exception:
+                    pass
+                
+        if hasattr(self, 'btn_generate') and self.btn_generate:
+            try:
+                self.btn_generate.configure(fg_color=hex_color, hover_color=hover_hex, border_color=hex_color)
+            except Exception:
+                pass
+            
+        if hasattr(self, 'hero_banner') and self.hero_banner:
+            try:
+                self.hero_banner.configure(border_color=hex_color)
+            except Exception:
+                pass
+            
+        # Update progress bars
+        for pbar_name in ['progress_bar', 'gallery_progress_bar']:
+            pbar = getattr(self, pbar_name, None)
+            if pbar:
+                try:
+                    pbar.configure(progress_color=hex_color)
+                except Exception:
+                    pass
+                
+        # Update sliders and switches
+        if hasattr(self, 'slider_vad_speaker_threshold') and self.slider_vad_speaker_threshold:
+            try:
+                self.slider_vad_speaker_threshold.configure(button_color=hex_color, button_hover_color=hover_hex, progress_color=hex_color)
+            except Exception:
+                pass
+            
+        if hasattr(self, 'sound_switch') and self.sound_switch:
+            try:
+                self.sound_switch.configure(progress_color=hex_color, button_color=hex_color, button_hover_color=hover_hex)
+            except Exception:
+                pass
+            
+        # Update segmented buttons
+        for seg_name in ['mode_switch', 'tab_switcher', 'appearance_mode_optionemenu']:
+            seg = getattr(self, seg_name, None)
+            if seg:
+                try:
+                    seg.configure(selected_color=hex_color, selected_hover_color=hover_hex)
+                except Exception:
+                    pass
 
     def change_language_event(self, selected_language: str):
         self.settings["language"] = selected_language
@@ -2339,6 +2416,7 @@ class FocusApp(ctk.CTk):
         else:
             self.generator_view.pack_forget()
             self.gallery_view.pack(fill="both", expand=True)
+        self.update_ui_theme_colors(self.settings.get("color_theme", "blue"))
 
     def _download_anime_cascade(self):
         if not hasattr(self, 'anime_cascade_path'):
