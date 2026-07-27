@@ -8,7 +8,7 @@ import platform
 
 try:
     import face_recognition_models
-    import customtkinter
+    import PySide6
     from PIL import Image
     import cv2
 except ImportError as e:
@@ -19,26 +19,26 @@ print("Preparing to build Focus...")
 
 # Dynamically locate the data directories for difficult packages
 frm_path = os.path.dirname(face_recognition_models.__file__)
-ctk_path = os.path.dirname(customtkinter.__file__)
+pyside_path = os.path.dirname(PySide6.__file__)
 cv2_path = os.path.dirname(cv2.__file__)
 sep = os.pathsep  # Handles ':' on mac/linux and ';' on windows automatically
 
 print(f"Located face_recognition_models at: {frm_path}")
-print(f"Located customtkinter at: {ctk_path}")
+print(f"Located PySide6 at: {pyside_path}")
 print(f"Located cv2 at: {cv2_path}")
 
 args = [
-    'scenepack_generator_gui.py',
+    'scenepack_generator_gui_qt.py',
     '--name=Focus',
     '--onefile',       # Bundle everything into a single standalone executable!
     '--windowed',      # Don't open a terminal window when launching the built app
     '--noconfirm',     # Overwrite output directory if it exists
     '--clean',         # Clean PyInstaller cache and remove temporary files before building
     f'--add-data={frm_path}{sep}face_recognition_models',
-    f'--add-data={ctk_path}{sep}customtkinter',
     f'--add-data=themes{sep}themes',
     '--collect-all=opencv-python',
-    '--collect-all=customtkinter',
+    '--collect-all=PySide6',
+    '--collect-all=shiboken6',
     '--collect-all=face_recognition_models',
     '--hidden-import=cv2',
     '--hidden-import=cv2.data',
@@ -52,8 +52,11 @@ args = [
     '--hidden-import=scipy.spatial',
     '--hidden-import=face_recognition_models',
     '--hidden-import=darkdetect',
-    '--hidden-import=PIL._tkinter_finder',
-    '--exclude-module=tkinter.test',
+    '--hidden-import=PySide6.QtCore',
+    '--hidden-import=PySide6.QtGui',
+    '--hidden-import=PySide6.QtWidgets',
+    '--exclude-module=tkinter',
+    '--exclude-module=customtkinter',
     '--exclude-module=matplotlib',
     '--exclude-module=IPython',
     '--exclude-module=PIL.ImageQt',
