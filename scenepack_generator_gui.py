@@ -28,7 +28,7 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v0.93"
+APP_VERSION = "v0.94"
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -1916,6 +1916,7 @@ class FocusApp(ctk.CTk):
 
         history_text = (
             f"=== Focus {APP_VERSION} Changelog ===\n\n"
+            "v0.94 - Fix OpenCV CascadeClassifier & haarcascades missing attribute error in PyInstaller builds (Anime mode & profile detection) by adding full cv2 binary/data collection flags, and added Windows VBScript (`Uruchom_Focus.vbs`) zero-console launcher for instant execution without black cmd flash.\n\n"
             "v0.93 - Zero-Terminal Automated Launchers: added double-clickable `Uruchom_Focus.command` (macOS Gatekeeper auto-clear) and `Uruchom_Focus.bat` (Windows) for instant terminal-free execution after download.\n\n"
             "v0.92 - CI/CD Release Trigger Fix: restored `- 'v*'` pattern under `tags:` in `build-and-release.yml` to trigger automated Release creation upon git tag push.\n\n"
             "v0.91 - Critical Windows Execution Fix: added explicit `scipy` requirement and PyInstaller `--hidden-import=scipy.fftpack` flags to resolve `ModuleNotFoundError: No module named 'scipy'` when initializing audio feature extraction.\n\n"

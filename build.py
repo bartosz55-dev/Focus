@@ -10,6 +10,7 @@ try:
     import face_recognition_models
     import customtkinter
     from PIL import Image
+    import cv2
 except ImportError as e:
     print(f"Error: Missing dependency. Please ensure all packages are installed in your environment before building. Details: {e}")
     sys.exit(1)
@@ -19,10 +20,12 @@ print("Preparing to build Focus...")
 # Dynamically locate the data directories for difficult packages
 frm_path = os.path.dirname(face_recognition_models.__file__)
 ctk_path = os.path.dirname(customtkinter.__file__)
+cv2_path = os.path.dirname(cv2.__file__)
 sep = os.pathsep  # Handles ':' on mac/linux and ';' on windows automatically
 
 print(f"Located face_recognition_models at: {frm_path}")
 print(f"Located customtkinter at: {ctk_path}")
+print(f"Located cv2 at: {cv2_path}")
 
 args = [
     'scenepack_generator_gui.py',
@@ -32,7 +35,15 @@ args = [
     '--clean',         # Clean PyInstaller cache and remove temporary files before building
     f'--add-data={frm_path}{sep}face_recognition_models',
     f'--add-data={ctk_path}{sep}customtkinter',
+    f'--add-data={cv2_path}{sep}cv2',
     f'--add-data=themes{sep}themes',
+    '--collect-all=cv2',
+    '--collect-all=opencv-python',
+    '--collect-all=opencv-python-headless',
+    '--hidden-import=cv2',
+    '--hidden-import=cv2.data',
+    '--hidden-import=cv2.gapi',
+    '--hidden-import=cv2.cv2',
     '--hidden-import=scipy',
     '--hidden-import=scipy.fftpack',
     '--hidden-import=scipy.special',
@@ -129,14 +140,28 @@ if dist_dir.exists():
         pass
     print(f"Generated macOS launcher: {mac_launcher}")
 
-    # Windows Launcher
+    # Windows Launchers
     win_dist_folder = dist_dir / "Focus"
     if win_dist_folder.exists():
+        # VBScript Launcher (Zero Console / Black Window)
+        win_vbs_launcher = win_dist_folder / "Uruchom_Focus.vbs"
+        win_vbs_content = (
+            'Set WshShell = CreateObject("WScript.Shell")\n'
+            'Set FSO = CreateObject("Scripting.FileSystemObject")\n'
+            'CurrentDir = FSO.GetParentFolderName(WScript.ScriptFullName)\n'
+            'WshShell.CurrentDirectory = CurrentDir\n'
+            'WshShell.Run chr(34) & "Focus.exe" & chr(34), 0, False\n'
+        )
+        with open(win_vbs_launcher, "w") as f:
+            f.write(win_vbs_content)
+        print(f"Generated Windows VBS launcher: {win_vbs_launcher}")
+
+        # Bat Launcher (Improved)
         win_launcher = win_dist_folder / "Uruchom_Focus.bat"
-        win_launcher_content = "@echo off\nstart \"\" \"%~dp0Focus.exe\"\n"
+        win_launcher_content = "@echo off\ncd /d \"%~dp0\"\nstart \"\" \"Focus.exe\"\nexit\n"
         with open(win_launcher, "w") as f:
             f.write(win_launcher_content)
-        print(f"Generated Windows launcher: {win_launcher}")
+        print(f"Generated Windows BAT launcher: {win_launcher}")
 
 if target:
     total_bytes = 0
