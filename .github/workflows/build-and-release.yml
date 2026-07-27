@@ -58,7 +58,7 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         cd dist
-        zip -r ../Focus-macOS.zip Focus.app
+        zip -r ../Focus-macOS.zip Focus.app Uruchom_Focus.command
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
