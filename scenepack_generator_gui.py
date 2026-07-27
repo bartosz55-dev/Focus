@@ -28,7 +28,7 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v0.90"
+APP_VERSION = "v0.91"
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -1916,6 +1916,7 @@ class FocusApp(ctk.CTk):
 
         history_text = (
             f"=== Focus {APP_VERSION} Changelog ===\n\n"
+            "v0.91 - Critical Windows Execution Fix: added explicit `scipy` requirement and PyInstaller `--hidden-import=scipy.fftpack` flags to resolve `ModuleNotFoundError: No module named 'scipy'` when initializing audio feature extraction.\n\n"
             "v0.90 - CI/CD GitHub Release Permissions Fix: added explicit `permissions: contents: write` to automated workflow to enable automatic release note generation and ZIP uploading.\n\n"
             "v0.89 - Universal Hardware Acceleration Support: dynamic runtime probing for GPU video encoders across all operating systems.\n"
             "      - Supported GPU engines: NVIDIA NVENC (`h264_nvenc`), Intel Quick Sync (`h264_qsv`), AMD AMF (`h264_amf`), Apple VideoToolbox (`h264_videotoolbox`), and Windows MediaFoundation (`h264_mf`).\n"
