@@ -35,7 +35,7 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v0.95"
+APP_VERSION = "v1.0.1"
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -144,7 +144,50 @@ TRANSLATIONS = {
             "• Generation: Click 'Generate Scenepack' and enjoy smooth, stutter-free clips!"
         ),
         "changelog_title": "Project History & Changelog",
-        "changelog_close": "Close"
+        "changelog_close": "Close",
+        "hero_title": "Focus — AI Scenepack Generator",
+        "hero_subtitle": "Automated face tracking, VAD voice verification, and precision video scene cutting.",
+        "sec_workflow": "WORKFLOW",
+        "sec_system": "SYSTEM",
+        "preset_label": "⚡ Preset Profiles:",
+        "aspect_label": "📐 Aspect Ratio & Framing:",
+        "pad_before": "⏳ Padding Before Scene (s):",
+        "pad_after": "⏳ Padding After Scene (s):",
+        "max_gap": "🔄 Max Gap / Blink Tolerance (s):",
+        "min_scene": "⏱️ Min Scene Length (s):",
+        "frame_skip": "⏭️ Frame Skip Interval:",
+        "vad_enable": "🛡️ Smart Dialogue Protection (VAD & Lip-Sync)",
+        "vad_buffer": "🎚️ Silence Snapping Buffer (ms):",
+        "vad_speaker_enable": "🎙️ Target Speaker Voice Matching (Filter Background/Narrator)",
+        "vad_speaker_threshold": "🎯 Voice Similarity Threshold:",
+        "sel_video": "📂 Select Input Video...",
+        "sel_ref": "🖼️ Select Reference Face Image...",
+        "sel_output": "💾 Select Save Location & Output File...",
+        "generate": "🚀 Step 1: Start Scan & Analyze Video",
+        "review_title": "🎬 Step 2: Review & Select Detected Scenes",
+        "btn_render": "✂️ Step 2: Render & Export Selected Clips",
+        "logs_title": "📋 Real-Time Execution Logs & Diagnostics:",
+        "gallery_title": "✨ Interactive Character Auto-Gallery (AI Detection)",
+        "gallery_desc": "Pre-scan video to discover unique character faces. Click any card to select as target reference face!",
+        "scan_chars": "🔍 Scan Video for Characters",
+        "btn_cancel_gallery": "⏹️ Cancel Scan",
+        "how_to_use": "📖 How to Use Focus",
+        "changelog": "📜 Project Changelog",
+        "theme": "🎨 Color Theme:",
+        "language": "🌐 Language / Język:",
+        "play_sound": "🔊 Play sound when finished",
+        "real_faces": "👤 Real Faces (Live-Action / 3D)",
+        "anime": "🎨 2D Animation / Anime",
+        "play_orig": "▶️ Play Original Video",
+        "play_result": "▶️ Play Last Result",
+        "aspect_16_9": "16:9 Original (Widescreen)",
+        "aspect_9_16_vert": "9:16 Vertical (Auto-Track Subject)",
+        "aspect_9_16_blur": "9:16 Vertical (Blurred Background)",
+        "th_include": "Include",
+        "th_thumb": "Thumbnail",
+        "th_start": "Start Time",
+        "th_end": "End Time",
+        "th_duration": "Duration (s)"
     },
     "Polski": {
         "dashboard": "Panel Główny",
@@ -230,7 +273,50 @@ TRANSLATIONS = {
             "• Generowanie: Kliknij 'Generuj Scenepack' i ciesz się idealnie przyciętymi klipami!"
         ),
         "changelog_title": "Historia Projektu i Zmiany",
-        "changelog_close": "Zamknij"
+        "changelog_close": "Zamknij",
+        "hero_title": "Focus — Inteligentny Generator Scenepacków AI",
+        "hero_subtitle": "Automatyczne śledzenie twarzy, analiza głosu VAD i precyzyjne wycinanie scen w wideo.",
+        "sec_workflow": "NAWIGACJA",
+        "sec_system": "KONFIGURACJA SYSTEMU",
+        "preset_label": "⚡ Gotowe profile konfiguracji (Preset):",
+        "aspect_label": "📐 Proporcje wideo i kadrowanie:",
+        "pad_before": "⏳ Margines czasowy przed sceną (s):",
+        "pad_after": "⏳ Margines czasowy po scenie (s):",
+        "max_gap": "🔄 Maks. tolerancja przerwy / mrugnięć (s):",
+        "min_scene": "⏱️ Minimalna długość ujęcia (s):",
+        "frame_skip": "⏭️ Krok skanowania klatek (interwał):",
+        "vad_enable": "🛡️ Inteligentna ochrona dialogów (VAD & Lip-Sync)",
+        "vad_buffer": "🎚️ Bufor pauzy i ciszy (ms):",
+        "vad_speaker_enable": "🎙️ Weryfikacja głosu postaci (filtr tła i narratorów)",
+        "vad_speaker_threshold": "🎯 Wymagane podobieństwo głosu:",
+        "sel_video": "📂 Wybierz wideo wejściowe...",
+        "sel_ref": "🖼️ Wybierz twarz wzorcową (zdjęcie)...",
+        "sel_output": "💾 Wybierz folder i nazwę pliku wynikowego...",
+        "generate": "🚀 Krok 1: Rozpocznij analizę i skanowanie wideo",
+        "review_title": "🎬 Krok 2: Przegląd wykrytych ujęć i wybór scen",
+        "btn_render": "✂️ Krok 2: Wyrenderuj i zapisz wybrane klipy",
+        "logs_title": "📋 Dziennik operacji i diagnostyka w czasie rzeczywistym:",
+        "gallery_title": "✨ Interaktywna Galeria Postaci (Wykrywanie AI)",
+        "gallery_desc": "Przeskanuj plik wideo, aby automatycznie wykryć unikalne twarze postaci. Kliknij dowolną kartę, aby wybrać cel!",
+        "scan_chars": "🔍 Skanuj wideo w poszukiwaniu postaci",
+        "btn_cancel_gallery": "⏹️ Anuluj skanowanie",
+        "how_to_use": "📖 Przewodnik i instrukcja",
+        "changelog": "📜 Historia wersji i zmiany",
+        "theme": "🎨 Motyw kolorystyczny:",
+        "language": "🌐 Język interfejsu / Language:",
+        "play_sound": "🔊 Dźwięk powiadomienia po zakończeniu",
+        "real_faces": "👤 Prawdziwe twarze (Ludzie / 3D)",
+        "anime": "🎨 Animacja 2D / Anime",
+        "play_orig": "▶️ Odtwórz oryginalne wideo",
+        "play_result": "▶️ Odtwórz ostatni wynik",
+        "aspect_16_9": "16:9 Oryginalny (Szerokoekranowy)",
+        "aspect_9_16_vert": "9:16 Pionowy (Auto-Kadrowanie)",
+        "aspect_9_16_blur": "9:16 Pionowy (Rozmyte Tło)",
+        "th_include": "Wybierz",
+        "th_thumb": "Podgląd",
+        "th_start": "Czas startu",
+        "th_end": "Czas końca",
+        "th_duration": "Długość (s)"
     },
     "Deutsch": {
         "dashboard": "Dashboard",
@@ -1241,11 +1327,12 @@ class ScenePackGenerator:
                 
                 # Determine video filter based on aspect ratio
                 vf_filter = "setpts=PTS-STARTPTS,fps=24"
-                if "9:16 Vertical (Auto-Track)" in aspect_ratio:
+                aspect_lower = aspect_ratio.lower()
+                if "9:16" in aspect_ratio and ("vert" in aspect_lower or "auto" in aspect_lower or "pion" in aspect_lower or "vertical" in aspect_lower):
                     # Crop logic: height remains the same, width is ih*(9/16).
                     # We ensure even dimensions using ceil(ih*9/32)*2 to prevent YUV420p odd-dimension black lines.
                     vf_filter = f"crop='ceil(ih*9/32)*2':'ceil(ih/2)*2':'iw*{avg_x}-ceil(ih*9/32)':0,setpts=PTS-STARTPTS,fps=24"
-                elif "9:16 Blurred Background" in aspect_ratio:
+                elif "9:16" in aspect_ratio and ("blur" in aspect_lower or "rozm" in aspect_lower or "tł" in aspect_lower or "background" in aspect_lower):
                     # Blurred background: scale original to 9:16 keeping aspect ratio for foreground,
                     # scale background to fill 9:16, apply blur, overlay. Ensured even dimensions.
                     vf_filter = "[0:v]split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS,fps=24"
@@ -1260,7 +1347,7 @@ class ScenePackGenerator:
                     '-fps_mode', 'cfr'
                 ]
                 
-                if "Blurred Background" in aspect_ratio:
+                if "blur" in aspect_lower or "rozm" in aspect_lower or "background" in aspect_lower:
                     cmd.extend(['-filter_complex', vf_filter])
                 else:
                     cmd.extend(['-vf', vf_filter])
@@ -1952,105 +2039,14 @@ class FocusApp(ctk.CTk if ctk else object):
         title.pack(pady=(20, 10))
 
         history_text = (
-            f"=== Focus {APP_VERSION} Changelog ===\n\n"
-            "v0.95 - Consolidated Windows build to a single standalone `Focus.exe` (`--onefile` mode) eliminating redundant launcher files and DLL clutter. Fixed UI color theme persistence by implementing dynamic re-theming across all interactive widgets (buttons, progress bars, borders, sliders, switches) immediately upon theme selection and view navigation without requiring an application restart.\n\n"
-            "v0.94 - Fix OpenCV CascadeClassifier & haarcascades missing attribute error in PyInstaller builds (Anime mode & profile detection) by adding full cv2 binary/data collection flags, and added Windows VBScript (`Uruchom_Focus.vbs`) zero-console launcher for instant execution without black cmd flash.\n\n"
-            "v0.93 - Zero-Terminal Automated Launchers: added double-clickable `Uruchom_Focus.command` (macOS Gatekeeper auto-clear) and `Uruchom_Focus.bat` (Windows) for instant terminal-free execution after download.\n\n"
-            "v0.92 - CI/CD Release Trigger Fix: restored `- 'v*'` pattern under `tags:` in `build-and-release.yml` to trigger automated Release creation upon git tag push.\n\n"
-            "v0.91 - Critical Windows Execution Fix: added explicit `scipy` requirement and PyInstaller `--hidden-import=scipy.fftpack` flags to resolve `ModuleNotFoundError: No module named 'scipy'` when initializing audio feature extraction.\n\n"
-            "v0.90 - CI/CD GitHub Release Permissions Fix: added explicit `permissions: contents: write` to automated workflow to enable automatic release note generation and ZIP uploading.\n\n"
-            "v0.89 - Universal Hardware Acceleration Support: dynamic runtime probing for GPU video encoders across all operating systems.\n"
-            "      - Supported GPU engines: NVIDIA NVENC (`h264_nvenc`), Intel Quick Sync (`h264_qsv`), AMD AMF (`h264_amf`), Apple VideoToolbox (`h264_videotoolbox`), and Windows MediaFoundation (`h264_mf`).\n"
-            "      - Intelligent fallback to multi-threaded CPU encoding (`libx264` with `-preset veryfast`) on unsupported hardware.\n"
-            "      - Automated GitHub Actions workflow (`build-and-release.yml`) for cross-platform binary releases.\n\n"
-            "v0.88 - Full cross-platform port for Windows 10/11 & macOS.\n"
-            "      - Automated downloading of Windows `.exe` FFmpeg static binaries.\n"
-            "      - Cross-platform system paths (`AppData` vs `Library`).\n"
-            "      - Implemented OS-specific commands (explorer/startfile vs open).\n"
-            "      - Updated build script to auto-generate `.ico` icons for Windows.\n"
-            "      - Multi-processing stability patch (`freeze_support`) for Windows builds.\n\n"
-            "v0.87 - Prepared repository for open-source GitHub release: sanitized local system paths, generated requirements.txt, .gitignore, and comprehensive README with legal liability disclaimers.\n\n"
-            "v0.86 - Fixed FFmpeg sub-sampling rendering errors (black line artifacts) when generating 9:16 crops, fixed language selector positioning bug, updated tutorial instructions, and unified interface color elements.\n\n"
-            "v0.85 - Implemented auto-scrolling log window and dynamic percent progress buttons to prevent interface stagnation during long video rendering and face scanning.\n\n"
-            "v0.84 - Implemented Target Speaker Voice Fingerprinting: profiles character voice from verified face frames and filters out non-target speakers, narrators, and intros.\n\n"
-            "v0.83 - Complete UI/UX overhaul inspired by modern dark web dashboards: added Hero Banner card layout, custom Tkinter animation loops (smooth progress interpolation, hover transitions, pulsing glow button), and preserved dynamic color themes.\n\n"
-            "v0.81 - Fixed Interactive Clip Review UI height bug causing the render button to be hidden, and implemented thumbnail extraction via OpenCV to display video frame previews alongside the checklist.\n\n"
-            "v0.80 - Implemented 9:16 Vertical Cropping (Auto-Track & Blurred Background), FFmpeg Scene Cut Snapping to align clips with natural shot boundaries, and a two-phase Interactive Clip Review Checklist (Scan -> Review -> Render).\n\n"
-            "v0.79 - Implemented AI Voice Activity Detection (VAD) & Active Speaker Alignment to intelligently extend scenes to the nearest silence pause, preventing character speech and sentences from being cut off mid-word.\n\n"
-            "v0.78 - Fixed mode switch Auto-Tune synchronization (switching between Anime and Real Faces now automatically triggers Auto-Tune) and fixed macOS sidebar column grid layout to prevent text rendering collapse.\n\n"
-            "v0.76 - Deep Code Audit & Refactoring: Fixed OpenCV VideoCapture resource leaks in background scanner, fixed disk space leak (cleared crops), unified cross-thread cascade model paths, and added thread-safe locks.\n\n"
-            "v0.75 - Implemented precise audio `atrim` + `apad` for perfect duration matching and `-bf 0` (no B-frames) for zero-freeze sharp scene cuts. Added OpenCV `haarcascade_profileface` fallback for detecting sideways/profile Real Faces.\n\n"
-            "v0.74 - Fixed random audio truncation and dropouts by implementing Audio Frame Padding (`apad`), 48kHz audio resampler alignment, and performed a complete codebase stability audit.\n\n"
-            "v0.72 - Added Smart Auto-Tune algorithm and dynamic Presets (Anime, Cinematic, Fast Edits) for automatic parameter configuration.\n\n"
-            "v0.71 - Fixed audio/video freeze and frame stalls using hard A/V PTS resampling (`-fps_mode cfr`, `min_hard_comp`) and added supported video/image formats list to Tutorial modal.\n\n"
-            "v0.70 - Internal stability updates and minor UI refinements.\n\n"
-            "v0.67 - Restored missing `import concurrent.futures` in scenepack_generator_gui.py resolving NameError ('concurrent' is not defined) during parallel FFmpeg segment extraction. (haha 67)\n\n"
-            "v0.66 - Upgraded Anime face clustering with 1D Hue histogram & 256-bit dHash matching to merge characters across shadows/lighting shifts. Fixed card text formatting and added 1:1 square face thumbnail cropping.\n\n"
-            "v0.65 - Added post-scan Face Clustering and Deduplication pass: automatically merges duplicate character captures, selects the best thumbnail, and displays total occurrence counts.\n\n"
-            "v0.64 - Fixed macOS Dock app icon rendering using native Cocoa NSApplication icon binding. Enhanced Anime face clustering with center elliptical mask filtering to eliminate duplicate character cards.\n\n"
-            "v0.63 - Fixed missing PIL Image import in scenepack_generator_gui.py resolving NameError ('Image' is not defined) in character gallery pre-scanner.\n\n"
-            "v0.62 - Upgraded Anime Character Gallery with 2D HSV Color Histogram + Perceptual dHash Feature Clustering. Eliminates multi-card character duplication. Updated Tutorial modal across all languages.\n\n"
-            "v0.61 - Implemented multi-encoding secondary merge pass for character deduplication in Beta Gallery (eliminates repeating identical characters). Added hand cursor and localized card labels.\n\n"
-            "v0.60 - Fixed Beta character gallery pre-scanner stuck on initialization: added _download_anime_cascade handler to FocusApp and wired missing gallery event queue listeners (gallery_status, gallery_progress, gallery_results, gallery_error).\n\n"
-            "v0.59 - Fixed Beta tab mode localization bug preventing face detection in non-English UI languages. Added live execution logging to GUI console and updated Scanner background worker.\n\n"
-            "v0.58 - Fixed Beta tab freeze by moving character scanning to a multi-threaded background worker with 2.5s frame stepping and 480p downscaling.\n\n"
-            "v0.57 - Introduced Beta Character Gallery: auto-scans video, clusters unique real/anime faces, and allows one-click character selection for scenepack generation. Fixed boundary PTS freeze on 00:00 and file endings.\n\n"
-            "v0.56 - Fixed application startup crash by reorganizing variable initialization sequence before UI option menu callbacks.\n\n"
-            "v0.55 - Fixed initial 5s stream freeze via accurate seeking buffers (-accurate_seek) and added Minimum Scene Duration filter (1.0s) to eliminate micro-cut glitches.\n\n"
-            "v0.54 - Exhaustive Deep Code Audit: Fully dynamic multi-language tooltips for Real Faces/Anime segmented buttons, 100% thread-safe UI queues, and verified pipeline.\n\n"
-            "v0.53 - Fixed tooltip text updating and localized color theme name mapping (e.g. `pomarańczowy.json` -> `orange.json`).\n\n"
-            "v0.52 - Comprehensive Code Audit & Refactoring: Enforced immutability in settings state, strict input boundary validation (skip >= 1), subprocess file existence checks, and 100% test suite.\n\n"
-            "v0.51 - Extracted clean vector camera logo symbol from `ikonka.png` to eliminate background box artifacts on macOS Dock squircle tile.\n\n"
-            "v0.50 - Added dynamic macOS squircle Dock & window icon generator matching system appearance mode and color theme.\n\n"
-            "v0.49 - Updated application icon source to `ikonka.png` and regenerated native `icon.icns` bundle assets.\n\n"
-            "v0.48 - Added native macOS application icon support (`icon.icns`) to build script and window header.\n\n"
-            "v0.47 - Eliminated video freezing / audio drift at segment boundaries via closed GOPs (-bf 0), PTS regeneration (-fflags +genpts), and MOOV faststart.\n\n"
-            "v0.46 - Optimized application build pipeline: excluded redundant dependencies and enabled binary stripping to drastically reduce bundle size.\n\n"
-            "v0.45 - Fixed layout regression by removing duplicate settings frame from main container grid.\n\n"
-            "v0.44 - Comprehensive deep code audit & refactoring (cv2.VideoCapture resource leak fixes, interval edge-case clamping, translation fallback keys, and concat file list escaping).\n\n"
-            "v0.43 - Added Gap Bridging Tolerance (1.5s) to prevent premature scene cuts during head turns or temporary face occlusions.\n\n"
-            "v0.42 - Fixed CTkToplevel window rendering and styling issue on macOS.\n\n"
-            "v0.41 - Fixed segmented button selection state loss when switching languages (Real Faces/Anime & Light/Dark/System).\n\n"
-            "v0.40 - Full UI i18n translations (Appearance modes, color names, tooltips, placeholders, tutorial & status labels).\n\n"
-            "v0.39 - Added multi-language support (Polish, English, German, Russian, Ukrainian, Spanish, French, Japanese) with persistent language settings.\n\n"
-            "v0.38 - Enforced permanent system versioning rule (+0.01 per prompt) & fast-seek setpts/asetpts filter pipeline.\n\n"
-            "v0.37 - Hybrid fast seeking (-ss before -i) + setpts/asetpts PTS reset filters for high-speed & sync-perfect rendering.\n\n"
-            "v0.36 - Expanded granular Changelog tracking all project iterations.\n\n"
-            "v0.35 - Centralized APP_VERSION variable across all UI windows and headers.\n\n"
-            "v0.34 - Added in-app Changelog window with initial version history.\n\n"
-            "v0.33 - Frame-accurate seeking (-ss after -i) to fix ~40s initial clip freezes on raw MKV rips.\n\n"
-            "v0.32 - Fast-seeking parameter positioning (-ss) in FFmpeg extraction.\n\n"
-            "v0.31 - Multi-threaded parallel segment extraction using ThreadPoolExecutor for 5-10x faster generation.\n\n"
-            "v0.30 - Added -start_at_zero flag and verified padding_after clip boundary logic.\n\n"
-            "v0.29 - Enforced Constant Frame Rate (CFR -r 24 -fps_mode cfr) & GOP keyframe alignment (-g 24).\n\n"
-            "v0.28 - Configured PyInstaller build.py with Focus bundle identifier (com.focus.app).\n\n"
-            "v0.27 - Converted How-to-Use guide to read-only CTkTextbox with word wrapping.\n\n"
-            "v0.26 - GitHub User-Agent header fix for XML downloads & size validation (>50KB check).\n\n"
-            "v0.25 - Added OpenCV cascade.empty() load validation.\n\n"
-            "v0.24 - Relocated external binaries and XML to ~/Library/Application Support/Focus for macOS bundle security.\n\n"
-            "v0.23 - Tooltip helpers for Real Faces vs Anime modes.\n\n"
-            "v0.22 - Added OpenCV Anime face detection mode using lbpcascade_animeface classifier.\n\n"
-            "v0.21 - Fixed GUI method scope AttributeError on application startup.\n\n"
-            "v0.20 - Added 'How to Use' tutorial Toplevel popup window.\n\n"
-            "v0.19 - Audio sync timestamp flags (-avoid_negative_ts make_zero, -fflags +genpts, -async 1).\n\n"
-            "v0.18 - Audio/Video duration drift fix using AAC re-encoding (-c:a aac -b:a 192k).\n\n"
-            "v0.17 - Official application rebranding to 'Focus'.\n\n"
-            "v0.16 - Persistent JSON settings storage (~/.scenepack_generator_settings.json).\n\n"
-            "v0.15 - Integrated macOS native completion audio notification (afplay).\n\n"
-            "v0.14 - Added custom color theme engine (generate_themes.py).\n\n"
-            "v0.13 - Fixed keyframe gray smearing artifacts by removing stream copying (-c copy).\n\n"
-            "v0.12 - VideoToolbox Apple Silicon GPU hardware acceleration (-c:v h264_videotoolbox).\n\n"
-            "v0.11 - Added stream concat demuxer logic.\n\n"
-            "v0.10 - Initial FFmpeg segment extraction logic.\n\n"
-            "v0.09 - Face Recognition tolerance adjustment parameter.\n\n"
-            "v0.08 - Frame Skip interval speed optimization control.\n\n"
-            "v0.07 - Padding Before & Padding After numerical configuration.\n\n"
-            "v0.06 - Progress bar and real-time scanning percentage ETA indicator.\n\n"
-            "v0.05 - Output save location selector & filename configuration.\n\n"
-            "v0.04 - Reference Image picker & preview integration.\n\n"
-            "v0.03 - Input Video file picker & path display integration.\n\n"
-            "v0.02 - Basic CustomTkinter GUI layout creation.\n\n"
-            "v0.01 - Initial CLI prototype for face recognition scenepack cutting."
+            f"=== Focus {APP_VERSION} Release Notes ===\n\n"
+            "v1.0.1 (Production Release):\n"
+            "• Complete migration to PySide6 (Qt 6) with Modern Dark Studio UI.\n"
+            "• Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).\n"
+            "• Refined UI typography, professional labels, and polished layout.\n"
+            "• Robust multi-language support (English, Polish, German, Spanish, etc.).\n"
+            "• Hardware-accelerated FFmpeg scene extraction and concatenation.\n"
+            "• Interactive Character Auto-Gallery (AI Detection) for face pre-scanning."
         )
 
         textbox = ctk.CTkTextbox(self.changelog_win, wrap="word", font=ctk.CTkFont(size=13), fg_color=("#FFFFFF", "#14161B"))
