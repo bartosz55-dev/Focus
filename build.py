@@ -30,16 +30,16 @@ print(f"Located cv2 at: {cv2_path}")
 args = [
     'scenepack_generator_gui.py',
     '--name=Focus',
+    '--onefile',       # Bundle everything into a single standalone executable!
     '--windowed',      # Don't open a terminal window when launching the built app
     '--noconfirm',     # Overwrite output directory if it exists
     '--clean',         # Clean PyInstaller cache and remove temporary files before building
     f'--add-data={frm_path}{sep}face_recognition_models',
     f'--add-data={ctk_path}{sep}customtkinter',
-    f'--add-data={cv2_path}{sep}cv2',
     f'--add-data=themes{sep}themes',
-    '--collect-all=cv2',
     '--collect-all=opencv-python',
-    '--collect-all=opencv-python-headless',
+    '--collect-all=customtkinter',
+    '--collect-all=face_recognition_models',
     '--hidden-import=cv2',
     '--hidden-import=cv2.data',
     '--hidden-import=cv2.gapi',
@@ -117,10 +117,11 @@ for spec_file in Path(".").glob("*.spec"):
 
 # Calculate final app bundle size
 dist_app = Path("dist/Focus.app")
+dist_exe = Path("dist/Focus.exe")
 dist_folder = Path("dist/Focus")
-target = dist_app if dist_app.exists() else (dist_folder if dist_folder.exists() else None)
+target = dist_app if dist_app.exists() else (dist_exe if dist_exe.exists() else (dist_folder if dist_folder.exists() else None))
 
-# Generate double-clickable zero-terminal launchers in dist/
+# Generate double-clickable zero-terminal launcher for macOS Gatekeeper in dist/
 dist_dir = Path("dist")
 if dist_dir.exists():
     # macOS Launcher
@@ -139,29 +140,6 @@ if dist_dir.exists():
     except Exception:
         pass
     print(f"Generated macOS launcher: {mac_launcher}")
-
-    # Windows Launchers
-    win_dist_folder = dist_dir / "Focus"
-    if win_dist_folder.exists():
-        # VBScript Launcher (Zero Console / Black Window)
-        win_vbs_launcher = win_dist_folder / "Uruchom_Focus.vbs"
-        win_vbs_content = (
-            'Set WshShell = CreateObject("WScript.Shell")\n'
-            'Set FSO = CreateObject("Scripting.FileSystemObject")\n'
-            'CurrentDir = FSO.GetParentFolderName(WScript.ScriptFullName)\n'
-            'WshShell.CurrentDirectory = CurrentDir\n'
-            'WshShell.Run chr(34) & "Focus.exe" & chr(34), 0, False\n'
-        )
-        with open(win_vbs_launcher, "w") as f:
-            f.write(win_vbs_content)
-        print(f"Generated Windows VBS launcher: {win_vbs_launcher}")
-
-        # Bat Launcher (Improved)
-        win_launcher = win_dist_folder / "Uruchom_Focus.bat"
-        win_launcher_content = "@echo off\ncd /d \"%~dp0\"\nstart \"\" \"Focus.exe\"\nexit\n"
-        with open(win_launcher, "w") as f:
-            f.write(win_launcher_content)
-        print(f"Generated Windows BAT launcher: {win_launcher}")
 
 if target:
     total_bytes = 0
