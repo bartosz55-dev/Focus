@@ -8,6 +8,7 @@ import shutil
 import logging
 import time
 import os
+import platform
 from typing import List, Tuple
 
 # Configure logging
@@ -32,6 +33,55 @@ class ScenePackGenerator:
             raise RuntimeError("ffmpeg binary not found. Please install FFmpeg (e.g., 'brew install ffmpeg').")
         if shutil.which("ffprobe") is None:
             raise RuntimeError("ffprobe binary not found. FFmpeg installation may be incomplete.")
+
+    def get_best_video_codec_and_args(self) -> Tuple[str, List[str]]:
+        """Probes FFmpeg for available hardware video encoders and returns the fastest supported codec and its optimal speed arguments."""
+        if hasattr(self, "_cached_best_vcodec") and self._cached_best_vcodec is not None:
+            return self._cached_best_vcodec
+
+        if platform.system() == "Darwin":
+            candidates = [
+                ("h264_videotoolbox", []),
+                ("libx264", ["-preset", "veryfast"])
+            ]
+        elif platform.system() == "Windows":
+            candidates = [
+                ("h264_nvenc", ["-preset", "fast"]),
+                ("h264_qsv", ["-preset", "veryfast"]),
+                ("h264_amf", ["-quality", "speed"]),
+                ("h264_mf", []),
+                ("libx264", ["-preset", "veryfast"])
+            ]
+        else:
+            candidates = [
+                ("h264_nvenc", ["-preset", "fast"]),
+                ("h264_vaapi", []),
+                ("h264_qsv", ["-preset", "veryfast"]),
+                ("h264_amf", ["-quality", "speed"]),
+                ("libx264", ["-preset", "veryfast"])
+            ]
+            
+        for codec, args in candidates:
+            if codec == "libx264":
+                self._cached_best_vcodec = (codec, args)
+                logging.info(f"Using CPU video encoder fallback: '{codec}'")
+                return codec, args
+            try:
+                cmd = [
+                    "ffmpeg", "-hide_banner", "-loglevel", "error",
+                    "-f", "lavfi", "-i", "nullsrc=s=320x240:d=0.05",
+                    "-c:v", codec
+                ] + args + ["-f", "null", "-"]
+                res = subprocess.run(cmd, capture_output=True, timeout=5)
+                if res.returncode == 0:
+                    self._cached_best_vcodec = (codec, args)
+                    logging.info(f"Hardware acceleration enabled: selected GPU video encoder '{codec}'")
+                    return codec, args
+            except Exception as e:
+                logging.debug(f"Codec probe failed for {codec}: {e}")
+                
+        self._cached_best_vcodec = ("libx264", ["-preset", "veryfast"])
+        return self._cached_best_vcodec
 
     def load_reference_face(self, ref_image_path: Path):
         """Loads and encodes the reference face image."""
@@ -212,8 +262,9 @@ class ScenePackGenerator:
         concat_list_path = temp_dir / "concat_list.txt"
         
         try:
+            codec, extra_args = self.get_best_video_codec_and_args()
+            logging.info(f"Extracting scenes via FFmpeg (codec: {codec})...")
             chunk_files = []
-            logging.info("Extracting scenes via FFmpeg...")
             
             with open(concat_list_path, "w") as f:
                 for i, (start, end) in enumerate(intervals):
@@ -230,7 +281,8 @@ class ScenePackGenerator:
                         '-t', str(duration), 
                         '-vf', 'setpts=PTS-STARTPTS,fps=24',
                         '-af', 'asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0',
-                        '-c:v', 'h264_videotoolbox' if os.path.exists('/System/Library/Frameworks/VideoToolbox.framework') else 'libx264',
+                        '-c:v', codec,
+                    ] + extra_args + [
                         '-b:v', '4M',
                         '-g', '24',
                         '-bf', '0',
