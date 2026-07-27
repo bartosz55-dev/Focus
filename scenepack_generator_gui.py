@@ -859,11 +859,20 @@ class ScenePackGenerator:
             cap.release()
         return float('inf')
 
-    def merge_intervals(self, timestamps: List[Tuple[float, float]], padding_before: float, padding_after: float, duration: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0) -> List[Tuple[float, float, float]]:
+    def merge_intervals(self, timestamps: List[Any], padding_before: float, padding_after: float, duration: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0) -> List[Any]:
         if not timestamps:
             return []
             
-        sorted_ts = sorted([t for t in timestamps if t[0] >= 0.0], key=lambda x: x[0])
+        is_tuple_input = False
+        norm_ts = []
+        for t in timestamps:
+            if isinstance(t, (list, tuple)):
+                is_tuple_input = True
+                norm_ts.append((t[0], t[1] if len(t) > 1 else 0.5))
+            else:
+                norm_ts.append((float(t), 0.5))
+                
+        sorted_ts = sorted([t for t in norm_ts if t[0] >= 0.0], key=lambda x: x[0])
         if not sorted_ts:
             return []
 
@@ -946,6 +955,8 @@ class ScenePackGenerator:
         m_x = sum(c_x_list) / len(c_x_list)
         result.append((c_start, c_end, m_x))
 
+        if not is_tuple_input:
+            return [(s, e) for s, e, _ in result]
         return result
 
     def _detect_silences(self, video_path: Path, buffer_ms: int = 300) -> List[Tuple[float, float]]:

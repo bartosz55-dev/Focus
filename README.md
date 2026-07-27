@@ -15,43 +15,35 @@ Focus is a powerful, AI-driven video processing tool built for creators, editors
 * **Interactive Beta / Character Gallery:** Scan videos to build a gallery of unique faces. Select your target character to instruct the AI exactly who to track and extract.
 * **Smart Audio Trimming & Scene Snapping:** Uses Voice Activity Detection (VAD) to align cuts with natural speech pauses, preventing dialogue from being cut off mid-word.
 
-## Installation & Setup
+## Installation & Setup (Automated / Zero-Terminal)
+
+We provide automated double-clickable launchers for Windows and macOS that automatically set up Python virtual environments, install required libraries (including PySide6 Qt 6 and OpenCV), check for FFmpeg, and launch the application without opening a terminal!
+
+### 🚀 Automatic Launchers
+* **Windows:** Simply double-click `Uruchom_Focus_Windows.bat` in the project folder. It will automatically create the virtual environment, install dependencies, check for FFmpeg (and install via winget if missing), and open the Focus Studio UI.
+* **macOS:** Double-click `Uruchom_Focus_Mac.command` in Finder. It will automatically set up the virtual environment and launch the application.
+* **Linux / Manual Setup:** If you prefer running manually via terminal:
+  ```bash
+  python3 -m venv venv
+  source venv/bin/activate  # On Windows: venv\Scripts\activate
+  pip install -r requirements.txt
+  python3 scenepack_generator_gui_qt.py
+  ```
 
 ### Prerequisites
 - **Python 3.10+** is required.
-- **FFmpeg** must be installed on your system.
-
-#### Installing FFmpeg
-* **macOS:** `brew install ffmpeg`
-* **Windows:** Download from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) or use `winget install ffmpeg`. Ensure FFmpeg is added to your system `PATH`.
-* **Linux (Ubuntu/Debian):** `sudo apt update && sudo apt install ffmpeg`
-
-### Setup Environment
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/focus.git
-   cd focus
-   ```
-2. Create and activate a virtual environment:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3. Install the dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+- **FFmpeg** must be installed on your system (our automatic Windows launcher can install it via winget; on macOS use `brew install ffmpeg`).
 
 ## Usage & Building
 
 ### Running from Source
-To launch the application directly from the source code:
+To launch the modern Qt 6 application directly from the source code:
 ```bash
-python3 scenepack_generator_gui.py
+python3 scenepack_generator_gui_qt.py
 ```
 
-### Building the Executable
-Focus includes a build script utilizing PyInstaller to package the application into a standalone executable (e.g., an `.app` bundle for macOS).
+### Building the Standalone Executable
+Focus includes an automated build script utilizing PyInstaller to package the application into a single standalone executable (`Focus.exe` on Windows, or `Focus.app` / `Focus-macOS.zip` on macOS).
 ```bash
 python3 build.py
 ```
