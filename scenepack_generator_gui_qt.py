@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 import scenepack_generator_gui as sg_engine
 from scenepack_generator_gui import (
     ScenePackGenerator, get_translation, TRANSLATIONS, canonicalize_mode,
-    make_square_crop, extract_anime_face_features, is_anime_feature_match
+    make_square_crop, extract_anime_face_features, is_anime_feature_match, APP_VERSION
 )
 from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker
@@ -44,7 +44,7 @@ class FocusApp(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Focus - AI Scenepack Generator")
+        self.setWindowTitle(f"Focus - AI Scenepack Generator ({APP_VERSION})")
         self.resize(1150, 780)
         self.setMinimumSize(950, 650)
 
@@ -160,9 +160,9 @@ class FocusApp(QMainWindow):
         self.lbl_logo.setFont(QFont("Segoe UI", 22, QFont.Bold))
         sidebar_layout.addWidget(self.lbl_logo)
 
-        lbl_wf = QLabel("WORKFLOW")
-        lbl_wf.setObjectName("SectionHeader")
-        sidebar_layout.addWidget(lbl_wf)
+        self.lbl_wf = QLabel("WORKFLOW")
+        self.lbl_wf.setObjectName("SectionHeader")
+        sidebar_layout.addWidget(self.lbl_wf)
 
         self.btn_tutorial = QPushButton("How to Use")
         self.btn_tutorial.setObjectName("SidebarBtn")
@@ -175,9 +175,9 @@ class FocusApp(QMainWindow):
         sidebar_layout.addWidget(self.btn_changelog)
 
         sidebar_layout.addSpacing(10)
-        lbl_sys = QLabel("SYSTEM")
-        lbl_sys.setObjectName("SectionHeader")
-        sidebar_layout.addWidget(lbl_sys)
+        self.lbl_sys = QLabel("SYSTEM")
+        self.lbl_sys.setObjectName("SectionHeader")
+        sidebar_layout.addWidget(self.lbl_sys)
 
         self.lbl_theme_title = QLabel("Color Theme:")
         sidebar_layout.addWidget(self.lbl_theme_title)
@@ -740,33 +740,82 @@ class FocusApp(QMainWindow):
     def _apply_language(self, lang_name: str):
         self.current_lang = lang_name
         self.lbl_dashboard.setText(get_translation(lang_name, "dashboard"))
-        self.btn_tab_gen.setText(get_translation(lang_name, "tab_generator"))
-        self.btn_tab_gal.setText(get_translation(lang_name, "tab_gallery"))
-        self.lbl_hero_title.setText(get_translation(lang_name, "title"))
-        self.lbl_hero_sub.setText(get_translation(lang_name, "subtitle"))
-        self.lbl_presets_title.setText(get_translation(lang_name, "presets_label"))
-        self.btn_autotune.setText(get_translation(lang_name, "btn_autotune"))
+        if hasattr(self, "lbl_wf"):
+            self.lbl_wf.setText(get_translation(lang_name, "sec_workflow"))
+        self.btn_tutorial.setText(get_translation(lang_name, "how_to_use"))
+        self.btn_changelog.setText(get_translation(lang_name, "changelog"))
+        if hasattr(self, "lbl_sys"):
+            self.lbl_sys.setText(get_translation(lang_name, "sec_system"))
+        self.lbl_theme_title.setText(get_translation(lang_name, "theme"))
+        self.lbl_lang_title.setText(get_translation(lang_name, "language"))
+        self.chk_sound.setText(get_translation(lang_name, "play_sound"))
+
+        self.btn_mode_real.setText(get_translation(lang_name, "real_faces"))
+        self.btn_mode_anime.setText(get_translation(lang_name, "anime"))
+        self.btn_tab_gen.setText(get_translation(lang_name, "generator_tab"))
+        self.btn_tab_gal.setText(get_translation(lang_name, "gallery_tab"))
+
+        self.lbl_hero_title.setText(get_translation(lang_name, "hero_title"))
+        self.lbl_hero_sub.setText(get_translation(lang_name, "hero_subtitle"))
+        self.lbl_presets_title.setText(get_translation(lang_name, "preset_label"))
+        self.btn_autotune.setText(get_translation(lang_name, "btn_auto_tune"))
         self.lbl_aspect_title.setText(get_translation(lang_name, "aspect_label"))
-        self.lbl_pad_before.setText(get_translation(lang_name, "pad_before_label"))
-        self.lbl_pad_after.setText(get_translation(lang_name, "pad_after_label"))
-        self.lbl_max_gap.setText(get_translation(lang_name, "max_gap_label"))
-        self.lbl_min_scene.setText(get_translation(lang_name, "min_scene_label"))
-        self.lbl_frame_skip.setText(get_translation(lang_name, "frame_skip_label"))
-        self.chk_vad.setText(get_translation(lang_name, "vad_checkbox"))
-        self.lbl_vad_buf.setText(get_translation(lang_name, "vad_buffer_label"))
-        self.chk_speaker.setText(get_translation(lang_name, "vad_speaker_checkbox"))
-        self.lbl_speaker_thresh.setText(get_translation(lang_name, "vad_speaker_threshold_label"))
-        self.btn_select_video.setText(get_translation(lang_name, "btn_select_video"))
-        self.btn_select_image.setText(get_translation(lang_name, "btn_select_image"))
-        self.btn_select_output.setText(get_translation(lang_name, "btn_select_output"))
-        self.btn_generate.setText(get_translation(lang_name, "btn_generate"))
+        self.lbl_pad_before.setText(get_translation(lang_name, "pad_before"))
+        self.lbl_pad_after.setText(get_translation(lang_name, "pad_after"))
+        self.lbl_max_gap.setText(get_translation(lang_name, "max_gap"))
+        self.lbl_min_scene.setText(get_translation(lang_name, "min_scene"))
+        self.lbl_frame_skip.setText(get_translation(lang_name, "frame_skip"))
+        self.chk_vad.setText(get_translation(lang_name, "vad_enable"))
+        self.lbl_vad_buf.setText(get_translation(lang_name, "vad_buffer"))
+        self.chk_speaker.setText(get_translation(lang_name, "vad_speaker_enable"))
+        self.lbl_speaker_thresh.setText(get_translation(lang_name, "vad_speaker_threshold"))
+        self.btn_select_video.setText(get_translation(lang_name, "sel_video"))
+        self.btn_select_image.setText(get_translation(lang_name, "sel_ref"))
+        self.btn_select_output.setText(get_translation(lang_name, "sel_output"))
+        self.btn_generate.setText(get_translation(lang_name, "generate"))
         self.lbl_review_title.setText(get_translation(lang_name, "review_title"))
         self.btn_render.setText(get_translation(lang_name, "btn_render"))
         self.lbl_log_title.setText(get_translation(lang_name, "logs_title"))
         self.lbl_gal_title.setText(get_translation(lang_name, "gallery_title"))
         self.lbl_gal_sub.setText(get_translation(lang_name, "gallery_desc"))
-        self.btn_gal_scan.setText(get_translation(lang_name, "btn_scan_gallery"))
+        self.btn_gal_scan.setText(get_translation(lang_name, "scan_chars"))
         self.btn_gal_cancel.setText(get_translation(lang_name, "btn_cancel_gallery"))
+
+        self.btn_play_orig.setText(get_translation(lang_name, "play_orig"))
+        self.btn_play_res.setText(get_translation(lang_name, "play_result"))
+        self.table_review.setHorizontalHeaderLabels([
+            get_translation(lang_name, "th_include"),
+            get_translation(lang_name, "th_thumb"),
+            get_translation(lang_name, "th_start"),
+            get_translation(lang_name, "th_end"),
+            get_translation(lang_name, "th_duration")
+        ])
+
+        self.combo_presets.blockSignals(True)
+        cur_preset_idx = self.combo_presets.currentIndex()
+        self.combo_presets.clear()
+        self.combo_presets.addItems([
+            get_translation(lang_name, "preset_auto"),
+            get_translation(lang_name, "preset_fast"),
+            get_translation(lang_name, "preset_cinematic"),
+            get_translation(lang_name, "preset_draft")
+        ])
+        if cur_preset_idx >= 0 and cur_preset_idx < self.combo_presets.count():
+            self.combo_presets.setCurrentIndex(cur_preset_idx)
+        self.combo_presets.blockSignals(False)
+
+        self.combo_aspect.blockSignals(True)
+        cur_aspect_idx = self.combo_aspect.currentIndex()
+        self.combo_aspect.clear()
+        self.combo_aspect.addItems([
+            get_translation(lang_name, "aspect_16_9"),
+            get_translation(lang_name, "aspect_9_16_vert"),
+            get_translation(lang_name, "aspect_9_16_blur")
+        ])
+        if cur_aspect_idx >= 0 and cur_aspect_idx < self.combo_aspect.count():
+            self.combo_aspect.setCurrentIndex(cur_aspect_idx)
+        self.combo_aspect.blockSignals(False)
+
         self.save_current_settings()
 
     def change_theme_event(self, new_theme: str):
@@ -796,28 +845,19 @@ class FocusApp(QMainWindow):
             self.btn_tab_gal.setChecked(True)
 
     def open_tutorial(self):
-        msg = (
-            "Focus - How to Use:\n\n"
-            "1. Select Input Video (MP4, MKV, MOV, etc.)\n"
-            "2. Select Reference Face (an image containing the target face)\n"
-            "3. Select Save Location for the rendered scenepack.\n"
-            "4. Choose Preset Profile or use Auto-Tune.\n"
-            "5. Click '1. Scan & Analyze Video' and wait for detection.\n"
-            "6. In the Clip Review table, uncheck any unwanted scenes.\n"
-            "7. Click '2. Render Selected Clips' to export the high-quality MP4 file!"
-        )
-        QMessageBox.information(self, "How to Use Focus", msg)
+        QMessageBox.information(self, get_translation(self.current_lang, "tutorial_title"), get_translation(self.current_lang, "tutorial_body"))
 
     def open_changelog(self):
         msg = (
-            "Focus Changelog (v0.96 - Qt 6 Modernization):\n\n"
-            "• Complete UI migration to PySide6 (Qt 6 for Python).\n"
-            "• Identical, hardware-accelerated rendering on Windows & macOS.\n"
-            "• Modern Dark Studio aesthetic with glassmorphic cards and neon accents.\n"
-            "• Thread-safe QThread / Signal background video processing (zero lag).\n"
-            "• Integrated Beta Character Gallery with interactive face selection."
+            f"Focus Release Notes ({APP_VERSION} - Production Release):\n\n"
+            "• Complete migration to PySide6 (Qt 6) with Modern Dark Studio UI.\n"
+            "• Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).\n"
+            "• Refined UI typography, professional labels, and polished layout.\n"
+            "• Robust multi-language support (English, Polish, German, Spanish, etc.).\n"
+            "• Hardware-accelerated FFmpeg scene extraction and concatenation.\n"
+            "• Interactive Character Auto-Gallery (AI Detection) for face pre-scanning."
         )
-        QMessageBox.information(self, "Changelog", msg)
+        QMessageBox.information(self, get_translation(self.current_lang, "changelog_title"), msg)
 
     def select_video(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Input Video", "", "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)")
@@ -872,15 +912,16 @@ class FocusApp(QMainWindow):
         self.lbl_eta.setText(msg)
 
     def _on_preset_selected(self, preset: str):
+        idx = self.combo_presets.currentIndex()
         preset_str = preset.lower()
-        if "auto-tune" in preset_str or "zalecan" in preset_str:
+        if idx == 0 or "auto" in preset_str or "zalecan" in preset_str:
             self.apply_auto_tune()
             return
-        if "fast" in preset_str or "tiktok" in preset_str:
+        elif idx == 1 or "fast" in preset_str or "tiktok" in preset_str or "szybk" in preset_str:
             pad_before, pad_after, max_gap, min_scene, frame_skip = 0.4, 0.4, 0.8, 0.5, 8
-        elif "cinematic" in preset_str or "kinow" in preset_str:
+        elif idx == 2 or "cinematic" in preset_str or "kinow" in preset_str:
             pad_before, pad_after, max_gap, min_scene, frame_skip = 2.0, 2.0, 2.5, 2.0, 15
-        elif "draft" in preset_str or "szkic" in preset_str:
+        elif idx == 3 or "draft" in preset_str or "szkic" in preset_str or "skan" in preset_str:
             pad_before, pad_after, max_gap, min_scene, frame_skip = 1.0, 1.0, 1.5, 1.0, 24
         else:
             self.apply_auto_tune()
@@ -948,10 +989,18 @@ class FocusApp(QMainWindow):
         self.progress_bar.setValue(0)
         self.lbl_eta.setText("Extracting and concatenating clips...")
 
+        idx_aspect = self.combo_aspect.currentIndex()
+        if idx_aspect == 1:
+            aspect_canonical = "9:16 Vertical (Auto-Track)"
+        elif idx_aspect == 2:
+            aspect_canonical = "9:16 Blurred Background"
+        else:
+            aspect_canonical = "16:9 Original"
+
         generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(self.queue_proxy, 15, self.current_mode)
         self.render_worker = RenderWorker(
             generator_inst, self.video_path_str, selected_intervals,
-            self.output_path_str, self.combo_aspect.currentText(), self.queue_proxy
+            self.output_path_str, aspect_canonical, self.queue_proxy
         )
         self.render_worker.start()
 
