@@ -35,7 +35,7 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.0.2"
+APP_VERSION = "v1.0.3"
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -2040,7 +2040,7 @@ class FocusApp(ctk.CTk if ctk else object):
 
         history_text = (
             f"=== Focus {APP_VERSION} Release Notes ===\n\n"
-            "v1.0.2 (Production Release):\n"
+            "v1.0.3 (Production Release):\n"
             "• Complete migration to PySide6 (Qt 6) with Modern Dark Studio UI.\n"
             "• Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).\n"
             "• Refined UI typography, professional labels, and polished layout.\n"
