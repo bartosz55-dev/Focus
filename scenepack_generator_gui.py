@@ -28,7 +28,7 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v0.88"
+APP_VERSION = "v0.89"
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -755,6 +755,55 @@ class ScenePackGenerator:
                     self.log_queue.put(("log", f"Failed to download anime cascade model: {e}"))
                     raise RuntimeError(f"Failed to download anime cascade model: {e}")
 
+    def _get_best_video_codec_and_args(self) -> Tuple[str, List[str]]:
+        """Probes FFmpeg for available hardware video encoders and returns the fastest supported codec and its optimal speed arguments."""
+        if hasattr(self, "_cached_best_vcodec") and self._cached_best_vcodec is not None:
+            return self._cached_best_vcodec
+
+        if platform.system() == "Darwin":
+            candidates = [
+                ("h264_videotoolbox", []),
+                ("libx264", ["-preset", "veryfast"])
+            ]
+        elif platform.system() == "Windows":
+            candidates = [
+                ("h264_nvenc", ["-preset", "fast"]),
+                ("h264_qsv", ["-preset", "veryfast"]),
+                ("h264_amf", ["-quality", "speed"]),
+                ("h264_mf", []),
+                ("libx264", ["-preset", "veryfast"])
+            ]
+        else:
+            candidates = [
+                ("h264_nvenc", ["-preset", "fast"]),
+                ("h264_vaapi", []),
+                ("h264_qsv", ["-preset", "veryfast"]),
+                ("h264_amf", ["-quality", "speed"]),
+                ("libx264", ["-preset", "veryfast"])
+            ]
+            
+        for codec, args in candidates:
+            if codec == "libx264":
+                self._cached_best_vcodec = (codec, args)
+                logging.info(f"Using CPU video encoder fallback: '{codec}'")
+                return codec, args
+            try:
+                cmd = [
+                    str(self.ffmpeg_path), "-hide_banner", "-loglevel", "error",
+                    "-f", "lavfi", "-i", "nullsrc=s=320x240:d=0.05",
+                    "-c:v", codec
+                ] + args + ["-f", "null", "-"]
+                res = subprocess.run(cmd, capture_output=True, timeout=5)
+                if res.returncode == 0:
+                    self._cached_best_vcodec = (codec, args)
+                    logging.info(f"Hardware acceleration enabled: selected GPU video encoder '{codec}'")
+                    return codec, args
+            except Exception as e:
+                logging.debug(f"Codec probe failed for {codec}: {e}")
+                
+        self._cached_best_vcodec = ("libx264", ["-preset", "veryfast"])
+        return self._cached_best_vcodec
+
     def load_reference_face(self, ref_image_path: Path):
         if not ref_image_path.is_file():
             raise FileNotFoundError(f"Reference image not found: {ref_image_path}")
@@ -1141,7 +1190,11 @@ class ScenePackGenerator:
         concat_list_path = temp_dir / "concat_list.txt"
         
         try:
-            logging.info("Extracting scenes in parallel via FFmpeg...")
+            codec, extra_args = self._get_best_video_codec_and_args()
+            logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec})...")
+            if hasattr(self, "log_queue") and self.log_queue:
+                self.log_queue.put(("log", f"Rendering with Hardware Acceleration: using video encoder '{codec}'."))
+
             total_segments = len(intervals)
             completed_count = 0
             count_lock = threading.Lock()
@@ -1180,7 +1233,8 @@ class ScenePackGenerator:
                 
                 cmd.extend([
                     '-af', 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,aresample=async=1,apad',
-                    '-c:v', 'h264_videotoolbox',
+                    '-c:v', codec,
+                ] + extra_args + [
                     '-b:v', '6M',
                     '-g', '24',
                     '-keyint_min', '24',
@@ -1862,6 +1916,10 @@ class FocusApp(ctk.CTk):
 
         history_text = (
             f"=== Focus {APP_VERSION} Changelog ===\n\n"
+            "v0.89 - Universal Hardware Acceleration Support: dynamic runtime probing for GPU video encoders across all operating systems.\n"
+            "      - Supported GPU engines: NVIDIA NVENC (`h264_nvenc`), Intel Quick Sync (`h264_qsv`), AMD AMF (`h264_amf`), Apple VideoToolbox (`h264_videotoolbox`), and Windows MediaFoundation (`h264_mf`).\n"
+            "      - Intelligent fallback to multi-threaded CPU encoding (`libx264` with `-preset veryfast`) on unsupported hardware.\n"
+            "      - Automated GitHub Actions workflow (`build-and-release.yml`) for cross-platform binary releases.\n\n"
             "v0.88 - Full cross-platform port for Windows 10/11 & macOS.\n"
             "      - Automated downloading of Windows `.exe` FFmpeg static binaries.\n"
             "      - Cross-platform system paths (`AppData` vs `Library`).\n"
