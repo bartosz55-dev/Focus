@@ -6,6 +6,11 @@ import tempfile
 from pathlib import Path
 from typing import List, Tuple, Any, Optional
 
+# macOS specific GUI fixes to prevent Cocoa/Qt/OpenCV collisions and window hiding
+if sys.platform == "darwin":
+    os.environ["QT_MAC_WANTS_LAYER"] = "1"
+    os.environ["OPENCV_UI_BACKEND"] = "none"
+
 import cv2
 import numpy as np
 from PIL import Image
@@ -20,9 +25,9 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy
 )
 
-# Import shared backend engine and helpers from scenepack_generator_gui
-import scenepack_generator_gui as sg_engine
-from scenepack_generator_gui import (
+# Import shared backend engine and helpers from scenepack_generator_backend
+import scenepack_generator_backend as sg_engine
+from scenepack_generator_backend import (
     ScenePackGenerator, get_translation, TRANSLATIONS, canonicalize_mode,
     make_square_crop, extract_anime_face_features, is_anime_feature_match, APP_VERSION
 )
@@ -1227,8 +1232,21 @@ class FocusApp(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    if sys.platform == "darwin":
+        app.setQuitOnLastWindowClosed(True)
     window = FocusApp()
     window.show()
+    window.raise_()
+    window.activateWindow()
+    if sys.platform == "darwin":
+        # On macOS Cocoa, calling activateWindow() before app.exec() starts the event loop can be ignored.
+        # Single-shot timers inside the event loop force Cocoa to bring the window to front and give it key status.
+        def _force_macos_focus():
+            window.show()
+            window.raise_()
+            window.activateWindow()
+        QTimer.singleShot(100, _force_macos_focus)
+        QTimer.singleShot(500, _force_macos_focus)
     sys.exit(app.exec())
 
 if __name__ == "__main__":
