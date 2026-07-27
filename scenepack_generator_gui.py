@@ -605,6 +605,11 @@ class FocusApp(ctk.CTk if ctk else object):
 
         history_text = (
             f"=== Focus {APP_VERSION} Release Notes ===\n\n"
+            "v1.0.5 (Changelog & Documentation Synchronization):\n"
+            "• Synchronized complete release history across all GUI interfaces and updated versioning to v1.0.5.\n\n"
+            "v1.0.4 (OS Abstraction Decoupling):\n"
+            "• Decoupled Windows/macOS platform logic into clean backend module (scenepack_generator_backend.py).\n"
+            "• Fixed Cocoa GUI activation and app bundling on macOS.\n\n"
             "v1.0.3 (Cross-Platform Stability & Hygiene Update):\n"
             "• Comprehensive Windows & macOS cross-platform fixes and process management.\n"
             "• Elimination of console popups via subprocess CREATE_NO_WINDOW injection.\n"
