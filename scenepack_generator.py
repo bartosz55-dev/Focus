@@ -14,6 +14,18 @@ from typing import List, Tuple
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0) if platform.system() == "Windows" else 0
+
+
+def write_concat_list(chunk_paths: List[Path], concat_list_path: Path):
+    """Writes a UTF-8 encoded FFmpeg concat demuxer list with normalized forward slashes."""
+    with open(concat_list_path, "w", encoding="utf-8") as f:
+        for chunk_path in chunk_paths:
+            if chunk_path:
+                safe_name = str(chunk_path.name).replace('\\', '/').replace("'", "'\\''")
+                f.write(f"file '{safe_name}'\n")
+
+
 class ScenePackGenerator:
     """
     A backend service for generating video scenepacks based on facial recognition.
@@ -72,7 +84,7 @@ class ScenePackGenerator:
                     "-f", "lavfi", "-i", "nullsrc=s=320x240:d=0.05",
                     "-c:v", codec
                 ] + args + ["-f", "null", "-"]
-                res = subprocess.run(cmd, capture_output=True, timeout=5)
+                res = subprocess.run(cmd, capture_output=True, timeout=5, creationflags=CREATE_NO_WINDOW)
                 if res.returncode == 0:
                     self._cached_best_vcodec = (codec, args)
                     logging.info(f"Hardware acceleration enabled: selected GPU video encoder '{codec}'")
@@ -103,7 +115,7 @@ class ScenePackGenerator:
             'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
             '-of', 'default=noprint_wrappers=1:nokey=1', str(video_path)
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
         try:
             val = float(result.stdout.strip())
             if val > 0:
@@ -264,45 +276,42 @@ class ScenePackGenerator:
         try:
             codec, extra_args = self.get_best_video_codec_and_args()
             logging.info(f"Extracting scenes via FFmpeg (codec: {codec})...")
-            chunk_files = []
+            valid_chunks = []
+            for i, (start, end) in enumerate(intervals):
+                chunk_path = temp_dir / f"chunk_{i:04d}{video_path.suffix}"
+                duration = end - start
+                
+                cmd = [
+                    'ffmpeg', '-y', 
+                    '-hide_banner', '-loglevel', 'error',
+                    '-ss', str(start), 
+                    '-accurate_seek',
+                    '-i', str(video_path), 
+                    '-t', str(duration), 
+                    '-vf', 'setpts=PTS-STARTPTS,fps=24',
+                    '-af', 'asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0',
+                    '-c:v', codec,
+                ] + extra_args + [
+                    '-b:v', '4M',
+                    '-g', '24',
+                    '-bf', '0',
+                    '-c:a', 'aac',
+                    '-b:a', '128k',
+                    '-ar', '48000',
+                    '-ac', '2',
+                    '-avoid_negative_ts', 'make_zero',
+                    '-max_muxing_queue_size', '1024',
+                    '-shortest',
+                    str(chunk_path)
+                ]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
+                if result.returncode != 0:
+                    logging.error(f"FFmpeg slice failed: {result.stderr}")
+                    continue
+                valid_chunks.append(chunk_path)
             
-            with open(concat_list_path, "w") as f:
-                for i, (start, end) in enumerate(intervals):
-                    chunk_path = temp_dir / f"chunk_{i:04d}{video_path.suffix}"
-                    chunk_files.append(chunk_path)
-                    duration = end - start
-                    
-                    cmd = [
-                        'ffmpeg', '-y', 
-                        '-hide_banner', '-loglevel', 'error',
-                        '-ss', str(start), 
-                        '-accurate_seek',
-                        '-i', str(video_path), 
-                        '-t', str(duration), 
-                        '-vf', 'setpts=PTS-STARTPTS,fps=24',
-                        '-af', 'asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0',
-                        '-c:v', codec,
-                    ] + extra_args + [
-                        '-b:v', '4M',
-                        '-g', '24',
-                        '-bf', '0',
-                        '-c:a', 'aac',
-                        '-b:a', '128k',
-                        '-ar', '48000',
-                        '-ac', '2',
-                        '-avoid_negative_ts', 'make_zero',
-                        '-max_muxing_queue_size', '1024',
-                        '-shortest',
-                        str(chunk_path)
-                    ]
-                    
-                    result = subprocess.run(cmd, capture_output=True, text=True)
-                    if result.returncode != 0:
-                        logging.error(f"FFmpeg slice failed: {result.stderr}")
-                        continue
-                    
-                    safe_name = chunk_path.name.replace("'", "'\\''")
-                    f.write(f"file '{safe_name}'\n")
+            write_concat_list(valid_chunks, concat_list_path)
 
             logging.info("Concatenating extracted scenes...")
             concat_cmd = [
@@ -317,7 +326,7 @@ class ScenePackGenerator:
                 str(output_path)
             ]
             
-            concat_result = subprocess.run(concat_cmd, cwd=temp_dir, capture_output=True, text=True)
+            concat_result = subprocess.run(concat_cmd, cwd=temp_dir, capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
             if concat_result.returncode != 0:
                 raise RuntimeError(f"FFmpeg concat failed: {concat_result.stderr}")
                 

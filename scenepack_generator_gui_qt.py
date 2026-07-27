@@ -887,11 +887,13 @@ class FocusApp(QMainWindow):
         if self.video_path_str and os.path.isfile(self.video_path_str):
             try:
                 cap = cv2.VideoCapture(self.video_path_str)
-                if cap.isOpened():
-                    fps_val = cap.get(cv2.CAP_PROP_FPS)
-                    if fps_val > 0:
-                        video_fps = fps_val
-                cap.release()
+                try:
+                    if cap.isOpened():
+                        fps_val = cap.get(cv2.CAP_PROP_FPS)
+                        if fps_val > 0:
+                            video_fps = fps_val
+                finally:
+                    cap.release()
             except Exception:
                 pass
 
@@ -1213,8 +1215,12 @@ class FocusApp(QMainWindow):
             self.gallery_worker.cancel()
             self.gallery_worker.wait(1000)
         if self.scan_worker and self.scan_worker.isRunning():
+            if hasattr(self.scan_worker, 'cancel'):
+                self.scan_worker.cancel()
             self.scan_worker.terminate()
         if self.render_worker and self.render_worker.isRunning():
+            if hasattr(self.render_worker, 'cancel'):
+                self.render_worker.cancel()
             self.render_worker.terminate()
         event.accept()
 

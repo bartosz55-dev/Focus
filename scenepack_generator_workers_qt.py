@@ -100,6 +100,12 @@ class ScanWorker(QThread):
         self.mode = mode
         self.queue_proxy = queue_proxy
         self.generator_instance = None
+        self.is_cancelled = False
+
+    def cancel(self):
+        self.is_cancelled = True
+        if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'terminate_all_subprocesses'):
+            self.generator_instance.terminate_all_subprocesses()
 
     def run(self):
         try:
@@ -116,17 +122,19 @@ class ScanWorker(QThread):
             
             thumbnails = []
             cap = cv2.VideoCapture(self.video_path)
-            for start, end, avg_x in scanned_intervals:
-                cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
-                ret, frame = cap.read()
-                if ret:
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    img = Image.fromarray(frame_rgb)
-                    img.thumbnail((160, 90), Image.Resampling.LANCZOS)
-                    thumbnails.append(img)
-                else:
-                    thumbnails.append(None)
-            cap.release()
+            try:
+                for start, end, avg_x in scanned_intervals:
+                    cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
+                    ret, frame = cap.read()
+                    if ret:
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        img = Image.fromarray(frame_rgb)
+                        img.thumbnail((160, 90), Image.Resampling.LANCZOS)
+                        thumbnails.append(img)
+                    else:
+                        thumbnails.append(None)
+            finally:
+                cap.release()
             
             self.queue_proxy.put(("progress", 1.0, "Scan Complete"))
             self.queue_proxy.put(("show_review_checklist", (scanned_intervals, thumbnails)))
@@ -147,6 +155,10 @@ class RenderWorker(QThread):
         self.output_path = output_path
         self.aspect_ratio = aspect_ratio
         self.queue_proxy = queue_proxy
+
+    def cancel(self):
+        if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'terminate_all_subprocesses'):
+            self.generator_instance.terminate_all_subprocesses()
 
     def run(self):
         try:
@@ -173,6 +185,8 @@ class GalleryScanWorker(QThread):
 
     def cancel(self):
         self.is_cancelled = True
+        if hasattr(self, 'sg_engine') and self.sg_engine and hasattr(self.sg_engine, 'terminate_all_subprocesses'):
+            self.sg_engine.terminate_all_subprocesses()
 
     def _download_anime_cascade(self):
         if self.anime_cascade_path.exists() and self.anime_cascade_path.stat().st_size > 0:

@@ -35,7 +35,18 @@ import python_speech_features
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.0.2"
+APP_VERSION = "v1.0.3"
+
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0) if platform.system() == "Windows" else 0
+
+
+def write_concat_list(chunk_paths: List[Path], concat_list_path: Path):
+    """Writes a UTF-8 encoded FFmpeg concat demuxer list with normalized forward slashes."""
+    with open(concat_list_path, "w", encoding="utf-8") as f:
+        for chunk_path in chunk_paths:
+            if chunk_path:
+                safe_name = str(chunk_path.name).replace('\\', '/').replace("'", "'\\''")
+                f.write(f"file '{safe_name}'\n")
 
 THEME_COLORS = {
     "red": "#C52233",
@@ -772,6 +783,46 @@ class ScenePackGenerator:
         exe_suffix = ".exe" if platform.system() == "Windows" else ""
         self.ffmpeg_path = self.bin_dir / f"ffmpeg{exe_suffix}"
         self.ffprobe_path = self.bin_dir / f"ffprobe{exe_suffix}"
+        self._active_subprocesses = set()
+        self._subproc_lock = threading.Lock()
+
+    def register_subprocess(self, proc: subprocess.Popen):
+        with self._subproc_lock:
+            self._active_subprocesses.add(proc)
+
+    def unregister_subprocess(self, proc: subprocess.Popen):
+        with self._subproc_lock:
+            self._active_subprocesses.discard(proc)
+
+    def terminate_all_subprocesses(self):
+        with self._subproc_lock:
+            procs = list(self._active_subprocesses)
+            self._active_subprocesses.clear()
+        for proc in procs:
+            try:
+                proc.terminate()
+                proc.wait(timeout=2)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+
+    def run_subprocess(self, cmd, **kwargs):
+        if "creationflags" not in kwargs:
+            kwargs["creationflags"] = CREATE_NO_WINDOW
+        if kwargs.pop("capture_output", False):
+            kwargs["stdout"] = subprocess.PIPE
+            kwargs["stderr"] = subprocess.PIPE
+        timeout = kwargs.pop("timeout", None)
+        proc = subprocess.Popen(cmd, **kwargs)
+        self.register_subprocess(proc)
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+            retcode = proc.poll()
+            return subprocess.CompletedProcess(cmd, retcode, stdout, stderr)
+        finally:
+            self.unregister_subprocess(proc)
 
     def _check_and_download_ffmpeg(self):
         if self.ffmpeg_path.exists() and self.ffprobe_path.exists():
@@ -902,7 +953,7 @@ class ScenePackGenerator:
                     "-f", "lavfi", "-i", "nullsrc=s=320x240:d=0.05",
                     "-c:v", codec
                 ] + args + ["-f", "null", "-"]
-                res = subprocess.run(cmd, capture_output=True, timeout=5)
+                res = self.run_subprocess(cmd, capture_output=True, timeout=5)
                 if res.returncode == 0:
                     self._cached_best_vcodec = (codec, args)
                     logging.info(f"Hardware acceleration enabled: selected GPU video encoder '{codec}'")
@@ -1067,7 +1118,7 @@ class ScenePackGenerator:
                 '-af', f'silencedetect=noise=-30dB:d={d_sec}',
                 '-f', 'null', '-'
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = self.run_subprocess(cmd, capture_output=True, text=True)
             output = result.stderr
             import re
             starts = re.findall(r'silence_start:\s*([\d\.]+)', output)
@@ -1095,7 +1146,7 @@ class ScenePackGenerator:
                 "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
                 temp_wav_path
             ]
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.run_subprocess(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
             if not os.path.exists(temp_wav_path):
                 return None
@@ -1144,36 +1195,38 @@ class ScenePackGenerator:
         import numpy as np
         
         cap = cv2.VideoCapture(str(video_path))
-        fps = cap.get(cv2.CAP_PROP_FPS) or 24
-        
-        cap.set(cv2.CAP_PROP_POS_MSEC, max(0, timestamp) * 1000)
-        frames_to_check = max(5, int(duration_sec * fps))
-        mouth_distances = []
-        
-        for _ in range(frames_to_check):
-            ret, frame = cap.read()
-            if not ret:
-                break
-                
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            face_locations = face_recognition.face_locations(rgb_frame, model="hog")
-            if not face_locations:
-                continue
-                
-            encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+        try:
+            fps = cap.get(cv2.CAP_PROP_FPS) or 24
             
-            for loc, enc in zip(face_locations, encodings):
-                match = face_recognition.compare_faces([target_encoding], enc, tolerance=0.5)[0]
-                if match:
-                    landmarks = face_recognition.face_landmarks(rgb_frame, [loc])
-                    if landmarks and 'top_lip' in landmarks[0] and 'bottom_lip' in landmarks[0]:
-                        top_lip = landmarks[0]['top_lip']
-                        bottom_lip = landmarks[0]['bottom_lip']
-                        top_y = sum([p[1] for p in top_lip]) / len(top_lip)
-                        bottom_y = sum([p[1] for p in bottom_lip]) / len(bottom_lip)
-                        mouth_distances.append(abs(bottom_y - top_y))
+            cap.set(cv2.CAP_PROP_POS_MSEC, max(0, timestamp) * 1000)
+            frames_to_check = max(5, int(duration_sec * fps))
+            mouth_distances = []
+            
+            for _ in range(frames_to_check):
+                ret, frame = cap.read()
+                if not ret:
                     break
-        cap.release()
+                    
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+                if not face_locations:
+                    continue
+                    
+                encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                
+                for loc, enc in zip(face_locations, encodings):
+                    match = face_recognition.compare_faces([target_encoding], enc, tolerance=0.5)[0]
+                    if match:
+                        landmarks = face_recognition.face_landmarks(rgb_frame, [loc])
+                        if landmarks and 'top_lip' in landmarks[0] and 'bottom_lip' in landmarks[0]:
+                            top_lip = landmarks[0]['top_lip']
+                            bottom_lip = landmarks[0]['bottom_lip']
+                            top_y = sum([p[1] for p in top_lip]) / len(top_lip)
+                            bottom_y = sum([p[1] for p in bottom_lip]) / len(bottom_lip)
+                            mouth_distances.append(abs(bottom_y - top_y))
+                        break
+        finally:
+            cap.release()
         
         if len(mouth_distances) > 2:
             variance = np.var(mouth_distances)
@@ -1370,7 +1423,7 @@ class ScenePackGenerator:
                     str(chunk_path)
                 ])
 
-                result = subprocess.run(cmd, capture_output=True, text=True)
+                result = self.run_subprocess(cmd, capture_output=True, text=True)
                 if result.returncode != 0:
                     logging.error(f"FFmpeg slice failed for segment {i+1}: {result.stderr}")
                     return i, None
@@ -1389,11 +1442,8 @@ class ScenePackGenerator:
             # Sort by original chronological order
             results.sort(key=lambda x: x[0])
 
-            with open(concat_list_path, "w") as f:
-                for i, chunk_path in results:
-                    if chunk_path and chunk_path.exists():
-                        safe_name = chunk_path.name.replace("'", "'\\''")
-                        f.write(f"file '{safe_name}'\n")
+            chunk_paths = [cp for _, cp in results if cp and cp.exists()]
+            write_concat_list(chunk_paths, concat_list_path)
 
             logging.info("Concatenating extracted scenes...")
             concat_cmd = [
@@ -1409,7 +1459,7 @@ class ScenePackGenerator:
                 str(output_path)
             ]
             
-            concat_result = subprocess.run(concat_cmd, cwd=temp_dir, capture_output=True, text=True)
+            concat_result = self.run_subprocess(concat_cmd, cwd=temp_dir, capture_output=True, text=True)
             if concat_result.returncode != 0:
                 raise RuntimeError(f"FFmpeg concat failed: {concat_result.stderr}")
                 
@@ -1428,7 +1478,7 @@ class ScenePackGenerator:
                 '-vf', f"select='gt(scene,{threshold})',showinfo",
                 '-f', 'null', '-'
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = self.run_subprocess(cmd, capture_output=True, text=True)
             output = result.stderr
             import re
             # Extract pts_time from showinfo filter output
@@ -2040,6 +2090,12 @@ class FocusApp(ctk.CTk if ctk else object):
 
         history_text = (
             f"=== Focus {APP_VERSION} Release Notes ===\n\n"
+            "v1.0.3 (Cross-Platform Stability & Hygiene Update):\n"
+            "• Comprehensive Windows & macOS cross-platform fixes and process management.\n"
+            "• Elimination of console popups via subprocess CREATE_NO_WINDOW injection.\n"
+            "• Complete VideoCapture handle protection (try-finally) preventing file locking.\n"
+            "• UTF-8 concat list formatting with forward-slash normalization for FFmpeg.\n"
+            "• Immediate background process termination upon scan/render cancellation.\n\n"
             "v1.0.2 (Production Release):\n"
             "• Complete migration to PySide6 (Qt 6) with Modern Dark Studio UI.\n"
             "• Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).\n"
@@ -2484,6 +2540,8 @@ class FocusApp(ctk.CTk if ctk else object):
         self._cancel_gallery_scan = True
         self.lbl_gallery_status.configure(text="Cancelling scan...", text_color="orange")
         self.btn_cancel_gallery.configure(state="disabled")
+        if hasattr(self, 'generator') and self.generator:
+            self.generator.terminate_all_subprocesses()
 
     def _async_scan_video(self, video_path_str: str, mode_raw: str):
         """Asynchronously scans raw video in a background worker thread using fast 2.5s frame seeking & 480p downscaling."""
