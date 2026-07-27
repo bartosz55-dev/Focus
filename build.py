@@ -109,6 +109,35 @@ dist_app = Path("dist/Focus.app")
 dist_folder = Path("dist/Focus")
 target = dist_app if dist_app.exists() else (dist_folder if dist_folder.exists() else None)
 
+# Generate double-clickable zero-terminal launchers in dist/
+dist_dir = Path("dist")
+if dist_dir.exists():
+    # macOS Launcher
+    mac_launcher = dist_dir / "Uruchom_Focus.command"
+    mac_launcher_content = (
+        "#!/usr/bin/env bash\n"
+        "DIR=\"$( cd \"$( dirname \"${BASH_SOURCE[0]}\" )\" && pwd )\"\n"
+        "# Automatically strip macOS Gatekeeper quarantine attribute if present\n"
+        "xattr -cr \"$DIR/Focus.app\" 2>/dev/null || true\n"
+        "open \"$DIR/Focus.app\"\n"
+    )
+    with open(mac_launcher, "w") as f:
+        f.write(mac_launcher_content)
+    try:
+        os.chmod(mac_launcher, 0o755)
+    except Exception:
+        pass
+    print(f"Generated macOS launcher: {mac_launcher}")
+
+    # Windows Launcher
+    win_dist_folder = dist_dir / "Focus"
+    if win_dist_folder.exists():
+        win_launcher = win_dist_folder / "Uruchom_Focus.bat"
+        win_launcher_content = "@echo off\nstart \"\" \"%~dp0Focus.exe\"\n"
+        with open(win_launcher, "w") as f:
+            f.write(win_launcher_content)
+        print(f"Generated Windows launcher: {win_launcher}")
+
 if target:
     total_bytes = 0
     if target.is_dir():
