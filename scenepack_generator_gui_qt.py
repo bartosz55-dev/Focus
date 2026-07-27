@@ -854,7 +854,19 @@ class FocusApp(QMainWindow):
 
     def open_changelog(self):
         msg = (
-            f"Focus Release Notes ({APP_VERSION} - Production Release):\n\n"
+            f"=== Focus {APP_VERSION} Release Notes ===\n\n"
+            "v1.0.5 (Changelog & Documentation Synchronization):\n"
+            "• Synchronized complete release history across all GUI interfaces and updated versioning to v1.0.5.\n\n"
+            "v1.0.4 (OS Abstraction Decoupling):\n"
+            "• Decoupled Windows/macOS platform logic into clean backend module (scenepack_generator_backend.py).\n"
+            "• Fixed Cocoa GUI activation and app bundling on macOS.\n\n"
+            "v1.0.3 (Cross-Platform Stability & Hygiene Update):\n"
+            "• Comprehensive Windows & macOS cross-platform fixes and process management.\n"
+            "• Elimination of console popups via subprocess CREATE_NO_WINDOW injection.\n"
+            "• Complete VideoCapture handle protection (try-finally) preventing file locking.\n"
+            "• UTF-8 concat list formatting with forward-slash normalization for FFmpeg.\n"
+            "• Immediate background process termination upon scan/render cancellation.\n\n"
+            "v1.0.2 (Production Release):\n"
             "• Complete migration to PySide6 (Qt 6) with Modern Dark Studio UI.\n"
             "• Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).\n"
             "• Refined UI typography, professional labels, and polished layout.\n"
