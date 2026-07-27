@@ -16,11 +16,18 @@ import gzip
 import multiprocessing
 from typing import List, Tuple
 import urllib.request
-import tkinter as tk
+try:
+    import tkinter as tk
+except ImportError:
+    tk = None
 import json
 import numpy as np
 import concurrent.futures
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw
+try:
+    from PIL import ImageTk
+except ImportError:
+    ImageTk = None
 import wave
 import python_speech_features
 
@@ -637,8 +644,13 @@ class ToolTip:
             self.tooltip_window.destroy()
             self.tooltip_window = None
 
-import customtkinter as ctk
-from tkinter import filedialog, messagebox
+try:
+    import customtkinter as ctk
+    from tkinter import filedialog, messagebox
+except ImportError:
+    ctk = None
+    filedialog = None
+    messagebox = None
 
 # Custom Logging Handler to forward logs to our GUI Queue
 class TextboxLogHandler(logging.Handler):
@@ -1456,7 +1468,7 @@ class ScenePackGenerator:
         return intervals
 
 
-class FocusApp(ctk.CTk):
+class FocusApp(ctk.CTk if ctk else object):
     def __init__(self):
         super().__init__(className="Focus")
         
