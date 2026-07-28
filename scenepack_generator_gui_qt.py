@@ -17,13 +17,8 @@ from PySide6.QtGui import QFont, QPixmap, QImage, QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QCheckBox, QSlider, QProgressBar, QComboBox,
-<<<<<<< HEAD
-    QScrollArea, QFrame, QMessageBox, QFileDialog, QTextEdit,
-    QStackedWidget, QAbstractItemView,
-=======
     QScrollArea, QTabWidget, QFrame, QMessageBox, QFileDialog, QTextEdit,
     QSplitter, QStackedWidget, QButtonGroup, QRadioButton, QAbstractItemView,
->>>>>>> origin/main
     QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QDialog
 )
 
@@ -854,65 +849,7 @@ class FocusApp(QMainWindow):
         QMessageBox.information(self, get_translation(self.current_lang, "tutorial_title"), get_translation(self.current_lang, "tutorial_body"))
 
     def open_changelog(self):
-<<<<<<< HEAD
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f"{get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})")
-        dialog.resize(640, 500)
-        dialog.setMinimumSize(480, 360)
 
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
-
-        header_title = QLabel(f"📜 {get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})", dialog)
-        header_font = QFont()
-        header_font.setPointSize(15)
-        header_font.setBold(True)
-        header_title.setFont(header_font)
-        layout.addWidget(header_title)
-
-        textbox = QTextEdit(dialog)
-        textbox.setReadOnly(True)
-        textbox.setStyleSheet("""
-            QTextEdit {
-                background-color: #14161B;
-                color: #E0E0E0;
-                border: 1px solid #2C2F36;
-                border-radius: 8px;
-                padding: 12px;
-                font-size: 13px;
-                line-height: 1.4;
-            }
-            QScrollBar:vertical {
-                background: #14161B;
-                width: 10px;
-                margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background: #3A3D45;
-                min-height: 20px;
-                border-radius: 5px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #50545F;
-            }
-        """)
-
-        history_text = sg_engine.get_changelog_text(self.current_lang)
-        textbox.setText(history_text)
-        layout.addWidget(textbox)
-
-        btn_close = QPushButton(get_translation(self.current_lang, "changelog_close"), dialog)
-        btn_close.setFixedWidth(120)
-        btn_close.clicked.connect(dialog.accept)
-
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
-        btn_layout.addWidget(btn_close)
-        layout.addLayout(btn_layout)
-
-        dialog.exec()
-=======
         dlg = QDialog(self)
         dlg.setWindowTitle(f"{get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})")
         dlg.resize(750, 550)
@@ -920,7 +857,7 @@ class FocusApp(QMainWindow):
         layout = QVBoxLayout(dlg)
 
         title_lbl = QLabel(f"Focus {APP_VERSION} Release Notes")
-        title_lbl.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        title_lbl.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         title_lbl.setStyleSheet("color: #FFFFFF; margin-bottom: 10px;")
         layout.addWidget(title_lbl)
 
@@ -1052,7 +989,7 @@ class FocusApp(QMainWindow):
         layout.addWidget(btn_close, 0, Qt.AlignCenter)
 
         dlg.exec()
->>>>>>> origin/main
+
 
     def select_video(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Input Video", "", "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)")

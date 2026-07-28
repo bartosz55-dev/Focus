@@ -28,11 +28,7 @@ import re
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-<<<<<<< HEAD
-APP_VERSION = "v1.0.6"
-=======
-APP_VERSION = "v1.0.7"
->>>>>>> origin/main
+APP_VERSION = "v1.0.8"
 
 
 class PlatformManager:
