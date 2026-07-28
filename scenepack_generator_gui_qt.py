@@ -1312,7 +1312,7 @@ class FocusApp(QMainWindow):
 
         self.review_card.setVisible(True)
         self.btn_generate.setEnabled(True)
-        self.btn_generate.setText(get_translation(self.current_lang, "btn_generate"))
+        self.btn_generate.setText(get_translation(self.current_lang, "generate"))
         self.lbl_eta.setText(f"Scan complete! Review {len(intervals)} clip(s) below and click Render.")
 
     @Slot(str)
@@ -1328,7 +1328,7 @@ class FocusApp(QMainWindow):
     @Slot(str)
     def _on_error_msg(self, err: str):
         self.btn_generate.setEnabled(True)
-        self.btn_generate.setText(get_translation(self.current_lang, "btn_generate"))
+        self.btn_generate.setText(get_translation(self.current_lang, "generate"))
         self.btn_render.setEnabled(True)
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
         QMessageBox.critical(self, "Execution Error", f"An error occurred:\n{err}")
@@ -1336,7 +1336,7 @@ class FocusApp(QMainWindow):
     @Slot()
     def _on_reset_buttons(self):
         self.btn_generate.setEnabled(True)
-        self.btn_generate.setText(get_translation(self.current_lang, "btn_generate"))
+        self.btn_generate.setText(get_translation(self.current_lang, "generate"))
         self.btn_render.setEnabled(True)
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
 

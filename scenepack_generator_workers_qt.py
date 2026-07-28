@@ -233,7 +233,7 @@ class GalleryScanWorker(QThread):
                 if mode == "Anime":
                     self.queue_proxy.put(("log", "Downloading/preparing anime face cascade classifier..."))
                     self._download_anime_cascade()
-                    cascade = cv2.CascadeClassifier(str(self.anime_cascade_path))
+                    cascade = self.engine_module.get_cascade_classifier(str(self.anime_cascade_path))
                     if cascade.empty():
                         err_msg = "Failed to load anime cascade classifier XML model."
                         logging.error(err_msg)
@@ -242,7 +242,7 @@ class GalleryScanWorker(QThread):
                         return
                 elif mode == "Real Faces":
                     profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')
-                    profile_cascade = cv2.CascadeClassifier(profile_cascade_path)
+                    profile_cascade = self.engine_module.get_cascade_classifier(profile_cascade_path)
 
                 crops_dir = Path(tempfile.gettempdir()) / "focus_gallery_crops"
                 if crops_dir.exists():
