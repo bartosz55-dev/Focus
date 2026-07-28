@@ -28,7 +28,7 @@ from scenepack_generator_backend import (
     ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text, get_app_dir
 )
 from scenepack_generator_workers_qt import (
-    QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker
+    QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker
 )
 
 class ModernCard(QFrame):
@@ -69,6 +69,7 @@ class FocusApp(QMainWindow):
         self.scan_worker: Optional[ScanWorker] = None
         self.render_worker: Optional[RenderWorker] = None
         self.gallery_worker: Optional[GalleryScanWorker] = None
+        self.audio_worker: Optional[AudioTrackWorker] = None
 
         # Setup UI
         self._init_ui()
@@ -134,6 +135,15 @@ class FocusApp(QMainWindow):
         self.queue_proxy.render_complete_signal.connect(self._on_render_complete)
         self.queue_proxy.error_signal.connect(self._on_error_msg)
         self.queue_proxy.reset_btn_signal.connect(self._on_reset_buttons)
+        self.queue_proxy.audio_tracks_signal.connect(self._on_audio_tracks_loaded)
+
+    @Slot(list)
+    def _on_audio_tracks_loaded(self, tracks):
+        self.combo_audio_track.clear()
+        for stream_idx, label in tracks:
+            self.combo_audio_track.addItem(label, stream_idx)
+        if hasattr(self, 'lbl_video_path') and self.video_path_str:
+            self.lbl_video_path.setText(Path(self.video_path_str).name)
 
     def _setup_logging(self):
         handler = QtLogHandler(self.queue_proxy.log_signal)
@@ -894,16 +904,11 @@ class FocusApp(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, "Select Input Video", "", "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)")
         if path:
             self.video_path_str = path
-            self.lbl_video_path.setText(Path(path).name)
+            self.lbl_video_path.setText("Loading video information...")
             self.apply_auto_tune()
-            try:
-                gen = ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
-                tracks = gen.get_audio_tracks(Path(path))
-                self.combo_audio_track.clear()
-                for stream_idx, label in tracks:
-                    self.combo_audio_track.addItem(label, stream_idx)
-            except Exception as e:
-                logging.warning(f"Could not probe audio tracks: {e}")
+            
+            self.audio_worker = AudioTrackWorker(ScenePackGenerator, path, self.current_mode, self.queue_proxy)
+            self.audio_worker.start()
 
     def select_image(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Reference Face", "", "Image Files (*.png *.jpg *.jpeg *.webp *.bmp);;All Files (*.*)")

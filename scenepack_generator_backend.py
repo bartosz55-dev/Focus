@@ -402,15 +402,7 @@ TRANSLATIONS = {
         "th_duration": "Długość",
         "aspect_16_9": "16:9 (Oryginalne proporcje)",
         "aspect_9_16": "9:16 (Pionowy - Kadrowanie i Śledzenie Twarzy)",
-        "aspect_9_16_blur": "9:16 (Pionowy - Rozmyte Tło)"
-            "  • 9:16 Vertical (Auto-Track): Dynamicznie kadruje wideo pionowo, śledząc twarz postaci.\n"
-            "  • 9:16 Blurred Background: Umieszcza wideo 16:9 na rozmytym, pionowym tle (idealne na TikTok).\n\n"
-            "• Ustawienia i Filtry:\n"
-            "  • Prawdziwe Twarze vs Anime: Wybierz 'Prawdziwe Twarze' dla filmu lub 'Anime' dla animacji 2D.\n"
-            "  • Marginesy i Tolerancja Przerw: Dodaj sekundy przed/po scenie oraz łącz krótkie mrugnięcia.\n"
-            "  • Min. Długość Sceny: Zapobiega ucięciom i miganiu krótkich kadrów (domyślnie 1.0s).\n\n"
-            "• Generowanie: Kliknij 'Generuj Scenepack' i ciesz się idealnie przyciętymi klipami!"
-        ),
+        "aspect_9_16_blur": "9:16 (Pionowy - Rozmyte Tło)",
         "changelog_title": "Historia Projektu i Zmiany",
         "changelog_close": "Zamknij",
         "hero_title": "Focus — Inteligentny Generator Scenepacków AI",
@@ -1228,7 +1220,16 @@ class ScenePackGenerator:
             kwargs["stdout"] = subprocess.PIPE
             kwargs["stderr"] = subprocess.PIPE
         timeout = kwargs.pop("timeout", None)
-        proc = subprocess.Popen(cmd, **kwargs)
+        try:
+            proc = subprocess.Popen(cmd, **kwargs)
+        except OSError as e:
+            if hasattr(self, 'log_queue') and self.log_queue:
+                self.log_queue.put(("log", f"Failed to start subprocess: {e}"))
+            is_text = kwargs.get('text', False)
+            empty_out = "" if is_text else b""
+            err_msg = str(e) if is_text else str(e).encode('utf-8')
+            return subprocess.CompletedProcess(cmd, 1, empty_out, err_msg)
+
         self.register_subprocess(proc)
         try:
             stdout, stderr = proc.communicate(timeout=timeout)
@@ -1252,20 +1253,34 @@ class ScenePackGenerator:
 
         if PlatformManager.is_windows():
             if not self.ffmpeg_path.exists() or not self.ffprobe_path.exists():
-                self.log_queue.put(("log", "Downloading FFmpeg for Windows (this may take a minute)..."))
+                if self.log_queue:
+                    self.log_queue.put(("log", "Downloading FFmpeg for Windows (this may take a minute)..."))
                 url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
                 zip_path = self.bin_dir / "ffmpeg_win.zip"
-                urllib.request.urlretrieve(url, zip_path)
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    for file_info in zip_ref.infolist():
-                        if file_info.filename.endswith('ffmpeg.exe'):
-                            file_info.filename = 'ffmpeg.exe'
-                            zip_ref.extract(file_info, self.bin_dir)
-                        elif file_info.filename.endswith('ffprobe.exe'):
-                            file_info.filename = 'ffprobe.exe'
-                            zip_ref.extract(file_info, self.bin_dir)
-                zip_path.unlink()
-                self.log_queue.put(("log", "FFmpeg downloaded successfully."))
+                try:
+                    urllib.request.urlretrieve(url, zip_path)
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        for file_info in zip_ref.infolist():
+                            if file_info.filename.endswith('ffmpeg.exe'):
+                                extracted_path = zip_ref.extract(file_info, self.bin_dir)
+                                shutil.move(extracted_path, self.ffmpeg_path)
+                            elif file_info.filename.endswith('ffprobe.exe'):
+                                extracted_path = zip_ref.extract(file_info, self.bin_dir)
+                                shutil.move(extracted_path, self.ffprobe_path)
+                    
+                    # Clean up the extracted folder structure if needed
+                    for p in self.bin_dir.iterdir():
+                        if p.is_dir() and "ffmpeg" in p.name.lower():
+                            shutil.rmtree(p, ignore_errors=True)
+                            
+                    if self.log_queue:
+                        self.log_queue.put(("log", "FFmpeg downloaded successfully."))
+                except Exception as e:
+                    if self.log_queue:
+                        self.log_queue.put(("log", f"Failed to download FFmpeg: {e}"))
+                finally:
+                    if zip_path.exists():
+                        zip_path.unlink()
             return
 
         if not self.ffmpeg_path.exists():
@@ -1816,19 +1831,26 @@ class ScenePackGenerator:
             batch_size = 32
             max_workers = min(12, os.cpu_count() or 4)
 
-            for i in range(0, total_targets, batch_size):
+            current_idx = 0
+            target_idx_set = set(target_indices)
+            
+            while current_idx < total_frames:
                 if getattr(self, 'is_cancelled', False):
                     logging.info("Scene extraction cancelled by user.")
                     break
 
-                batch_indices = target_indices[i:i+batch_size]
                 batch_frames = []
-
-                for target_idx in batch_indices:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, target_idx)
-                    ret, frame = cap.read()
-                    if ret and frame is not None:
-                        batch_frames.append((target_idx, frame))
+                while len(batch_frames) < batch_size and current_idx < total_frames:
+                    ret = cap.grab()
+                    if not ret:
+                        current_idx = total_frames
+                        break
+                    
+                    if current_idx in target_idx_set:
+                        ret_ret, frame = cap.retrieve()
+                        if ret_ret and frame is not None:
+                            batch_frames.append((current_idx, frame))
+                    current_idx += 1
 
                 if not batch_frames:
                     continue
@@ -1840,7 +1862,7 @@ class ScenePackGenerator:
                     if res is not None:
                         timestamps.append(res)
 
-                current_frame = batch_indices[-1]
+                current_frame = batch_frames[-1][0]
                 progress = min(1.0, current_frame / total_frames)
                 elapsed = time.time() - start_time
                 eta_seconds = (elapsed / progress) - elapsed if progress > 0 else 0
@@ -1850,7 +1872,7 @@ class ScenePackGenerator:
 
                 self.log_queue.put(("progress", progress, f"ETA: {eta_mins}m {eta_secs}s  ({int(progress*100)}%)"))
 
-                if (i // batch_size) % 5 == 0 or (i + batch_size >= total_targets):
+                if len(timestamps) % (batch_size * 2) < batch_size:
                     logging.info(f"Scanned {min(current_frame, total_frames)}/{total_frames} frames ({int(progress*100)}%)...")
 
         finally:
