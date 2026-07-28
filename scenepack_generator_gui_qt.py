@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 # Import shared backend engine and helpers from scenepack_generator_backend
 import scenepack_generator_backend as sg_engine
 from scenepack_generator_backend import (
-    ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text
+    ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text, get_app_dir
 )
 from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker
@@ -1260,11 +1260,11 @@ class FocusApp(QMainWindow):
         log_path = log_dir / "focus_debug.log"
         
         msg_box = QMessageBox(self)
-        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle("Execution Error")
         msg_box.setText(f"An error occurred during processing:\n{err}\n\nDetailed diagnostic log saved to:\n{log_path}")
-        btn_open = msg_box.addButton("Open Log Folder", QMessageBox.ActionRole)
-        msg_box.addButton(QMessageBox.Ok)
+        btn_open = msg_box.addButton("Open Log Folder", QMessageBox.ButtonRole.ActionRole)
+        msg_box.addButton(QMessageBox.StandardButton.Ok)
         msg_box.exec()
         
         if msg_box.clickedButton() == btn_open:
