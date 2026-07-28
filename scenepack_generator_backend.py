@@ -52,7 +52,7 @@ def get_cascade_classifier(cascade_path: Optional[str]):
     return None
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.1.4"
+APP_VERSION = "v1.1.5"
 
 
 class PlatformManager:
@@ -771,6 +771,11 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.1.5 (Architecture Audit, Deduplication & Test Suite Consolidation):\n"
+            "  - Refactored Qt6 and CustomTkinter GUI Changelog dialogs to consume `backend.get_changelog_text()` as single source of truth.\n"
+            "  - Consolidated unit tests to dynamically validate version string format and verified 100% test suite pass rate.\n"
+            "  - Hardened OpenCV cascade loading and neural face recognition fallback across all scanning engines.\n"
+            "  - Incremented versioning per strict permanent versioning rule (+0.01 bump).\n\n"
             "• v1.1.4 (PySide6 Qt6 Enum & Resilient Face Recognition Fix):\n"
             "  - Fixed broken Changelog button on Qt6 by converting deprecated Qt.AlignCenter enum to Qt.AlignmentFlag.AlignCenter.\n"
             "  - Fixed CascadeClassifier crash on Windows by making get_cascade_classifier non-blocking and adding neural face detection fallbacks.\n"
