@@ -849,33 +849,37 @@ class FocusApp(QMainWindow):
         QMessageBox.information(self, get_translation(self.current_lang, "tutorial_title"), get_translation(self.current_lang, "tutorial_body"))
 
     def open_changelog(self):
+        try:
+            dlg = QDialog(self)
+            dlg.setWindowTitle(f"{get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})")
+            dlg.resize(750, 550)
+            dlg.setStyleSheet("background-color: #14161B; color: #FFFFFF;")
+            layout = QVBoxLayout(dlg)
 
-        dlg = QDialog(self)
-        dlg.setWindowTitle(f"{get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})")
-        dlg.resize(750, 550)
-        dlg.setStyleSheet("background-color: #14161B; color: #FFFFFF;")
-        layout = QVBoxLayout(dlg)
+            title_lbl = QLabel(f"Focus {APP_VERSION} Release Notes")
+            title_lbl.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+            title_lbl.setStyleSheet("color: #FFFFFF; margin-bottom: 10px;")
+            layout.addWidget(title_lbl)
 
-        title_lbl = QLabel(f"Focus {APP_VERSION} Release Notes")
-        title_lbl.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        title_lbl.setStyleSheet("color: #FFFFFF; margin-bottom: 10px;")
-        layout.addWidget(title_lbl)
+            txt = QTextEdit()
+            txt.setReadOnly(True)
+            txt.setFont(QFont("Segoe UI", 10))
+            txt.setStyleSheet("background-color: #1A1D24; color: #E0E0E0; border: 1px solid #2D3139; border-radius: 8px; padding: 10px;")
 
-        txt = QTextEdit()
-        txt.setReadOnly(True)
-        txt.setFont(QFont("Segoe UI", 10))
-        txt.setStyleSheet("background-color: #1A1D24; color: #E0E0E0; border: 1px solid #2D3139; border-radius: 8px; padding: 10px;")
+            msg = get_changelog_text(self.current_lang)
+            txt.setText(msg)
+            layout.addWidget(txt)
 
-        msg = get_changelog_text(self.current_lang)
-        txt.setText(msg)
-        layout.addWidget(txt)
+            close_label = get_translation(self.current_lang, "changelog_close")
+            btn_close = QPushButton(close_label if close_label else "Close")
+            btn_close.setStyleSheet("background-color: #2D3139; color: #FFFFFF; padding: 8px 16px; border-radius: 6px; font-weight: bold;")
+            btn_close.clicked.connect(dlg.accept)
+            layout.addWidget(btn_close, 0, Qt.AlignmentFlag.AlignCenter)
 
-        btn_close = QPushButton(get_translation(self.current_lang, "close") if "close" in TRANSLATIONS.get(self.current_lang, {}) else "Close")
-        btn_close.setStyleSheet("background-color: #2D3139; color: #FFFFFF; padding: 8px 16px; border-radius: 6px; font-weight: bold;")
-        btn_close.clicked.connect(dlg.accept)
-        layout.addWidget(btn_close, 0, Qt.AlignmentFlag.AlignCenter)
-
-        dlg.exec()
+            dlg.exec()
+        except Exception as e:
+            logging.error(f"Failed to open Changelog dialog: {e}")
+            QMessageBox.information(self, "Changelog", get_changelog_text(self.current_lang))
 
 
     def select_video(self):
