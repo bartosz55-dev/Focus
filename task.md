@@ -1,8 +1,16 @@
 # Focus AI Scenepack Generator — Task Tracking & Release Status
 
-## Current Release: `v1.1.8`
+## Current Release: `v1.1.9`
 
 ### Completed Tasks & Milestones
+
+- [x] **v1.1.9 — Persistent Diagnostic Crash Logging (`focus_debug.log`) & Render Validation**
+  - [x] Implemented system-wide crash logger (`setup_crash_logger()`) creating `focus_debug.log` in app support directory.
+  - [x] Installed `sys.excepthook` and `threading.excepthook` to intercept and log uncaught exceptions across GUI and background threads.
+  - [x] Hardened `start_render()` in Qt6 and Tkinter GUIs with input video & save location validation and automatic save picker dialog.
+  - [x] Fixed keyword argument passing (`log_queue=self.queue_proxy`, `mode=self.current_mode`) during fallback `ScenePackGenerator` instantiation.
+  - [x] Updated unit test suite (`tests/test_backend_separation.py`) and verified 100% test pass rate (27/27 tests passing).
+  - [x] Tagged `v1.1.9` and pushed to GitHub triggering automated CI/CD multi-platform builds for Windows (`Focus-Windows.zip`) and macOS (`Focus-macOS.zip`).
 
 - [x] **v1.1.8 — Multi-Core Batch Frame Processing & High-Speed Seeking**
   - [x] Implemented parallel multi-core batch scanning (`ThreadPoolExecutor`) in `find_scenes()` to utilize 100% of CPU thread capacity on Windows & multi-core systems.
