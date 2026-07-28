@@ -603,13 +603,14 @@ class FocusApp(QMainWindow):
         self.lbl_review_title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         rev_layout.addWidget(self.lbl_review_title)
 
-        self.table_review = QTableWidget(0, 5)
-        self.table_review.setHorizontalHeaderLabels(["Include", "Thumbnail", "Start Time", "End Time", "Duration (s)"])
+        self.table_review = QTableWidget(0, 6)
+        self.table_review.setHorizontalHeaderLabels(["Include", "Thumbnail", "Start Time", "End Time", "Duration (s)", "Mini-Preview"])
         self.table_review.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table_review.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table_review.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.table_review.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         self.table_review.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.table_review.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeToContents)
         self.table_review.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_review.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table_review.setFixedHeight(220)
@@ -634,12 +635,24 @@ class FocusApp(QMainWindow):
 
         self.gen_content_layout.addWidget(self.review_card)
 
-        # 6. Real-time Log Textbox
+        # 6. Real-time Log Textbox & Diagnostics Bar
         log_card = ModernCard()
         log_layout = QVBoxLayout(log_card)
+        
+        log_header = QHBoxLayout()
         self.lbl_log_title = QLabel("Execution Logs & Diagnostics:")
         self.lbl_log_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        log_layout.addWidget(self.lbl_log_title)
+        log_header.addWidget(self.lbl_log_title)
+        
+        self.input_log_filter = QLineEdit()
+        self.input_log_filter.setPlaceholderText("🔍 Filter logs...")
+        self.input_log_filter.setFixedWidth(140)
+        log_header.addWidget(self.input_log_filter)
+        
+        self.btn_copy_diag = QPushButton("📋 Copy Diagnostics")
+        self.btn_copy_diag.clicked.connect(self.copy_diagnostics)
+        log_header.addWidget(self.btn_copy_diag)
+        log_layout.addLayout(log_header)
 
         self.txt_log = QTextEdit()
         self.txt_log.setReadOnly(True)
@@ -1445,6 +1458,12 @@ class FocusApp(QMainWindow):
             item_dur.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_review.setItem(idx, 4, item_dur)
 
+            # Col 5: Mini-Preview Button
+            btn_prev = QPushButton("▶️ Preview")
+            btn_prev.setFixedWidth(85)
+            btn_prev.clicked.connect(lambda chk=False, s=start, e=end: self._open_mini_preview(s, e))
+            self.table_review.setCellWidget(idx, 5, btn_prev)
+
         self.review_card.setVisible(True)
         self.btn_generate.setEnabled(True)
         self.btn_generate.setText(get_translation(self.current_lang, "generate"))
@@ -1457,6 +1476,27 @@ class FocusApp(QMainWindow):
             self.output_path_str = str(auto_out_path)
             self.lbl_output_path.setText(auto_out_path.name)
             QTimer.singleShot(800, self.start_render)
+
+    def _open_mini_preview(self, start_sec: float, end_sec: float):
+        if not self.video_path_str or not os.path.exists(self.video_path_str):
+            QMessageBox.warning(self, "No Video", "Video file unavailable for preview.")
+            return
+        dlg = MiniPreviewDialog(self, self.video_path_str, start_sec, end_sec)
+        dlg.exec()
+
+    def copy_diagnostics(self):
+        diag_text = (
+            f"=== FOCUS DIAGNOSTIC REPORT ({APP_VERSION}) ===\n"
+            f"OS: {sys.platform} ({platform.platform()})\n"
+            f"Python: {sys.version}\n"
+            f"CPU Cores: {os.cpu_count()}\n"
+            f"Log Console Output:\n"
+            f"{self.txt_log.toPlainText()}\n"
+        )
+        clipboard = QApplication.clipboard()
+        clipboard.setText(diag_text)
+        if hasattr(self, 'toast'):
+            self.toast.show_toast("Diagnostics copied to clipboard!", "📋")
 
     @Slot(str)
     def _on_render_complete(self, out_path: str):
