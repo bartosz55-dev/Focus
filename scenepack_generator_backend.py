@@ -28,7 +28,7 @@ import re
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.0.8"
+APP_VERSION = "v1.0.9"
 
 
 class PlatformManager:
@@ -1189,7 +1189,10 @@ class ScenePackGenerator:
             encodings = face_recognition.face_encodings(image)
 
             if not encodings:
-                raise ValueError(f"No face found in reference image: {ref_image_path.name}")
+                raise ValueError(
+                    f"Nie znaleziono ludzkiej twarzy w zdjęciu referencyjnym '{ref_image_path.name}'. "
+                    "Jeśli wybrałeś postać z Anime (np. Marin Kitagawa), przełącz tryb detekcji na 'Anime' w menu aplikacji!"
+                )
 
             return encodings[0]
         else:
