@@ -12,14 +12,14 @@ if sys.platform == "darwin":
 
 import cv2
 
-from PySide6.QtCore import Qt, QUrl, QTimer, Slot
-from PySide6.QtGui import QFont, QPixmap, QImage, QDesktopServices
+from PySide6.QtCore import Qt, QUrl, QTimer, Slot, QRectF
+from PySide6.QtGui import QFont, QPixmap, QImage, QDesktopServices, QPainter, QColor, QPen
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QCheckBox, QSlider, QProgressBar, QComboBox,
     QScrollArea, QTabWidget, QFrame, QMessageBox, QFileDialog, QTextEdit,
     QSplitter, QStackedWidget, QButtonGroup, QRadioButton, QAbstractItemView,
-    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QDialog
+    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QDialog, QSplashScreen
 )
 
 # Import shared backend engine and helpers from scenepack_generator_backend
@@ -1356,25 +1356,74 @@ class FocusApp(QMainWindow):
             self.render_worker.terminate()
         event.accept()
 
+class FocusSplashScreen(QSplashScreen):
+    """
+    Modern Dark Studio Splash Screen.
+    Instantly gives visual feedback while heavy AI & PySide6 components load.
+    """
+    def __init__(self, pixmap_size=(520, 280)):
+        pix = QPixmap(pixmap_size[0], pixmap_size[1])
+        pix.fill(QColor("#14161B"))
+
+        painter = QPainter(pix)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        rect = QRectF(0, 0, pixmap_size[0], pixmap_size[1])
+        painter.setPen(QPen(QColor("#2C2F36"), 2))
+        painter.setBrush(QColor("#14161B"))
+        painter.drawRoundedRect(rect.adjusted(1, 1, -1, -1), 16, 16)
+
+        font_title = QFont("Segoe UI", 32, QFont.Weight.Bold)
+        painter.setFont(font_title)
+        painter.setPen(QColor("#FFFFFF"))
+        painter.drawText(QRectF(35, 45, 450, 55), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, "Focus")
+
+        font_sub = QFont("Segoe UI", 12)
+        painter.setFont(font_sub)
+        painter.setPen(QColor("#8A8F9E"))
+        painter.drawText(QRectF(35, 105, 450, 25), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, f"AI Scenepack Generator ({APP_VERSION})")
+
+        painter.setBrush(QColor("#8B5CF6"))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(QRectF(35, 145, 160, 5), 3, 3)
+
+        painter.end()
+
+        super().__init__(pix, Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint)
+
+
 def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     if sys.platform == "darwin":
         app.setQuitOnLastWindowClosed(True)
+
+    # 1. Instant Startup Splash Screen
+    splash = FocusSplashScreen()
+    splash.show()
+    splash.showMessage("   🚀 Initializing Focus AI Scenepack Studio...", Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft, QColor("#9CA3AF"))
+    app.processEvents()
+
+    # 2. Load Main Window
     window = FocusApp()
+    splash.showMessage("   ✨ Loading AI Vision Models & Hardware Encoders...", Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft, QColor("#9CA3AF"))
+    app.processEvents()
+
     window.show()
     window.raise_()
     window.activateWindow()
+
     if sys.platform == "darwin":
-        # On macOS Cocoa, calling activateWindow() before app.exec() starts the event loop can be ignored.
-        # Single-shot timers inside the event loop force Cocoa to bring the window to front and give it key status.
         def _force_macos_focus():
             window.show()
             window.raise_()
             window.activateWindow()
         QTimer.singleShot(100, _force_macos_focus)
         QTimer.singleShot(500, _force_macos_focus)
+
+    splash.finish(window)
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()
