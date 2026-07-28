@@ -64,3 +64,68 @@ venv/bin/python -m unittest discover -s tests
 - [ ] Further GPU Hardware Acceleration optimizations (CUDA / DirectML support on Windows).
 - [ ] Advanced multi-speaker voice fingerprinting separation for crowded scenes.
 - [ ] Export directly to Premiere Pro XML / DaVinci Resolve EDL timeline formats.
+
+---
+
+## Technical State Report & Architecture (Active)
+
+**Target Operating Systems:** Microsoft Windows (x86_64) & Apple macOS (Universal / ARM64 / x86_64)  
+
+### 1. ACTIVE TECH STACK & UI FRAMEWORK
+
+* **Exact UI Library in Use:**  
+  The application is built on **PySide6 (Qt 6 for Python)**. The main window controller is `FocusApp(QMainWindow)` located in `scenepack_generator_gui_qt.py`, implementing a responsive "Modern Dark Studio" layout with custom stylesheet tokens and dynamic multi-language localization.
+* **UI & Background Worker Thread Communication:**  
+  To prevent GUI freezes during heavy FFmpeg video processing and OpenCV AI face scanning, the architecture employs a multi-threaded asynchronous model:
+  1. **Worker Threads (`QThread`):** Heavy backend operations are encapsulated within specialized `QThread` classes (`ScanWorker`, `RenderWorker`, `GalleryScanWorker` defined in `scenepack_generator_workers_qt.py`).
+  2. **Thread-Safe Signal Bridge (`QtQueueProxy`):** A custom bridge class `QtQueueProxy(QObject)` intercepts legacy queue calls and emits thread-safe **Qt Signals** (`progress_signal`, `log_signal`, etc.). The PySide6 event loop delivers these signals asynchronously to GUI slots in `FocusApp`.
+
+### 2. WINDOWS vs macOS BACKEND PIPELINE
+
+* **Paths & File Handling:**  
+  * The codebase uses standard `pathlib.Path` and `os.path.join` across all data layers, automatically handling OS-specific path separators.
+  * Application support directories are dynamically resolved per host OS (`%APPDATA%\Focus` on Windows, `~/Library/Application Support/Focus` on macOS).
+  * Opening file explorers is routed through `QDesktopServices.openUrl(QUrl.fromLocalFile(...))`.
+* **FFmpeg Acceleration & Dynamic Encoder Probing:**  
+  Video encoding acceleration is dynamically probed by `_get_best_video_codec_and_args()` in `scenepack_generator_gui.py`:
+  * **macOS:** Apple VideoToolbox (`h264_videotoolbox`), fallback to CPU (`libx264`).
+  * **Windows:** NVIDIA NVENC, Intel QuickSync, AMD AMF, and Microsoft Media Foundation, fallback to CPU.
+* **Binary Dependencies (`ffmpeg` / `ffprobe`):**  
+  Binaries are isolated in `bin/` and downloaded automatically if missing from the system path.
+
+### 3. BUILD PIPELINE & PACKAGING (`build.py` / PyInstaller)
+
+* **Build Orchestration (`build.py`):**  
+  * **Windows Target:** Compiles to `dist/Focus.exe` using `--onefile` and `--windowed`. A double-clickable batch wrapper `Uruchom_Focus_Windows.bat` is provided.
+  * **macOS Target:** Compiles to `dist/Focus.app` and bypassing Gatekeeper via `Uruchom_Focus.command`.
+* **PyInstaller Configuration:** Automatically bundles AI model XMLs, UI color tokens, and collects all required shared libraries (`cv2`, `PySide6`, `face_recognition_models`).
+
+### 4. PROJECT MAP & ENTRY POINTS
+
+```text
+Focus/
+├── scenepack_generator_gui_qt.py     # [PRIMARY ENTRY POINT] PySide6 Modern Dark Studio GUI Controller
+├── scenepack_generator_gui.py        # [BACKEND ENGINE] Core AI Processing Engine, Localizations & FFmpeg Prober
+├── scenepack_generator_workers_qt.py # [THREADING BRIDGE] QThread Worker Classes & QtQueueProxy Signal Emitter
+├── scenepack_generator.py            # [CLI ENGINE] Standalone Command-Line Tool & Processing Backup
+├── build.py                          # [BUILD PIPELINE] Cross-Platform PyInstaller Orchestration Script
+├── generate_themes.py                # [THEME TOOL] Color Token & Stylesheet Generator
+├── Uruchom_Focus_Windows.bat         # [LAUNCHER] Zero-Terminal Wrapper for Windows
+├── Uruchom_Focus_Mac.command         # [LAUNCHER] Zero-Terminal Gatekeeper Wrapper for macOS
+├── requirements.txt                  # [DEPENDENCIES] Pinned Python Library Packages
+├── icon.icns / icon.png / icon.ico   # [ASSETS] OS-Specific Application Icons
+├── themes/                           # [ASSETS] JSON Color Palettes & Stylesheets
+└── .github/workflows/
+    └── build-and-release.yml         # [CI/CD] Automated Multi-OS Matrix Build & GitHub Release Pipeline
+```
+
+### 5. CROSS-PLATFORM RISKS & CRITICAL RECOMMENDATIONS
+
+1. **Windows Console Popup During Subprocess Execution (HIGH RISK):**  
+  * **Recommendation:** Ensure Windows-specific creation flags (`subprocess.CREATE_NO_WINDOW`) are injected into all `subprocess` calls.
+2. **Process Termination & Kill Signals (MEDIUM RISK):**  
+  * **Recommendation:** Keep a reference to active `subprocess.Popen` objects in the worker threads to explicitly terminate them on cancellation.
+3. **Windows File Locking (MEDIUM RISK):**  
+  * **Recommendation:** Ensure `cv2.VideoCapture` and wave audio readers explicitly release handles (`cap.release()`, `wave_obj.close()`) before cleanup.
+4. **UTF-8 Path Encoding in FFmpeg Concat Demuxer (LOW RISK):**  
+  * **Recommendation:** Continue using UTF-8 encoding and standardized forward slashes in concat lists to prevent failures on non-ASCII Windows profiles.
