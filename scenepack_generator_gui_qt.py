@@ -706,7 +706,7 @@ class FocusApp(QMainWindow):
         self.lbl_gal_status.setObjectName("EtaLabel")
         gal_prog_box.addWidget(self.lbl_gal_status)
         gt_layout.addLayout(gal_prog_box)
-        gal_layout.addWidget(gal_top_card)
+        gal_layout.addWidget(self.gal_top_card)
 
         # Gallery Grid Scroll Area
         self.scroll_gal = QScrollArea()
