@@ -123,16 +123,19 @@ class ScanWorker(QThread):
             thumbnails = []
             cap = cv2.VideoCapture(self.video_path)
             try:
-                for start, end, avg_x in scanned_intervals:
-                    cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
-                    ret, frame = cap.read()
-                    if ret:
-                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        img = Image.fromarray(frame_rgb)
-                        img.thumbnail((160, 90), Image.Resampling.LANCZOS)
-                        thumbnails.append(img)
-                    else:
-                        thumbnails.append(None)
+                if cap.isOpened():
+                    for start, end, avg_x in scanned_intervals:
+                        cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
+                        ret, frame = cap.read()
+                        if ret and frame is not None:
+                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            img = Image.fromarray(frame_rgb)
+                            img.thumbnail((160, 90), Image.Resampling.LANCZOS)
+                            thumbnails.append(img)
+                        else:
+                            thumbnails.append(None)
+                else:
+                    thumbnails = [None] * len(scanned_intervals)
             finally:
                 cap.release()
 
