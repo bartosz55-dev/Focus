@@ -44,7 +44,7 @@ def get_cascade_classifier(cascade_path: str):
             raise RuntimeError(f"Could not load cv2.CascadeClassifier: {e}")
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.1.2"
+APP_VERSION = "v1.1.3"
 
 
 class PlatformManager:
@@ -763,6 +763,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.1.3 (PyInstaller OpenCV Fix):\n"
+            "  - Fixed Windows build OpenCV dependency collection by switching to `--collect-all=cv2` in PyInstaller.\n"
+            "  - Incremented versioning per strict permanent versioning rule (+0.01 bump).\n\n"
             "• v1.0.6 (Complete Historical Changelog Restoration):\n"
             "  - Restored full historical release notes (v0.01 to v1.0.6) across all application interfaces per user request.\n"
             "  - Upgraded Qt6 GUI Changelog dialog to a modern, styled scrollable QDialog.\n"
