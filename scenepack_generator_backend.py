@@ -27,8 +27,24 @@ import re
 # Global lock for thread-safe model downloads
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
+
+def get_cascade_classifier(cascade_path: str):
+    """
+    Safely instantiates cv2.CascadeClassifier with robust fallbacks for PyInstaller bundled environments.
+    """
+    if hasattr(cv2, 'CascadeClassifier'):
+        return cv2.CascadeClassifier(cascade_path)
+    elif hasattr(cv2, 'cv2') and hasattr(cv2.cv2, 'CascadeClassifier'):
+        return cv2.cv2.CascadeClassifier(cascade_path)
+    else:
+        try:
+            from cv2 import CascadeClassifier  # type: ignore[attr-defined]
+            return CascadeClassifier(cascade_path)
+        except Exception as e:
+            raise RuntimeError(f"Could not load cv2.CascadeClassifier: {e}")
+
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.1.0"
+APP_VERSION = "v1.1.1"
 
 
 class PlatformManager:
@@ -111,6 +127,7 @@ TRANSLATIONS = {
         "no_video": "No video selected",
         "no_image": "No image selected",
         "no_output": "No save location selected",
+        "err_no_human_face": "No human face found in reference image '{name}'. If you selected a 2D Anime character (e.g. Marin Kitagawa), please switch detection mode to 'Anime'!",
         "ready": "Ready to generate",
         "real_faces": "Real Faces",
         "anime": "Anime",
@@ -240,6 +257,7 @@ TRANSLATIONS = {
         "no_video": "Nie wybrano wideo",
         "no_image": "Nie wybrano zdjęcia",
         "no_output": "Nie wybrano miejsca zapisu",
+        "err_no_human_face": "Nie znaleziono ludzkiej twarzy w zdjęciu referencyjnym '{name}'. Jeśli wybrałeś postać z Anime (np. Marin Kitagawa), przełącz tryb detekcji na 'Anime'!",
         "ready": "Gotowy do generowania",
         "real_faces": "Prawdziwe Twarze",
         "anime": "Anime",
@@ -1189,10 +1207,12 @@ class ScenePackGenerator:
             encodings = face_recognition.face_encodings(image)
 
             if not encodings:
-                raise ValueError(
-                    f"Nie znaleziono ludzkiej twarzy w zdjęciu referencyjnym '{ref_image_path.name}'. "
-                    "Jeśli wybrałeś postać z Anime (np. Marin Kitagawa), przełącz tryb detekcji na 'Anime' w menu aplikacji!"
-                )
+                err_tmpl = get_translation(self.current_lang, "err_no_human_face")
+                if "{name}" in err_tmpl:
+                    err_msg = err_tmpl.format(name=ref_image_path.name)
+                else:
+                    err_msg = err_tmpl
+                raise ValueError(err_msg)
 
             return encodings[0]
         else:
@@ -1459,12 +1479,12 @@ class ScenePackGenerator:
             if self.mode == "Anime":
                 self.log_queue.put(("log", "Note: Anime mode detects all faces in the frame, not a specific character."))
                 self._download_anime_cascade()
-                cascade = cv2.CascadeClassifier(str(self.anime_cascade_path))
+                cascade = get_cascade_classifier(str(self.anime_cascade_path))
                 if cascade.empty():
                     raise RuntimeError("Failed to load anime face cascade XML. File may be missing or corrupted.")
             elif self.mode == "Real Faces":
                 profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')  # type: ignore[attr-defined]
-                profile_cascade = cv2.CascadeClassifier(profile_cascade_path)
+                profile_cascade = get_cascade_classifier(profile_cascade_path)
 
             logging.info(f"Starting facial recognition scan in {self.mode} mode...")
             start_time = time.time()
