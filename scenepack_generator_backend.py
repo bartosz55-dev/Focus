@@ -373,6 +373,36 @@ TRANSLATIONS = {
             "  3. Wybierz miejsce zapisu pliku scenepack.\n\n"
             "• Format Wyjściowy (16:9 vs 9:16):\n"
             "  • 16:9 Original: Zapisuje klip w oryginalnych proporcjach obrazu.\n"
+            "  • 9:16 Vertical: Automatycznie śledzi twarz postaci, powiększa obraz i tworzy gotowe wideo do YouTube Shorts lub TikToka."
+        ),
+        "changelog_title": "Historia Projektu i Zmiany",
+        "changelog_close": "Zamknij",
+        "dashboard": "Panel Sterowania",
+        "appearance": "Wygląd Aplikacji:",
+        "theme": "Motyw Kolorystyczny:",
+        "language": "Język Interfejsu:",
+        "sec_workflow": "Ustawienia Procesu",
+        "sec_system": "Systemowe",
+        "generator_tab": "Generator Scen",
+        "gallery_tab": "Galeria Postaci (Beta)",
+        "hero_title": "Ekstraktor Klipów z Twarzą",
+        "hero_subtitle": "Wykrywa twarze używając AI i łączy sceny z wybraną postacią wideo.",
+        "aspect_label": "Proporcje i Kadrowanie:",
+        "review_title": "Podgląd i Weryfikacja Wykrytych Klipów:",
+        "btn_render": "Eksportuj Scenepack (Renderuj)",
+        "logs_title": "Konsola Diagnostyczna (Logi)",
+        "gallery_title": "Odkryj Postacie (Skan Beta)",
+        "gallery_desc": "Automatycznie analizuje cały film, by odnaleźć najczęstsze, unikalne twarze (Działa w tle).",
+        "scan_chars": "Skanuj Wideo w Poszukiwaniu Postaci",
+        "btn_cancel_gallery": "Anuluj Skanowanie",
+        "th_include": "Eksportuj?",
+        "th_thumb": "Podgląd",
+        "th_start": "Początek",
+        "th_end": "Koniec",
+        "th_duration": "Długość",
+        "aspect_16_9": "16:9 (Oryginalne proporcje)",
+        "aspect_9_16": "9:16 (Pionowy - Kadrowanie i Śledzenie Twarzy)",
+        "aspect_9_16_blur": "9:16 (Pionowy - Rozmyte Tło)"
             "  • 9:16 Vertical (Auto-Track): Dynamicznie kadruje wideo pionowo, śledząc twarz postaci.\n"
             "  • 9:16 Blurred Background: Umieszcza wideo 16:9 na rozmytym, pionowym tle (idealne na TikTok).\n\n"
             "• Ustawienia i Filtry:\n"
@@ -1150,6 +1180,12 @@ class ScenePackGenerator:
         exe_suffix = PlatformManager.get_exe_suffix()
         self.ffmpeg_path = self.bin_dir / f"ffmpeg{exe_suffix}"
         self.ffprobe_path = self.bin_dir / f"ffprobe{exe_suffix}"
+        
+        if not self.ffmpeg_path.exists() and shutil.which("ffmpeg"):
+            self.ffmpeg_path = Path(shutil.which("ffmpeg"))
+        if not self.ffprobe_path.exists() and shutil.which("ffprobe"):
+            self.ffprobe_path = Path(shutil.which("ffprobe"))
+            
         self._active_subprocesses: set[subprocess.Popen] = set()
         self._subproc_lock = threading.Lock()
         self._cached_best_vcodec: Optional[Tuple[str, List[str]]] = None
@@ -1300,11 +1336,6 @@ class ScenePackGenerator:
             return ["-hwaccel", "videotoolbox"]
         return []
 
-    def _get_best_video_codec_and_args(self) -> Tuple[str, List[str]]:
-        """Probes FFmpeg for available hardware video encoders and returns the fastest supported codec and its optimal speed arguments."""
-        if hasattr(self, "_cached_best_vcodec") and self._cached_best_vcodec is not None:
-            return self._cached_best_vcodec
-
     def get_audio_tracks(self, video_path: Path) -> List[Tuple[int, str]]:
         """
         Probes input video for available audio streams using ffprobe.
@@ -1345,6 +1376,11 @@ class ScenePackGenerator:
 
         return tracks
 
+    def _get_best_video_codec_and_args(self) -> Tuple[str, List[str]]:
+        """Probes FFmpeg for available hardware video encoders and returns the fastest supported codec and its optimal speed arguments."""
+        if hasattr(self, "_cached_best_vcodec") and self._cached_best_vcodec is not None:
+            return self._cached_best_vcodec
+
         if PlatformManager.is_macos():
             candidates = [
                 ("h264_videotoolbox", []),
@@ -1355,8 +1391,8 @@ class ScenePackGenerator:
             candidates = [
                 ("h264_nvenc", ["-preset", "fast"]),
                 ("hevc_nvenc", ["-preset", "fast"]),
-                ("h264_amf", ["-quality", "speed"]),
-                ("hevc_amf", ["-quality", "speed"]),
+                ("h264_amf", []),
+                ("hevc_amf", []),
                 ("h264_mf", []),
                 ("hevc_mf", []),
                 ("h264_qsv", ["-preset", "veryfast"]),
@@ -1367,7 +1403,7 @@ class ScenePackGenerator:
             candidates = [
                 ("h264_nvenc", ["-preset", "fast"]),
                 ("hevc_nvenc", ["-preset", "fast"]),
-                ("h264_amf", ["-quality", "speed"]),
+                ("h264_amf", []),
                 ("h264_vaapi", []),
                 ("h264_qsv", ["-preset", "veryfast"]),
                 ("libx264", ["-preset", "veryfast"])
@@ -1738,9 +1774,9 @@ class ScenePackGenerator:
                 elif self.mode == "Anime":
                     if cascade is not None and hasattr(cascade, 'empty') and not cascade.empty():
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                        faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+                        faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=5, minSize=(24, 24))
                         if len(faces) == 0:
-                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
+                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(24, 24))
 
                         if len(faces) > 0:
                             if ref_data is not None:
@@ -1875,7 +1911,7 @@ class ScenePackGenerator:
                 else:
                     cmd.extend(['-vf', vf_filter])
 
-                rate_control_args = ['-crf', '20'] if codec == 'libx264' else ['-b:v', '2.5M', '-maxrate', '4M', '-bufsize', '8M']
+                rate_control_args = ['-crf', '20'] if codec == 'libx264' else ['-b:v', '2M', '-maxrate', '3M', '-bufsize', '6M']
                 cmd.extend([
                     '-map', '0:v:0',
                     '-map', f'0:a:{audio_track_index}?',
