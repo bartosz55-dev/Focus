@@ -126,7 +126,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.2.3"
+APP_VERSION = "v1.2.4"
 
 
 class PlatformManager:
@@ -748,6 +748,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.2.4 (UI De-Cluttering, Master Batch Concatenation & Beta Gallery Fix):\n"
+            "  - Wyczyszczono zbędne ikonki i emoji z interfejsu (czysty, minimalistyczny wygląd dark studio).\n"
+            "  - Dodano przełącznik trybu kolejki wsadowej (Batch Mode): osobne pliki wideo vs połączony jeden plik główny (Master Scenepack).\n"
+            "  - Naprawiono błąd 'TypeError: __fspath__ returns a str, not dict' przy wyborze postaci z Galerii Beta.\n\n"
             "• v1.2.3 (Automated Startup Hardware Benchmark, Mini-Scene Preview & Diagnostics Guard):\n"
             "  - Automatyczny 3-sekundowy benchmark przy starcie badający skalowanie rdzeni CPU i akceleratory GPU (NVENC/AMF/VideoToolbox/QSV).\n"
             "  - Wdrożono odtwarzacz Mini-Preview pozwalający na szybki podgląd i pętlę ujęć z poziomu tabeli weryfikacyjnej w interfejsie.\n"
@@ -1481,20 +1485,24 @@ class ScenePackGenerator:
         self._cached_best_vcodec = ("libx264", ["-preset", "veryfast"])
         return self._cached_best_vcodec
 
-    def load_reference_face(self, ref_image_path: Path):
-        if not ref_image_path.is_file():
-            raise FileNotFoundError(f"Reference image not found: {ref_image_path}")
+    def load_reference_face(self, ref_image_path: Any):
+        if isinstance(ref_image_path, dict) or ref_image_path is None:
+            return ref_image_path
+            
+        path_obj = Path(ref_image_path) if isinstance(ref_image_path, (str, Path)) else ref_image_path
+        if hasattr(path_obj, "is_file") and not path_obj.is_file():
+            raise FileNotFoundError(f"Reference image not found: {path_obj}")
 
-        logging.info(f"Loading reference face from '{ref_image_path.name}'...")
+        logging.info(f"Loading reference face from '{getattr(path_obj, 'name', str(path_obj))}'...")
 
         if self.mode == "Real Faces":
-            image = face_recognition.load_image_file(str(ref_image_path))
+            image = face_recognition.load_image_file(str(path_obj))
             encodings = face_recognition.face_encodings(image)
 
             if not encodings:
                 err_tmpl = get_translation(self.current_lang, "err_no_human_face")
                 if "{name}" in err_tmpl:
-                    err_msg = err_tmpl.format(name=ref_image_path.name)
+                    err_msg = err_tmpl.format(name=getattr(path_obj, 'name', str(path_obj)))
                 else:
                     err_msg = err_tmpl
                 raise ValueError(err_msg)
@@ -2076,7 +2084,10 @@ class ScenePackGenerator:
         if not video_path.is_file():
             raise FileNotFoundError(f"Video file not found: {video_path}")
 
-        ref_data = self.load_reference_face(ref_image_path)
+        if isinstance(ref_image_path, dict):
+            ref_data = ref_image_path
+        else:
+            ref_data = self.load_reference_face(ref_image_path)
         intervals = self.find_scenes(video_path, ref_data, padding_before, padding_after, max_gap_tolerance, min_scene_duration)
 
         logging.info("Detecting shot boundaries for scene snapping...")
