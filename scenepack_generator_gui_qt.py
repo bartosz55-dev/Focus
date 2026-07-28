@@ -356,17 +356,19 @@ class FocusApp(QMainWindow):
         gen_layout.addWidget(scroll_gen)
 
         # 1. Hero Banner Card
-        hero_card = ModernCard()
-        hero_layout = QVBoxLayout(hero_card)
+        self.hero_card = ModernCard(self)
+        hero_layout = QVBoxLayout(self.hero_card)
         self.lbl_hero_title = QLabel("Focus - AI Scenepack Generator")
         self.lbl_hero_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         self.lbl_hero_sub = QLabel("Automated facial tracking and intelligent clip extraction.")
         self.lbl_hero_sub.setObjectName("SubText")
         hero_layout.addWidget(self.lbl_hero_title)
         hero_layout.addWidget(self.lbl_hero_sub)
+        self.gen_content_layout.addWidget(self.hero_card)
+
         # 2. Smart Preset Cards
-        presets_card = ModernCard()
-        presets_layout = QVBoxLayout(presets_card)
+        self.presets_card = ModernCard(self)
+        presets_layout = QVBoxLayout(self.presets_card)
         lbl_smart_title = QLabel("✨ 1-Click Smart Presets")
         lbl_smart_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         presets_layout.addWidget(lbl_smart_title)
@@ -393,11 +395,11 @@ class FocusApp(QMainWindow):
         p_box.addWidget(self.btn_preset_youtube)
         p_box.addWidget(self.btn_preset_draft)
         presets_layout.addLayout(p_box)
-        self.gen_content_layout.addWidget(presets_card)
+        self.gen_content_layout.addWidget(self.presets_card)
 
         # 3. Settings Card
-        settings_card = ModernCard()
-        set_layout = QVBoxLayout(settings_card)
+        self.settings_card = ModernCard(self)
+        set_layout = QVBoxLayout(self.settings_card)
         set_layout.setSpacing(12)
 
         # Top bar: Presets and Aspect Ratio
@@ -496,11 +498,11 @@ class FocusApp(QMainWindow):
         speaker_box.addStretch()
         set_layout.addLayout(speaker_box)
 
-        self.gen_content_layout.addWidget(settings_card)
+        self.gen_content_layout.addWidget(self.settings_card)
 
         # 3. Files Selection Card
-        files_card = ModernCard()
-        files_layout = QVBoxLayout(files_card)
+        self.files_card = ModernCard(self)
+        files_layout = QVBoxLayout(self.files_card)
         files_layout.setSpacing(10)
 
         box_v = QHBoxLayout()
@@ -567,11 +569,11 @@ class FocusApp(QMainWindow):
         self.lbl_batch_status.setObjectName("SubText")
         files_layout.addWidget(self.lbl_batch_status)
 
-        self.gen_content_layout.addWidget(files_card)
+        self.gen_content_layout.addWidget(self.files_card)
 
         # 4. Action & Progress Card
-        action_card = ModernCard()
-        action_layout = QVBoxLayout(action_card)
+        self.action_card = ModernCard(self)
+        action_layout = QVBoxLayout(self.action_card)
 
         self.btn_generate = QPushButton("1. Scan & Analyze Video")
         self.btn_generate.setObjectName("PrimaryActionBtn")
@@ -593,10 +595,10 @@ class FocusApp(QMainWindow):
         prog_box.addWidget(self.lbl_eta)
         action_layout.addLayout(prog_box)
 
-        self.gen_content_layout.addWidget(action_card)
+        self.gen_content_layout.addWidget(self.action_card)
 
         # 5. Review Results Card (hidden initially until scan complete)
-        self.review_card = ModernCard()
+        self.review_card = ModernCard(self)
         self.review_card.setVisible(False)
         rev_layout = QVBoxLayout(self.review_card)
         self.lbl_review_title = QLabel("Step 2: Review & Render Selected Clips")
@@ -636,8 +638,8 @@ class FocusApp(QMainWindow):
         self.gen_content_layout.addWidget(self.review_card)
 
         # 6. Real-time Log Textbox & Diagnostics Bar
-        log_card = ModernCard()
-        log_layout = QVBoxLayout(log_card)
+        self.log_card = ModernCard(self)
+        log_layout = QVBoxLayout(self.log_card)
         
         log_header = QHBoxLayout()
         self.lbl_log_title = QLabel("Execution Logs & Diagnostics:")
@@ -660,7 +662,7 @@ class FocusApp(QMainWindow):
         self.txt_log.setObjectName("LogConsole")
         self.txt_log.setFont(QFont("Consolas", 10))
         log_layout.addWidget(self.txt_log)
-        self.gen_content_layout.addWidget(log_card)
+        self.gen_content_layout.addWidget(self.log_card)
 
         # --- VIEW 1: BETA / CHARACTER GALLERY TAB ---
         self.page_gallery = QWidget()
@@ -669,8 +671,8 @@ class FocusApp(QMainWindow):
         gal_layout.setSpacing(14)
         self.stacked_view.addWidget(self.page_gallery)
 
-        gal_top_card = ModernCard()
-        gt_layout = QVBoxLayout(gal_top_card)
+        self.gal_top_card = ModernCard(self)
+        gt_layout = QVBoxLayout(self.gal_top_card)
         self.lbl_gal_title = QLabel("Beta: Automated Character Discovery Gallery")
         self.lbl_gal_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         self.lbl_gal_sub = QLabel("Scan your video to automatically discover all unique characters. Click any face card to select it as the Reference Face!")
@@ -894,11 +896,6 @@ class FocusApp(QMainWindow):
         self.save_current_settings()
 
     def _apply_language(self, lang_name: str):
-        self.current_lang = lang_name
-        self.lbl_dashboard.setText(get_translation(lang_name, "dashboard"))
-        if hasattr(self, "lbl_wf"):
-            self.lbl_wf.setText(get_translation(lang_name, "sec_workflow"))
-        self.btn_tutorial.setText(get_translation(lang_name, "how_to_use"))
         self.btn_changelog.setText(get_translation(lang_name, "changelog"))
         if hasattr(self, "lbl_sys"):
             self.lbl_sys.setText(get_translation(lang_name, "sec_system"))
