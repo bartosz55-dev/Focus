@@ -605,6 +605,9 @@ class FocusApp(ctk.CTk if ctk else object):
 
         history_text = (
             f"=== Focus {APP_VERSION} Release Notes ===\n\n"
+            "v1.1.3 (PyInstaller OpenCV Fix):\n"
+            "• Fixed Windows build OpenCV dependency collection by switching to `--collect-all=cv2` in PyInstaller.\n"
+            "• Incremented versioning per strict permanent versioning rule (+0.01 bump).\n\n"
             "v1.0.7 (Session Continuity & Maintenance Update):\n"
             "• Incremented versioning per strict permanent versioning rule (+0.01 bump) and validated unit test suite.\n\n"
             "v1.0.6 (Complete Historical Changelog Restoration):\n"

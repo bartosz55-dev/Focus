@@ -36,7 +36,7 @@ args = [
     '--clean',         # Clean PyInstaller cache and remove temporary files before building
     f'--add-data={frm_path}{sep}face_recognition_models',
     f'--add-data=themes{sep}themes',
-    '--collect-all=opencv-python',
+    '--collect-all=cv2',
     '--collect-all=PySide6',
     '--collect-all=shiboken6',
     '--collect-all=face_recognition_models',
