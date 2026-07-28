@@ -1,8 +1,21 @@
 # Focus AI Scenepack Generator — Task Tracking & Release Status
 
-## Current Release: `v1.1.5`
+## Current Release: `v1.1.7`
 
 ### Completed Tasks & Milestones
+
+- [x] **v1.1.7 — NVIDIA GPU Acceleration & Multi-OS GitHub Release Publishing**
+  - [x] Expanded FFmpeg GPU encoder probing to support NVIDIA NVENC (`h264_nvenc`, `hevc_nvenc`) alongside AMD AMF, Media Foundation, QSV, and VideoToolbox.
+  - [x] Verified CUDA/NVDEC hardware decoding integration and OpenCV OpenCL GPU offloading.
+  - [x] Tagged `v1.1.7` and pushed to GitHub triggering automated CI/CD multi-platform builds for Windows (`Focus-Windows.zip`) and macOS (`Focus-macOS.zip`).
+
+- [x] **v1.1.6 — AMD GPU Acceleration, Resilient Changelog Modal & UI Sanitization**
+  - [x] Enabled OpenCV OpenCL GPU hardware acceleration (`cv2.ocl.setUseOpenCL(True)`) for offloading AI scanning and image processing to AMD GPUs (Radeon RX 7800 XT) and OpenCL-compliant drivers.
+  - [x] Enhanced FFmpeg GPU encoder probing on Windows to test AMD AMF (`h264_amf`), Microsoft Media Foundation (`h264_mf`), NVENC, Intel QSV, and HEVC codecs.
+  - [x] Implemented dynamic FFmpeg hardware decoding flags (`-hwaccel auto` / `-hwaccel videotoolbox`) with automatic CPU fallback during video segment extraction.
+  - [x] Hardened Qt6 (`scenepack_generator_gui_qt.py`) and CustomTkinter (`scenepack_generator_gui.py`) Changelog dialogs with exception safety and proper translation key lookup (`changelog_close`).
+  - [x] Cleaned up UI labels, combo box items, and translation fallbacks to sanitize raw underscores (`_`) into clean human-readable text.
+  - [x] Updated unit test suite (`tests/test_backend_separation.py`) and verified 100% test pass rate (26/26 tests passing).
 
 - [x] **v1.1.5 — Architecture Audit, Deduplication & Test Suite Consolidation**
   - [x] Refactored Qt6 (`scenepack_generator_gui_qt.py`) and CustomTkinter (`scenepack_generator_gui.py`) Changelog views to consume `backend.get_changelog_text()` as single source of truth.
