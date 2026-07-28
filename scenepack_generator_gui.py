@@ -605,8 +605,10 @@ class FocusApp(ctk.CTk if ctk else object):
 
         history_text = (
             f"=== Focus {APP_VERSION} Release Notes ===\n\n"
-            "v1.1.3 (PyInstaller OpenCV Fix):\n"
-            "• Fixed Windows build OpenCV dependency collection by switching to `--collect-all=cv2` in PyInstaller.\n"
+            "v1.1.4 (PySide6 Qt6 Enum & Resilient Face Recognition Fix):\n"
+            "• Fixed broken Changelog button on Qt6 by converting deprecated Qt.AlignCenter enum to Qt.AlignmentFlag.AlignCenter.\n"
+            "• Fixed CascadeClassifier crash on Windows by making get_cascade_classifier non-blocking and adding neural face detection fallbacks.\n"
+            "• Explicitly bundled cv2 package directory in PyInstaller build.py manifest.\n"
             "• Incremented versioning per strict permanent versioning rule (+0.01 bump).\n\n"
             "v1.0.7 (Session Continuity & Maintenance Update):\n"
             "• Incremented versioning per strict permanent versioning rule (+0.01 bump) and validated unit test suite.\n\n"

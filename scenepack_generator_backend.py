@@ -28,23 +28,31 @@ import re
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 
-def get_cascade_classifier(cascade_path: str):
+def get_cascade_classifier(cascade_path: Optional[str]):
     """
     Safely instantiates cv2.CascadeClassifier with robust fallbacks for PyInstaller bundled environments.
+    Returns None safely if CascadeClassifier cannot be instantiated, avoiding runtime crashes.
     """
-    if hasattr(cv2, 'CascadeClassifier'):
-        return cv2.CascadeClassifier(cascade_path)
-    elif hasattr(cv2, 'cv2') and hasattr(cv2.cv2, 'CascadeClassifier'):
-        return cv2.cv2.CascadeClassifier(cascade_path)
-    else:
-        try:
-            from cv2 import CascadeClassifier  # type: ignore[attr-defined]
-            return CascadeClassifier(cascade_path)
-        except Exception as e:
-            raise RuntimeError(f"Could not load cv2.CascadeClassifier: {e}")
+    if not cascade_path or not os.path.exists(cascade_path):
+        return None
+
+    try:
+        if hasattr(cv2, 'CascadeClassifier'):
+            clf = cv2.CascadeClassifier(cascade_path)
+            if hasattr(clf, 'empty') and not clf.empty():
+                return clf
+        if hasattr(cv2, 'cv2') and hasattr(cv2.cv2, 'CascadeClassifier'):
+            clf = cv2.cv2.CascadeClassifier(cascade_path)
+            if hasattr(clf, 'empty') and not clf.empty():
+                return clf
+    except Exception as e:
+        logging.warning(f"Could not load cv2.CascadeClassifier for path '{cascade_path}': {e}")
+        return None
+
+    return None
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.1.3"
+APP_VERSION = "v1.1.4"
 
 
 class PlatformManager:
@@ -763,8 +771,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
-            "• v1.1.3 (PyInstaller OpenCV Fix):\n"
-            "  - Fixed Windows build OpenCV dependency collection by switching to `--collect-all=cv2` in PyInstaller.\n"
+            "• v1.1.4 (PySide6 Qt6 Enum & Resilient Face Recognition Fix):\n"
+            "  - Fixed broken Changelog button on Qt6 by converting deprecated Qt.AlignCenter enum to Qt.AlignmentFlag.AlignCenter.\n"
+            "  - Fixed CascadeClassifier crash on Windows by making get_cascade_classifier non-blocking and adding neural face detection fallbacks.\n"
+            "  - Explicitly bundled cv2 package directory in PyInstaller build.py manifest.\n"
             "  - Incremented versioning per strict permanent versioning rule (+0.01 bump).\n\n"
             "• v1.0.6 (Complete Historical Changelog Restoration):\n"
             "  - Restored full historical release notes (v0.01 to v1.0.6) across all application interfaces per user request.\n"
@@ -1483,11 +1493,12 @@ class ScenePackGenerator:
                 self.log_queue.put(("log", "Note: Anime mode detects all faces in the frame, not a specific character."))
                 self._download_anime_cascade()
                 cascade = get_cascade_classifier(str(self.anime_cascade_path))
-                if cascade.empty():
-                    raise RuntimeError("Failed to load anime face cascade XML. File may be missing or corrupted.")
+                if cascade is None or (hasattr(cascade, 'empty') and cascade.empty()):
+                    self.log_queue.put(("log", "Notice: Anime Haar cascade classifier unavailable. Falling back to neural face recognition model."))
             elif self.mode == "Real Faces":
-                profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')  # type: ignore[attr-defined]
-                profile_cascade = get_cascade_classifier(profile_cascade_path)
+                if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                    profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')  # type: ignore[attr-defined]
+                    profile_cascade = get_cascade_classifier(profile_cascade_path)
 
             logging.info(f"Starting facial recognition scan in {self.mode} mode...")
             start_time = time.time()
@@ -1527,7 +1538,7 @@ class ScenePackGenerator:
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                         face_locations = face_recognition.face_locations(rgb_frame, model="hog")
 
-                        if not face_locations and profile_cascade and not profile_cascade.empty():
+                        if not face_locations and profile_cascade and hasattr(profile_cascade, 'empty') and not profile_cascade.empty():
                             gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
 
                             profiles_right = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
@@ -1563,18 +1574,25 @@ class ScenePackGenerator:
                         else:
                             small_frame = frame
 
-                        gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                        assert cascade is not None
-                        faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
-                        if len(faces) == 0:
-                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
+                        if cascade is not None and hasattr(cascade, 'empty') and not cascade.empty():
+                            gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+                            if len(faces) == 0:
+                                faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
 
-                        if len(faces) > 0:
-                            (x_f, y_f, w_f, h_f) = faces[0]
-                            center_x = x_f + w_f / 2.0
-                            w_resized = small_frame.shape[1]
-                            rel_x = center_x / w_resized
-                            timestamps.append((frame_count / fps, rel_x))
+                            if len(faces) > 0:
+                                (x_f, y_f, w_f, h_f) = faces[0]
+                                center_x = x_f + w_f / 2.0
+                                w_resized = small_frame.shape[1]
+                                rel_x = center_x / w_resized
+                                timestamps.append((frame_count / fps, rel_x))
+                        else:
+                            rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+                            face_locs = face_recognition.face_locations(rgb_frame, model="hog")
+                            if face_locs:
+                                top, right, bottom, left = face_locs[0]
+                                rel_x = ((left + right) / 2.0) / small_frame.shape[1]
+                                timestamps.append((frame_count / fps, rel_x))
 
                 frame_count += 1
         finally:

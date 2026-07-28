@@ -234,15 +234,12 @@ class GalleryScanWorker(QThread):
                     self.queue_proxy.put(("log", "Downloading/preparing anime face cascade classifier..."))
                     self._download_anime_cascade()
                     cascade = self.engine_module.get_cascade_classifier(str(self.anime_cascade_path))
-                    if cascade.empty():
-                        err_msg = "Failed to load anime cascade classifier XML model."
-                        logging.error(err_msg)
-                        self.queue_proxy.put(("log", err_msg))
-                        self.queue_proxy.put(("gallery_error", err_msg))
-                        return
+                    if cascade is None or (hasattr(cascade, 'empty') and cascade.empty()):
+                        self.queue_proxy.put(("log", "Notice: Anime Haar cascade classifier unavailable. Falling back to neural face recognition model."))
                 elif mode == "Real Faces":
-                    profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')
-                    profile_cascade = self.engine_module.get_cascade_classifier(profile_cascade_path)
+                    if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                        profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')
+                        profile_cascade = self.engine_module.get_cascade_classifier(profile_cascade_path)
 
                 crops_dir = Path(tempfile.gettempdir()) / "focus_gallery_crops"
                 if crops_dir.exists():
@@ -309,29 +306,52 @@ class GalleryScanWorker(QThread):
                                     'anime_feature': None
                                 })
 
-                    elif mode == "Anime" and cascade is not None:
-                        gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                        faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
-                        if len(faces) == 0:
-                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
-                        for (x, y, fw, fh) in faces:
-                            crop_bgr = self.engine_module.make_square_crop(small_frame, y, x + fw, y + fh, x, pad_ratio=0.30)
-                            if crop_bgr is None or crop_bgr.size == 0:
-                                continue
+                    elif mode == "Anime":
+                        if cascade is not None and hasattr(cascade, 'empty') and not cascade.empty():
+                            gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+                            if len(faces) == 0:
+                                faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
+                            for (x, y, fw, fh) in faces:
+                                crop_bgr = self.engine_module.make_square_crop(small_frame, y, x + fw, y + fh, x, pad_ratio=0.30)
+                                if crop_bgr is None or crop_bgr.size == 0:
+                                    continue
 
-                            crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
-                            pil_crop = Image.fromarray(crop_rgb)
-                            crop_path = crops_dir / f"anime_cand_{sampled_count}_{len(raw_candidates)}.png"
-                            pil_crop.save(crop_path)
+                                crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
+                                pil_crop = Image.fromarray(crop_rgb)
+                                crop_path = crops_dir / f"anime_cand_{sampled_count}_{len(raw_candidates)}.png"
+                                pil_crop.save(crop_path)
 
-                            feat = self.engine_module.extract_anime_face_features(crop_bgr)
-                            raw_candidates.append({
-                                'crop_path': str(crop_path),
-                                'pil_image': pil_crop,
-                                'resolution': pil_crop.width * pil_crop.height,
-                                'encoding': None,
-                                'anime_feature': feat
-                            })
+                                feat = self.engine_module.extract_anime_face_features(crop_bgr)
+                                raw_candidates.append({
+                                    'crop_path': str(crop_path),
+                                    'pil_image': pil_crop,
+                                    'resolution': pil_crop.width * pil_crop.height,
+                                    'encoding': None,
+                                    'anime_feature': feat
+                                })
+                        else:
+                            rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+                            face_locs = face_recognition.face_locations(rgb_frame, model="hog")
+                            for loc in face_locs:
+                                top, right, bottom, left = loc
+                                face_crop_rgb = self.engine_module.make_square_crop(rgb_frame, top, right, bottom, left, pad_ratio=0.30)
+                                if face_crop_rgb is None or face_crop_rgb.size == 0:
+                                    continue
+
+                                pil_crop = Image.fromarray(face_crop_rgb)
+                                crop_path = crops_dir / f"anime_cand_{sampled_count}_{len(raw_candidates)}.png"
+                                pil_crop.save(crop_path)
+
+                                bgr_crop = cv2.cvtColor(face_crop_rgb, cv2.COLOR_RGB2BGR)
+                                feat = self.engine_module.extract_anime_face_features(bgr_crop)
+                                raw_candidates.append({
+                                    'crop_path': str(crop_path),
+                                    'pil_image': pil_crop,
+                                    'resolution': pil_crop.width * pil_crop.height,
+                                    'encoding': None,
+                                    'anime_feature': feat
+                                })
 
                     curr_frame += sample_step
             finally:
