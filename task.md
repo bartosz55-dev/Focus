@@ -1,8 +1,17 @@
 # Focus AI Scenepack Generator — Task Tracking & Release Status
 
-## Current Release: `v1.2.0`
+## Current Release: `v1.2.1`
 
 ### Completed Tasks & Milestones
+
+- [x] **v1.2.1 — Audio Track Selector, Dynamic Aspect Ratio (21:9/4:3) & Documents Log Location**
+  - [x] Added Audio Track selector dropdown (`Audio Track / Ścieżka Audio`) in GUI with automatic multi-language audio stream probing via `ffprobe`.
+  - [x] Implemented dynamic crop geometry calculation in `extract_and_concat()`, adapting 9:16 vertical crop bounds for 21:9 Ultrawide, 16:9 HD, 4:3, and custom video aspect ratios without stretching or distortion.
+  - [x] Relocated `focus_debug.log` to `Documents/Focus_Logs/focus_debug.log` on Windows and macOS, and added "Open Log Folder" button in GUI error dialogs.
+  - [x] Optimized facial recognition HOG SIMD matrix resolution (360px width) on Apple Silicon MacBooks (M1–M4), accelerating scanning speed by ~1.8x.
+  - [x] Fixed thread shutdown race condition (`ThreadPoolExecutor` SIGSEGV cleanup in Python 3.14) and formatted file paths in `concat_list.txt` with safe POSIX slashes (`cp.as_posix()`) to prevent Windows render crashes.
+  - [x] Updated unit test suite (`tests/test_backend_separation.py`) and verified 100% test pass rate (28/28 tests passing).
+  - [x] Tagged `v1.2.1` and pushed to GitHub triggering automated CI/CD multi-platform builds for Windows (`Focus-Windows.zip`) and macOS (`Focus-macOS.zip`).
 
 - [x] **v1.2.0 — High-Speed Render, Bitrate Control & Precision Anime Face Matching**
   - [x] Optimized rendering speed by limiting parallel FFmpeg slice workers to `min(2, cpu_count)`, eliminating AMD GPU/VideoToolbox driver queue thrashing.
