@@ -4,6 +4,7 @@ import tempfile
 import logging
 from pathlib import Path
 from typing import List, Tuple, Any
+import gc
 
 import cv2
 from PIL import Image
@@ -142,6 +143,8 @@ class ScanWorker(QThread):
             self.queue_proxy.put(("error", str(e)))
             self.queue_proxy.put(("progress", 0.0, "Scan Error Occurred"))
             self.queue_proxy.put(("reset_btn", None))
+        finally:
+            gc.collect()
 
 class AudioTrackWorker(QThread):
     """Background worker for initializing FFmpeg and probing audio tracks."""
@@ -193,6 +196,8 @@ class RenderWorker(QThread):
             self.queue_proxy.put(("error", str(e)))
             self.queue_proxy.put(("progress", 0.0, "Render Error Occurred"))
             self.queue_proxy.put(("reset_btn", None))
+        finally:
+            gc.collect()
 
 class GalleryScanWorker(QThread):
     """Background worker for scanning video to discover all unique characters (Beta / Character Gallery)."""
