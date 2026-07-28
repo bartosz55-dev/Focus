@@ -88,9 +88,16 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         backend.init_gpu_acceleration()
         cl_en = backend.get_changelog_text("English")
         cl_pl = backend.get_changelog_text("Polski")
-        self.assertIn("v1.1.8", cl_en)
-        self.assertIn("v1.1.8", cl_pl)
-        self.assertIn("Multi-Core Batch Frame Processing", cl_en)
+        self.assertIn("v1.1.9", cl_en)
+        self.assertIn("v1.1.9", cl_pl)
+
+    def test_focus_debug_log_creation(self):
+        """Verify get_app_dir and focus_debug.log setup."""
+        import scenepack_generator_backend as backend
+        app_dir = backend.get_app_dir()
+        self.assertTrue(app_dir.exists())
+        log_file = app_dir / "focus_debug.log"
+        self.assertTrue(log_file.exists())
 
 if __name__ == "__main__":
     unittest.main()

@@ -1000,6 +1000,10 @@ class FocusApp(QMainWindow):
         self.scan_worker.start()
 
     def start_render(self):
+        if not self.video_path_str or not os.path.exists(self.video_path_str):
+            QMessageBox.warning(self, "No Input Video", "Please select a valid input video file before rendering!")
+            return
+
         selected_intervals = []
         for (interval, chk) in self.review_checkboxes:
             if chk.isChecked():
@@ -1008,6 +1012,15 @@ class FocusApp(QMainWindow):
         if not selected_intervals:
             QMessageBox.warning(self, "No Clips Selected", "Please select at least one clip in the table to render.")
             return
+
+        if not self.output_path_str:
+            path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", "scenepack.mp4", "MP4 Video (*.mp4);;All Files (*.*)")
+            if path:
+                self.output_path_str = path
+                self.lbl_output_path.setText(Path(path).name)
+            else:
+                QMessageBox.warning(self, "No Save Location", "Please select an output save file location before rendering.")
+                return
 
         self.btn_render.setEnabled(False)
         self.btn_render.setText("Rendering Clips...")
@@ -1022,7 +1035,7 @@ class FocusApp(QMainWindow):
         else:
             aspect_canonical = "16:9 Original"
 
-        generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(self.queue_proxy, 15, self.current_mode)
+        generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
         self.render_worker = RenderWorker(
             generator_inst, self.video_path_str, selected_intervals,
             self.output_path_str, aspect_canonical, self.queue_proxy
@@ -1222,7 +1235,12 @@ class FocusApp(QMainWindow):
         self.btn_generate.setText(get_translation(self.current_lang, "generate"))
         self.btn_render.setEnabled(True)
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
-        QMessageBox.critical(self, "Execution Error", f"An error occurred:\n{err}")
+        log_path = get_app_dir() / "focus_debug.log"
+        QMessageBox.critical(
+            self, "Execution Error",
+            f"An error occurred during processing:\n{err}\n\n"
+            f"Detailed diagnostic log saved to:\n{log_path}"
+        )
 
     @Slot()
     def _on_reset_buttons(self):

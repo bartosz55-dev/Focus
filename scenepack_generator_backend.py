@@ -71,11 +71,65 @@ def init_gpu_acceleration():
         logging.warning(f"Could not initialize OpenCV OpenCL acceleration: {e}")
 
 
+def get_app_dir() -> Path:
+    """Returns application support directory based on host OS with resilient write fallback."""
+    try:
+        if platform.system() == "Windows":
+            app_dir = Path(os.environ.get('APPDATA', os.path.expanduser('~'))) / "Focus"
+        elif platform.system() == "Darwin":
+            app_dir = Path(os.path.expanduser('~/Library/Application Support/Focus'))
+        else:
+            app_dir = Path(os.path.expanduser('~/.local/share/Focus'))
+        app_dir.mkdir(parents=True, exist_ok=True)
+        test_file = app_dir / ".write_test"
+        test_file.touch()
+        test_file.unlink(missing_ok=True)
+        return app_dir
+    except Exception:
+        fallback_dir = Path(tempfile.gettempdir()) / "Focus"
+        fallback_dir.mkdir(parents=True, exist_ok=True)
+        return fallback_dir
+
+
+def setup_crash_logger():
+    """Configures file logging to focus_debug.log and hooks uncaught exceptions across threads."""
+    try:
+        log_file = get_app_dir() / "focus_debug.log"
+        file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+        file_handler.setLevel(logging.INFO)
+        
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+        if not any(isinstance(h, logging.FileHandler) for h in root_logger.handlers):
+            root_logger.addHandler(file_handler)
+
+        def handle_uncaught_exception(exc_type, exc_value, exc_traceback):
+            if issubclass(exc_type, KeyboardInterrupt):
+                sys.__excepthook__(exc_type, exc_value, exc_traceback)
+                return
+            logging.critical("Uncaught Exception Encountered:", exc_info=(exc_type, exc_value, exc_traceback))
+
+        def handle_thread_exception(args):
+            logging.critical(f"Uncaught Thread Exception in '{args.thread.name}':", exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
+
+        sys.excepthook = handle_uncaught_exception
+        if hasattr(threading, 'excepthook'):
+            threading.excepthook = handle_thread_exception
+
+        logging.info(f"Persistent crash logger initialized at: {log_file}")
+    except Exception as e:
+        print(f"Could not setup crash logger: {e}")
+
+
+# Initialize persistent crash logger
+setup_crash_logger()
+
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.1.8"
+APP_VERSION = "v1.1.9"
 
 
 class PlatformManager:
@@ -675,6 +729,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.1.9 (Persistent Crash Logging focus_debug.log & Render Validation):\n"
+            "  - Utworzono automatyczny plik dziennika błędów (focus_debug.log) przechwytujący unikalne błędy i pełne stosy wywołań.\n"
+            "  - Zabezpieczono akcję przycisku Render (walidacja ścieżki zapisu oraz automatyczne okno wyboru pliku docelowego).\n"
+            "  - Naprawiono przekazywanie nazwanych argumentów w ScenePackGenerator przy awaryjnej inicjalizacji.\n\n"
             "• v1.1.8 (Multi-Core Batch Frame Processing & High-Speed Seeking):\n"
             "  - Wdrożono równoległe skanowanie klatek na wszystkich rdzeniach CPU (ThreadPoolExecutor) przyspieszające skanowanie o 5x-10x.\n"
             "  - Zoptymalizowano dekodowanie wideo poprzez szybkie przeskakiwanie klatek (CAP_PROP_POS_FRAMES), reducując dekodowanie uniemożliwiające zacięcia o 94%.\n"
@@ -809,6 +867,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.1.9 (Persistent Crash Logging focus_debug.log & Render Validation):\n"
+            "  - Implemented persistent diagnostic logging (`focus_debug.log`) with global uncaught exception hooks across threads.\n"
+            "  - Hardened render button action with input video & save location validation and automatic save picker dialog.\n"
+            "  - Fixed keyword parameter passing in fallback `ScenePackGenerator` instantiation.\n\n"
             "• v1.1.8 (Multi-Core Batch Frame Processing & High-Speed Seeking):\n"
             "  - Implemented parallel multi-core batch scanning (`ThreadPoolExecutor`) accelerating scan speeds by 5x–10x across Windows & multi-core CPUs.\n"
             "  - Optimized video frame retrieval via targeted frame seeking (`CAP_PROP_POS_FRAMES`), bypassing 94% of unneeded video decoding overhead.\n"
