@@ -35,6 +35,7 @@ args = [
     '--noconfirm',     # Overwrite output directory if it exists
     '--clean',         # Clean PyInstaller cache and remove temporary files before building
     f'--add-data={frm_path}{sep}face_recognition_models',
+    f'--add-data={cv2_path}{sep}cv2',
     f'--add-data=themes{sep}themes',
     '--collect-all=cv2',
     '--collect-all=PySide6',
