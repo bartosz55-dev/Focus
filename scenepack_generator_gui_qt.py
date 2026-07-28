@@ -139,6 +139,7 @@ class FocusApp(QMainWindow):
 
         # Setup UI
         self._init_ui()
+        self.toast = ToastNotification(self)
         self._apply_theme(self.current_theme)
         self._apply_language(self.current_lang)
         self._setup_logging()
