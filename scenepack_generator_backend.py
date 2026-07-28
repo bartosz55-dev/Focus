@@ -72,21 +72,17 @@ def init_gpu_acceleration():
 
 
 def get_app_dir() -> Path:
-    """Returns application support directory based on host OS with resilient write fallback."""
+    """Returns application logs directory in user Documents folder with resilient write fallback."""
     try:
-        if platform.system() == "Windows":
-            app_dir = Path(os.environ.get('APPDATA', os.path.expanduser('~'))) / "Focus"
-        elif platform.system() == "Darwin":
-            app_dir = Path(os.path.expanduser('~/Library/Application Support/Focus'))
-        else:
-            app_dir = Path(os.path.expanduser('~/.local/share/Focus'))
+        docs_dir = Path(os.path.expanduser('~/Documents'))
+        app_dir = docs_dir / "Focus_Logs"
         app_dir.mkdir(parents=True, exist_ok=True)
         test_file = app_dir / ".write_test"
         test_file.touch()
         test_file.unlink(missing_ok=True)
         return app_dir
     except Exception:
-        fallback_dir = Path(tempfile.gettempdir()) / "Focus"
+        fallback_dir = Path(tempfile.gettempdir()) / "Focus_Logs"
         fallback_dir.mkdir(parents=True, exist_ok=True)
         return fallback_dir
 
@@ -129,7 +125,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.2.0"
+APP_VERSION = "v1.2.1"
 
 
 class PlatformManager:
@@ -729,6 +725,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.2.1 (Audio Track Selector, Dynamic Aspect Ratio & Documents Log Location):\n"
+            "  - Dodano wybór ścieżki dźwiękowej (Audio Track / Ścieżka Audio) z automatycznym wykrywaniem języków dubbingowych przez ffprobe.\n"
+            "  - Wdrożono dynamiczne obliczenia kadrowania dla wideo w proporcjach 21:9 Ultrawide, 16:9, 4:3 oraz custom bez zniekształceń.\n"
+            "  - Przeniesiono plik logów diagnostycznych do folderu Dokumenty/Focus_Logs/focus_debug.log z przyciskiem 'Otwórz Folder Logów'.\n"
+            "  - Przyspieszono skanowanie AI na MacBookach (M1-M4) poprzez optymalizację rozdzielczości HOG SIMD z 480 do 360px.\n"
+            "  - Naprawiono problem zamykania wątków Pythona (ThreadPoolExecutor SIGSEGV) oraz ścieżki Windows w concat_list.txt.\n\n"
             "• v1.2.0 (High-Speed Render, Bitrate Control & Precision Anime Matching):\n"
             "  - Zoptymalizowano prędkość renderowania (zmniejszono współbieżność FFmpeg z 8 do 2, likwidując zakleszczenia GPU AMD/VideoToolbox).\n"
             "  - Zoptymalizowano rozmiar pliku wyjściowego z 500MB+ do czystych ~25MB-40MB poprzez adaptacyjny bit-rate (CRF 20 / 2.5M VBR).\n"
@@ -1303,6 +1305,46 @@ class ScenePackGenerator:
         if hasattr(self, "_cached_best_vcodec") and self._cached_best_vcodec is not None:
             return self._cached_best_vcodec
 
+    def get_audio_tracks(self, video_path: Path) -> List[Tuple[int, str]]:
+        """
+        Probes input video for available audio streams using ffprobe.
+        Returns a list of tuples: (audio_stream_index, track_label).
+        """
+        tracks = []
+        if not video_path or not os.path.exists(video_path) or not self.ffprobe_path.exists():
+            return [(0, "Default Audio Stream (Track 1)")]
+
+        try:
+            cmd = [
+                str(self.ffprobe_path), '-v', 'error',
+                '-select_streams', 'a',
+                '-show_entries', 'stream=index,codec_name:stream_tags=language,title',
+                '-of', 'json', str(video_path)
+            ]
+            res = self.run_subprocess(cmd, capture_output=True, text=True)
+            if res.returncode == 0 and res.stdout:
+                data = json.loads(res.stdout)
+                streams = data.get('streams', [])
+                for idx, stream in enumerate(streams):
+                    tags = stream.get('tags') or {}
+                    lang = tags.get('language', 'und')
+                    title = tags.get('title', '')
+                    codec = stream.get('codec_name', 'audio')
+                    label_parts = [f"Track {idx+1}"]
+                    if lang and lang != 'und':
+                        label_parts.append(f"[{lang.upper()}]")
+                    if title:
+                        label_parts.append(f"- {title}")
+                    label_parts.append(f"({codec})")
+                    tracks.append((idx, " ".join(label_parts)))
+        except Exception as e:
+            logging.warning(f"Could not probe audio streams with ffprobe: {e}")
+
+        if not tracks:
+            tracks = [(0, "Default Audio Stream (Track 1)")]
+
+        return tracks
+
         if PlatformManager.is_macos():
             candidates = [
                 ("h264_videotoolbox", []),
@@ -1785,7 +1827,7 @@ class ScenePackGenerator:
 
         return merged_intervals
 
-    def extract_and_concat(self, video_path: Path, intervals: List[Tuple[float, float, float]], output_path: Path, aspect_ratio: str = "16:9 Original"):
+    def extract_and_concat(self, video_path: Path, intervals: List[Tuple[float, float, float]], output_path: Path, aspect_ratio: str = "16:9 Original", audio_track_index: int = 0):
         if not intervals:
             logging.warning("No scenes to extract.")
             return
@@ -1795,9 +1837,9 @@ class ScenePackGenerator:
 
         try:
             codec, extra_args = self._get_best_video_codec_and_args()
-            logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec})...")
+            logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec}, audio track: {audio_track_index})...")
             if hasattr(self, "log_queue") and self.log_queue:
-                self.log_queue.put(("log", f"Rendering with Hardware Acceleration: using video encoder '{codec}'."))
+                self.log_queue.put(("log", f"Rendering with Hardware Acceleration: using video encoder '{codec}' (audio track: {audio_track_index + 1})."))
 
             total_segments = len(intervals)
             completed_count = 0
@@ -1812,7 +1854,7 @@ class ScenePackGenerator:
                 vf_filter = "setpts=PTS-STARTPTS,fps=24"
                 aspect_lower = aspect_ratio.lower()
                 if "9:16" in aspect_ratio and ("vert" in aspect_lower or "auto" in aspect_lower or "pion" in aspect_lower or "vertical" in aspect_lower):
-                    vf_filter = f"crop='ceil(ih*9/32)*2':'ceil(ih/2)*2':'iw*{avg_x}-ceil(ih*9/32)':0,setpts=PTS-STARTPTS,fps=24"
+                    vf_filter = f"crop='ceil(ih*9/32)*2':'ceil(ih/2)*2':'max(0,min(iw-ceil(ih*9/32)*2,floor(iw*{avg_x}-ceil(ih*9/32))))':0,setpts=PTS-STARTPTS,fps=24"
                 elif "9:16" in aspect_ratio and ("blur" in aspect_lower or "rozm" in aspect_lower or "tł" in aspect_lower or "background" in aspect_lower):
                     vf_filter = "[0:v]split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS,fps=24"
 
@@ -1835,6 +1877,8 @@ class ScenePackGenerator:
 
                 rate_control_args = ['-crf', '20'] if codec == 'libx264' else ['-b:v', '2.5M', '-maxrate', '4M', '-bufsize', '8M']
                 cmd.extend([
+                    '-map', '0:v:0',
+                    '-map', f'0:a:{audio_track_index}?',
                     '-af', 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,aresample=async=1,apad',
                     '-c:v', codec,
                 ] + extra_args + rate_control_args + [

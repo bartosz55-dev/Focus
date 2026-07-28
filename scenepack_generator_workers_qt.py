@@ -143,7 +143,7 @@ class ScanWorker(QThread):
 class RenderWorker(QThread):
     """Background worker for extracting and concatenating selected video clips."""
     def __init__(self, generator_instance, video_path: str, intervals: List[Tuple[float, float, float]],
-                 output_path: str, aspect_ratio: str, queue_proxy: QtQueueProxy):
+                 output_path: str, aspect_ratio: str, queue_proxy: QtQueueProxy, audio_track_index: int = 0):
         super().__init__()
         self.generator_instance = generator_instance
         self.video_path = video_path
@@ -151,6 +151,7 @@ class RenderWorker(QThread):
         self.output_path = output_path
         self.aspect_ratio = aspect_ratio
         self.queue_proxy = queue_proxy
+        self.audio_track_index = audio_track_index
 
     def cancel(self):
         if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'cancel'):
@@ -160,7 +161,7 @@ class RenderWorker(QThread):
         try:
             self.generator_instance.extract_and_concat(
                 Path(self.video_path), self.intervals, Path(self.output_path),
-                aspect_ratio=self.aspect_ratio
+                aspect_ratio=self.aspect_ratio, audio_track_index=self.audio_track_index
             )
             self.queue_proxy.put(("progress", 1.0, "Render Complete!"))
             self.queue_proxy.put(("show_render_success", str(self.output_path)))

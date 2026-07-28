@@ -425,6 +425,14 @@ class FocusApp(QMainWindow):
         box_o.addWidget(self.lbl_output_path, 1)
         files_layout.addLayout(box_o)
 
+        box_a = QHBoxLayout()
+        self.lbl_audio_track = QLabel("Audio Track / Ścieżka Audio:")
+        self.combo_audio_track = QComboBox()
+        self.combo_audio_track.addItem("Default Audio Stream (Track 1)", 0)
+        box_a.addWidget(self.lbl_audio_track)
+        box_a.addWidget(self.combo_audio_track, 1)
+        files_layout.addLayout(box_a)
+
         self.gen_content_layout.addWidget(files_card)
 
         # 4. Action & Progress Card
@@ -888,6 +896,14 @@ class FocusApp(QMainWindow):
             self.video_path_str = path
             self.lbl_video_path.setText(Path(path).name)
             self.apply_auto_tune()
+            try:
+                gen = ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
+                tracks = gen.get_audio_tracks(Path(path))
+                self.combo_audio_track.clear()
+                for stream_idx, label in tracks:
+                    self.combo_audio_track.addItem(label, stream_idx)
+            except Exception as e:
+                logging.warning(f"Could not probe audio tracks: {e}")
 
     def select_image(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Reference Face", "", "Image Files (*.png *.jpg *.jpeg *.webp *.bmp);;All Files (*.*)")
@@ -1034,11 +1050,16 @@ class FocusApp(QMainWindow):
             aspect_canonical = "9:16 Blurred Background"
         else:
             aspect_canonical = "16:9 Original"
+        
+        audio_track_idx = self.combo_audio_track.currentData()
+        if audio_track_idx is None:
+            audio_track_idx = 0
 
         generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
         self.render_worker = RenderWorker(
             generator_inst, self.video_path_str, selected_intervals,
-            self.output_path_str, aspect_canonical, self.queue_proxy
+            self.output_path_str, aspect_canonical, self.queue_proxy,
+            audio_track_index=audio_track_idx
         )
         self.render_worker.start()
 
@@ -1235,12 +1256,19 @@ class FocusApp(QMainWindow):
         self.btn_generate.setText(get_translation(self.current_lang, "generate"))
         self.btn_render.setEnabled(True)
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
-        log_path = get_app_dir() / "focus_debug.log"
-        QMessageBox.critical(
-            self, "Execution Error",
-            f"An error occurred during processing:\n{err}\n\n"
-            f"Detailed diagnostic log saved to:\n{log_path}"
-        )
+        log_dir = get_app_dir()
+        log_path = log_dir / "focus_debug.log"
+        
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle("Execution Error")
+        msg_box.setText(f"An error occurred during processing:\n{err}\n\nDetailed diagnostic log saved to:\n{log_path}")
+        btn_open = msg_box.addButton("Open Log Folder", QMessageBox.ActionRole)
+        msg_box.addButton(QMessageBox.Ok)
+        msg_box.exec()
+        
+        if msg_box.clickedButton() == btn_open:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_dir)))
 
     @Slot()
     def _on_reset_buttons(self):

@@ -88,16 +88,25 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         backend.init_gpu_acceleration()
         cl_en = backend.get_changelog_text("English")
         cl_pl = backend.get_changelog_text("Polski")
-        self.assertIn("v1.2.0", cl_en)
-        self.assertIn("v1.2.0", cl_pl)
+        self.assertIn("v1.2.1", cl_en)
+        self.assertIn("v1.2.1", cl_pl)
 
     def test_focus_debug_log_creation(self):
-        """Verify get_app_dir and focus_debug.log setup."""
+        """Verify get_app_dir creates Focus_Logs directory in user Documents folder."""
         import scenepack_generator_backend as backend
         app_dir = backend.get_app_dir()
         self.assertTrue(app_dir.exists())
+        self.assertEqual(app_dir.name, "Focus_Logs")
         log_file = app_dir / "focus_debug.log"
         self.assertTrue(log_file.exists())
+
+    def test_get_audio_tracks_fallback(self):
+        """Verify get_audio_tracks returns default audio track when video is missing or invalid."""
+        import scenepack_generator_backend as backend
+        gen = backend.ScenePackGenerator()
+        tracks = gen.get_audio_tracks(Path("non_existent_video.mp4"))
+        self.assertGreaterEqual(len(tracks), 1)
+        self.assertEqual(tracks[0][0], 0)
 
 if __name__ == "__main__":
     unittest.main()
