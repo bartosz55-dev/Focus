@@ -605,6 +605,8 @@ class FocusApp(ctk.CTk if ctk else object):
 
         history_text = (
             f"=== Focus {APP_VERSION} Release Notes ===\n\n"
+            "v1.0.7 (Session Continuity & Maintenance Update):\n"
+            "• Incremented versioning per strict permanent versioning rule (+0.01 bump) and validated unit test suite.\n\n"
             "v1.0.6 (Complete Historical Changelog Restoration):\n"
             "• Restored full historical release notes (v0.01 to v1.0.6) across all application interfaces per user request.\n"
             "• Enforced strict versioning rule (+0.01 bump) and validated unit test suite.\n\n"
