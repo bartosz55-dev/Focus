@@ -1,19 +1,15 @@
 import os
-import sys
 import shutil
 import tempfile
 import logging
-import threading
 from pathlib import Path
-from typing import List, Tuple, Any, Optional
+from typing import List, Tuple, Any
 
 import cv2
-import numpy as np
 from PIL import Image
 import face_recognition
 
-from PySide6.QtCore import QThread, Signal, QObject, Qt
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QThread, Signal, QObject
 
 class QtLogHandler(logging.Handler):
     """Custom logging handler that emits log messages via a Qt Signal."""
@@ -104,8 +100,8 @@ class ScanWorker(QThread):
 
     def cancel(self):
         self.is_cancelled = True
-        if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'terminate_all_subprocesses'):
-            self.generator_instance.terminate_all_subprocesses()
+        if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'cancel'):
+            self.generator_instance.cancel()
 
     def run(self):
         try:
@@ -119,7 +115,7 @@ class ScanWorker(QThread):
                 self.vad_speaker_enabled, self.vad_speaker_threshold
             )
             logging.info(f"Finished Scanning! Found {len(scanned_intervals)} clips. Generating thumbnails...")
-            
+
             thumbnails = []
             cap = cv2.VideoCapture(self.video_path)
             try:
@@ -135,7 +131,7 @@ class ScanWorker(QThread):
                         thumbnails.append(None)
             finally:
                 cap.release()
-            
+
             self.queue_proxy.put(("progress", 1.0, "Scan Complete"))
             self.queue_proxy.put(("show_review_checklist", (scanned_intervals, thumbnails)))
         except Exception as e:
@@ -157,8 +153,8 @@ class RenderWorker(QThread):
         self.queue_proxy = queue_proxy
 
     def cancel(self):
-        if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'terminate_all_subprocesses'):
-            self.generator_instance.terminate_all_subprocesses()
+        if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'cancel'):
+            self.generator_instance.cancel()
 
     def run(self):
         try:
@@ -226,12 +222,12 @@ class GalleryScanWorker(QThread):
                 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                 if fps <= 0: fps = 24.0
                 if total_frames <= 0: total_frames = 1000
-                
+
                 sample_step = max(1, int(fps * 2.5))
                 curr_frame = 0
                 sampled_count = 0
                 raw_candidates = []
-                
+
                 cascade = None
                 profile_cascade = None
                 if mode == "Anime":
@@ -258,7 +254,7 @@ class GalleryScanWorker(QThread):
                     ret, frame = cap.read()
                     if not ret:
                         break
-                        
+
                     sampled_count += 1
                     prog = min(1.0, curr_frame / float(total_frames))
                     status_text = f"Scanning... {int(prog * 100)}% (Sampled {sampled_count} frames, Found {len(raw_candidates)} face candidate(s))"
@@ -275,17 +271,17 @@ class GalleryScanWorker(QThread):
                         small_frame = cv2.resize(frame, (480, new_h))
                     else:
                         small_frame = frame
-                        
+
                     if mode == "Real Faces":
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                         face_locations = face_recognition.face_locations(rgb_frame, model="hog")
-                        
+
                         if not face_locations and profile_cascade and not profile_cascade.empty():
                             gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
                             profiles_right = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                             for (x, y, w, h) in profiles_right:
                                 face_locations.append((y, x+w, y+h, x))
-                                
+
                             flipped_gray = cv2.flip(gray, 1)
                             profiles_left = profile_cascade.detectMultiScale(flipped_gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                             h_img, w_img = gray.shape
@@ -300,11 +296,11 @@ class GalleryScanWorker(QThread):
                                 face_crop_rgb = self.engine_module.make_square_crop(rgb_frame, top, right, bottom, left, pad_ratio=0.30)
                                 if face_crop_rgb is None or face_crop_rgb.size == 0:
                                     continue
-                                    
+
                                 pil_crop = Image.fromarray(face_crop_rgb)
                                 crop_path = crops_dir / f"char_cand_{sampled_count}_{len(raw_candidates)}.png"
                                 pil_crop.save(crop_path)
-                                
+
                                 raw_candidates.append({
                                     'crop_path': str(crop_path),
                                     'pil_image': pil_crop,
@@ -320,12 +316,12 @@ class GalleryScanWorker(QThread):
                             crop_bgr = self.engine_module.make_square_crop(small_frame, y, x + fw, y + fh, x, pad_ratio=0.30)
                             if crop_bgr is None or crop_bgr.size == 0:
                                 continue
-                                
+
                             crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
                             pil_crop = Image.fromarray(crop_rgb)
                             crop_path = crops_dir / f"anime_cand_{sampled_count}_{len(raw_candidates)}.png"
                             pil_crop.save(crop_path)
-                            
+
                             feat = self.engine_module.extract_anime_face_features(crop_bgr)
                             raw_candidates.append({
                                 'crop_path': str(crop_path),
@@ -338,7 +334,7 @@ class GalleryScanWorker(QThread):
                     curr_frame += sample_step
             finally:
                 cap.release()
-            
+
             self.queue_proxy.put(("log", f"Running post-scan face clustering pass over {len(raw_candidates)} candidate face(s)..."))
             merged_clusters = []
             for candidate in raw_candidates:
@@ -394,7 +390,7 @@ class GalleryScanWorker(QThread):
                 logging.info(msg_done)
                 self.queue_proxy.put(("log", msg_done))
                 self.queue_proxy.put(("gallery_results", merged_clusters))
-            
+
         except Exception as e:
             err_msg = f"Gallery scan failed: {e}"
             logging.error(err_msg)
