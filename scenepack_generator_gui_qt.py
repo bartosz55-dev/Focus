@@ -369,24 +369,24 @@ class FocusApp(QMainWindow):
         # 2. Smart Preset Cards
         self.presets_card = ModernCard(self)
         presets_layout = QVBoxLayout(self.presets_card)
-        lbl_smart_title = QLabel("✨ 1-Click Smart Presets")
+        lbl_smart_title = QLabel("Smart Presets")
         lbl_smart_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         presets_layout.addWidget(lbl_smart_title)
 
         p_box = QHBoxLayout()
         p_box.setSpacing(10)
 
-        self.btn_preset_tiktok = QPushButton("📱 TikTok / Shorts\n(9:16 Vertical Auto-Track)")
+        self.btn_preset_tiktok = QPushButton("TikTok / Shorts\n(9:16 Vertical Auto-Track)")
         self.btn_preset_tiktok.setObjectName("AccentBtn")
         self.btn_preset_tiktok.setFixedHeight(48)
         self.btn_preset_tiktok.clicked.connect(lambda: self._apply_smart_preset("tiktok"))
 
-        self.btn_preset_youtube = QPushButton("🎬 YouTube Scenepack\n(16:9 Original Res)")
+        self.btn_preset_youtube = QPushButton("YouTube Scenepack\n(16:9 Original Res)")
         self.btn_preset_youtube.setObjectName("AccentBtn")
         self.btn_preset_youtube.setFixedHeight(48)
         self.btn_preset_youtube.clicked.connect(lambda: self._apply_smart_preset("youtube"))
 
-        self.btn_preset_draft = QPushButton("⚡ Ultra-Fast Draft Scan\n(Low res fast sampling)")
+        self.btn_preset_draft = QPushButton("Ultra-Fast Draft Scan\n(Low res fast sampling)")
         self.btn_preset_draft.setObjectName("AccentBtn")
         self.btn_preset_draft.setFixedHeight(48)
         self.btn_preset_draft.clicked.connect(lambda: self._apply_smart_preset("draft"))
@@ -416,7 +416,7 @@ class FocusApp(QMainWindow):
         self.combo_presets.currentTextChanged.connect(self._on_preset_selected)
         top_set_box.addWidget(self.combo_presets, 1)
 
-        self.btn_autotune = QPushButton("✨ Auto-Tune")
+        self.btn_autotune = QPushButton("Auto-Tune")
         self.btn_autotune.setObjectName("AccentBtn")
         self.btn_autotune.clicked.connect(self.apply_auto_tune)
         top_set_box.addWidget(self.btn_autotune)
@@ -542,9 +542,17 @@ class FocusApp(QMainWindow):
 
         # Batch Queue Section
         files_layout.addSpacing(10)
-        self.lbl_batch_title = QLabel("📦 Batch Processing Queue (Multiple Video Files):")
+        self.lbl_batch_title = QLabel("Batch Processing Queue (Multiple Video Files):")
         self.lbl_batch_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         files_layout.addWidget(self.lbl_batch_title)
+
+        batch_mode_box = QHBoxLayout()
+        self.radio_batch_separate = QRadioButton("Render as Separate Video Files")
+        self.radio_batch_single = QRadioButton("Concatenate All into Single Master Scenepack")
+        self.radio_batch_separate.setChecked(True)
+        batch_mode_box.addWidget(self.radio_batch_separate)
+        batch_mode_box.addWidget(self.radio_batch_single)
+        files_layout.addLayout(batch_mode_box)
 
         self.list_batch_queue = QListWidget()
         self.list_batch_queue.setFixedHeight(80)
@@ -552,11 +560,11 @@ class FocusApp(QMainWindow):
         files_layout.addWidget(self.list_batch_queue)
 
         batch_btn_box = QHBoxLayout()
-        self.btn_add_batch = QPushButton("➕ Add Multiple Files to Queue")
+        self.btn_add_batch = QPushButton("Add Files to Queue")
         self.btn_add_batch.clicked.connect(self.add_batch_videos)
-        self.btn_clear_batch = QPushButton("🗑️ Clear Queue")
+        self.btn_clear_batch = QPushButton("Clear Queue")
         self.btn_clear_batch.clicked.connect(self.clear_batch_queue)
-        self.btn_run_batch = QPushButton("🚀 Run Batch Queue")
+        self.btn_run_batch = QPushButton("Run Batch Queue")
         self.btn_run_batch.setObjectName("AccentBtn")
         self.btn_run_batch.clicked.connect(self.start_batch_processing)
 
@@ -619,11 +627,11 @@ class FocusApp(QMainWindow):
         rev_layout.addWidget(self.table_review)
 
         rev_btns = QHBoxLayout()
-        self.btn_play_orig = QPushButton("▶ Play Original Video")
+        self.btn_play_orig = QPushButton("Play Original Video")
         self.btn_play_orig.clicked.connect(self.play_original)
         rev_btns.addWidget(self.btn_play_orig)
 
-        self.btn_play_res = QPushButton("▶ Play Last Result")
+        self.btn_play_res = QPushButton("Play Last Result")
         self.btn_play_res.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.output_path_str)) if self.output_path_str and os.path.exists(self.output_path_str) else None)
         rev_btns.addWidget(self.btn_play_res)
 
@@ -647,11 +655,11 @@ class FocusApp(QMainWindow):
         log_header.addWidget(self.lbl_log_title)
         
         self.input_log_filter = QLineEdit()
-        self.input_log_filter.setPlaceholderText("🔍 Filter logs...")
+        self.input_log_filter.setPlaceholderText("Filter logs...")
         self.input_log_filter.setFixedWidth(140)
         log_header.addWidget(self.input_log_filter)
         
-        self.btn_copy_diag = QPushButton("📋 Copy Diagnostics")
+        self.btn_copy_diag = QPushButton("Copy Diagnostics")
         self.btn_copy_diag.clicked.connect(self.copy_diagnostics)
         log_header.addWidget(self.btn_copy_diag)
         log_layout.addLayout(log_header)
@@ -1304,10 +1312,11 @@ class FocusApp(QMainWindow):
         if not self.batch_queue_files:
             QMessageBox.information(self, "Batch Queue Empty", "Please add video files to the batch queue first.")
             return
-        if not hasattr(self, 'image_path_str') or not self.image_path_str or not Path(self.image_path_str).is_file():
+        if not hasattr(self, 'image_path_str') or (not self.image_path_str and self.selected_ref_data is None):
             QMessageBox.warning(self, "Missing Reference Face", "Please select a reference face image before processing the batch queue.")
             return
         self.is_batch_running = True
+        self.batch_rendered_outputs = []
         self.current_batch_index = 0
         self._process_next_batch_item()
 
@@ -1317,12 +1326,37 @@ class FocusApp(QMainWindow):
             self.video_path_str = v_path
             self.lbl_video_path.setText(Path(v_path).name)
             self.lbl_batch_status.setText(f"Processing Batch Item {self.current_batch_index + 1} of {len(self.batch_queue_files)}: {Path(v_path).name}")
-            self.toast.show_toast(f"Batch [{self.current_batch_index + 1}/{len(self.batch_queue_files)}]: Scanning {Path(v_path).name}", "🚀")
+            self.toast.show_toast(f"Batch [{self.current_batch_index + 1}/{len(self.batch_queue_files)}]: Scanning {Path(v_path).name}")
             self.start_scan()
         else:
             self.is_batch_running = False
-            self.lbl_batch_status.setText("✅ Batch Processing Complete!")
-            self.toast.show_toast("All batch items processed successfully!", "🎉", 4000)
+            if self.radio_batch_single.isChecked() and len(self.batch_rendered_outputs) > 1:
+                self._concatenate_master_scenepack()
+            else:
+                self.lbl_batch_status.setText("Batch Processing Complete!")
+                self.toast.show_toast("All batch items processed successfully!", "Success", 4000)
+
+    def _concatenate_master_scenepack(self):
+        try:
+            out_dir = Path(self.output_path_str).parent if self.output_path_str else Path.home() / "Desktop"
+            master_out = out_dir / "Master_Consolidated_Scenepack.mp4"
+            valid_paths = [Path(p) for p in self.batch_rendered_outputs if os.path.exists(p)]
+            if valid_paths:
+                tmp_dir = Path(tempfile.mkdtemp(prefix="master_concat_"))
+                concat_list = tmp_dir / "master_list.txt"
+                sg_engine.write_concat_list(valid_paths, concat_list)
+                gen = ScenePackGenerator()
+                cmd = [
+                    str(gen.ffmpeg_path), '-y', '-f', 'concat', '-safe', '0',
+                    '-i', str(concat_list), '-c', 'copy', str(master_out)
+                ]
+                gen.run_subprocess(cmd, cwd=tmp_dir)
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                self.lbl_batch_status.setText(f"Master Scenepack Created: {master_out.name}")
+                self.toast.show_toast(f"Master Scenepack Created: {master_out.name}", duration_ms=4000)
+                QMessageBox.information(self, "Master Scenepack Complete", f"Consolidated Master Scenepack saved to:\n{master_out}")
+        except Exception as e:
+            logging.error(f"Master concatenation failed: {e}")
 
     @Slot(str)
     def _on_gallery_status(self, status: str):
@@ -1500,12 +1534,14 @@ class FocusApp(QMainWindow):
         self.btn_render.setEnabled(True)
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
         self.progress_bar.setValue(1000)
-        self.lbl_eta.setText(f"✨ Rendering complete! Saved to: {Path(out_path).name}")
+        self.lbl_eta.setText(f"Rendering complete! Saved to: {Path(out_path).name}")
         if self.chk_sound.isChecked():
             QApplication.beep()
         if not self.is_batch_running:
             QMessageBox.information(self, "Success", f"Scenepack successfully rendered and saved to:\n{out_path}")
         else:
+            if hasattr(self, 'batch_rendered_outputs'):
+                self.batch_rendered_outputs.append(out_path)
             self.current_batch_index += 1
             QTimer.singleShot(1000, self._process_next_batch_item)
 
