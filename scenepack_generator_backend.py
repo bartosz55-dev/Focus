@@ -51,8 +51,31 @@ def get_cascade_classifier(cascade_path: Optional[str]):
 
     return None
 
+
+def init_gpu_acceleration():
+    """
+    Enables OpenCV OpenCL hardware acceleration on supported GPUs (e.g. AMD Radeon RX 7800 XT, NVIDIA, Intel).
+    Offloads image transformations, color conversions, and AI detection operations to the GPU.
+    """
+    try:
+        if hasattr(cv2, 'ocl') and cv2.ocl.haveOpenCL():
+            cv2.ocl.setUseOpenCL(True)
+            if cv2.ocl.useOpenCL():
+                dev = cv2.ocl.Device.getDefault()
+                logging.info(f"OpenCV OpenCL GPU Acceleration Enabled: '{dev.name()}' ({dev.vendorName()})")
+            else:
+                logging.info("OpenCV OpenCL is available but setUseOpenCL returned False.")
+        else:
+            logging.info("OpenCV OpenCL hardware acceleration is not supported on this platform/driver.")
+    except Exception as e:
+        logging.warning(f"Could not initialize OpenCV OpenCL acceleration: {e}")
+
+
+# Initialize OpenCV OpenCL GPU Acceleration
+init_gpu_acceleration()
+
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.1.5"
+APP_VERSION = "v1.1.7"
 
 
 class PlatformManager:
@@ -652,7 +675,18 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
-            "• v1.0.6 (Przywrócenie Pełnej Historii Zmian):\n"
+            "• v1.1.7 (NVIDIA NVENC/HEVC Hardware Acceleration & Release Publishing):\n"
+            "  - Pełna obsługa sprzętowa dla kart NVIDIA (NVENC h264_nvenc, hevc_nvenc) oraz dekodowanie CUDA/NVDEC.\n"
+            "  - Automatyczne wyzwalanie cyklu budowania i publikacji wydań (GitHub Releases) dla Windows i macOS.\n\n"
+            "• v1.1.6 (AMD GPU Acceleration, Changelog Fix & UI Sanitization):\n"
+            "  - Włączono pełną akcelerację sprzętową OpenCV OpenCL (cv2.ocl) pozwalającą kartom AMD (np. RX 7800 XT) na wykonywanie skanowania AI na GPU.\n"
+            "  - Rozszerzono próbkowanie FFmpeg na Windows o enkoder AMD AMF (h264_amf) oraz Microsoft Media Foundation (h264_mf).\n"
+            "  - Wdrożono dekodowanie sprzętowe wideo FFmpeg (-hwaccel auto / -hwaccel videotoolbox).\n"
+            "  - Naprawiono i zabezpieczono otwarcie okna dialogowego Changelogu w interfejsie Qt6 oraz CustomTkinter.\n"
+            "  - Wyczyszczono błędy nazewnictwa i surowe znaki podłogi (_) we wszystkich widokach interfejsu.\n\n"
+            "• v1.1.5 (Architecture Audit, Deduplication & Test Suite Consolidation):\n"
+            "  - Skonsolidowano źródło danych widoku Changeloga do backend.get_changelog_text().\n"
+            "  - Zabezpieczono ładowanie kaskad OpenCV Haar i wdrożono automatyczny fallback na rozpoznawanie neuronalne.\n"
             "  - Przywrócono pełne, szczegółowe dzienniki zmian od wersji v0.01 do v1.0.6 we wszystkich interfejsach.\n"
             "  - Udoskonalono okno dialogowe Changelogu w PySide6 Qt6 (nowoczesny, stylizowany QDialog z suwakiem).\n"
             "  - Zaktualizowano wersjonowanie systemowe i przeprowadzono weryfikację testów jednostkowych.\n\n"
@@ -771,6 +805,15 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.1.7 (NVIDIA NVENC/HEVC Hardware Acceleration & Release Publishing):\n"
+            "  - Added full hardware acceleration support for NVIDIA GPUs (`h264_nvenc`, `hevc_nvenc`, CUDA/NVDEC decoding).\n"
+            "  - Tagged and triggered automated multi-platform release builds for Windows and macOS via GitHub Actions.\n\n"
+            "• v1.1.6 (AMD GPU Acceleration, Changelog Fix & UI Sanitization):\n"
+            "  - Enabled OpenCV OpenCL GPU acceleration (`cv2.ocl`) for offloading AI scanning to AMD RX 7800 XT and other GPUs.\n"
+            "  - Expanded Windows FFmpeg GPU encoder probing to support AMD AMF (`h264_amf`) and Media Foundation (`h264_mf`).\n"
+            "  - Implemented FFmpeg hardware decoding flags (`-hwaccel auto` / `-hwaccel videotoolbox`).\n"
+            "  - Hardened and fixed the Changelog modal popup across both PySide6 Qt6 and CustomTkinter interfaces.\n"
+            "  - Sanitized raw underscores (`_`) and improved UI text formatting across all views and comboboxes.\n\n"
             "• v1.1.5 (Architecture Audit, Deduplication & Test Suite Consolidation):\n"
             "  - Refactored Qt6 and CustomTkinter GUI Changelog dialogs to consume `backend.get_changelog_text()` as single source of truth.\n"
             "  - Consolidated unit tests to dynamically validate version string format and verified 100% test suite pass rate.\n"
@@ -1165,6 +1208,14 @@ class ScenePackGenerator:
                     self.log_queue.put(("log", f"Failed to download anime cascade model: {e}"))
                     raise RuntimeError(f"Failed to download anime cascade model: {e}")
 
+    def _get_hwaccel_args(self) -> List[str]:
+        """Returns optimal input hardware acceleration decoding flags for FFmpeg based on host platform."""
+        if PlatformManager.is_windows():
+            return ["-hwaccel", "auto"]
+        elif PlatformManager.is_macos():
+            return ["-hwaccel", "videotoolbox"]
+        return []
+
     def _get_best_video_codec_and_args(self) -> Tuple[str, List[str]]:
         """Probes FFmpeg for available hardware video encoders and returns the fastest supported codec and its optimal speed arguments."""
         if hasattr(self, "_cached_best_vcodec") and self._cached_best_vcodec is not None:
@@ -1173,22 +1224,28 @@ class ScenePackGenerator:
         if PlatformManager.is_macos():
             candidates = [
                 ("h264_videotoolbox", []),
+                ("hevc_videotoolbox", []),
                 ("libx264", ["-preset", "veryfast"])
             ]
         elif PlatformManager.is_windows():
             candidates = [
                 ("h264_nvenc", ["-preset", "fast"]),
-                ("h264_qsv", ["-preset", "veryfast"]),
+                ("hevc_nvenc", ["-preset", "fast"]),
                 ("h264_amf", ["-quality", "speed"]),
+                ("hevc_amf", ["-quality", "speed"]),
                 ("h264_mf", []),
+                ("hevc_mf", []),
+                ("h264_qsv", ["-preset", "veryfast"]),
+                ("hevc_qsv", ["-preset", "veryfast"]),
                 ("libx264", ["-preset", "veryfast"])
             ]
         else:
             candidates = [
                 ("h264_nvenc", ["-preset", "fast"]),
+                ("hevc_nvenc", ["-preset", "fast"]),
+                ("h264_amf", ["-quality", "speed"]),
                 ("h264_vaapi", []),
                 ("h264_qsv", ["-preset", "veryfast"]),
-                ("h264_amf", ["-quality", "speed"]),
                 ("libx264", ["-preset", "veryfast"])
             ]
 
@@ -1641,9 +1698,11 @@ class ScenePackGenerator:
                 elif "9:16" in aspect_ratio and ("blur" in aspect_lower or "rozm" in aspect_lower or "tł" in aspect_lower or "background" in aspect_lower):
                     vf_filter = "[0:v]split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS,fps=24"
 
+                hwaccel_flags = self._get_hwaccel_args()
                 cmd = [
                     str(self.ffmpeg_path), '-y',
-                    '-hide_banner', '-loglevel', 'error',
+                    '-hide_banner', '-loglevel', 'error'
+                ] + hwaccel_flags + [
                     '-ss', str(start),
                     '-accurate_seek',
                     '-i', str(video_path),
@@ -1675,6 +1734,24 @@ class ScenePackGenerator:
                 ])
 
                 result = self.run_subprocess(cmd, capture_output=True, text=True)
+                if result.returncode != 0 and hwaccel_flags:
+                    # Retry without hwaccel flags if hardware decoding fails for specific container/codecs
+                    cmd_fallback = [
+                        str(self.ffmpeg_path), '-y',
+                        '-hide_banner', '-loglevel', 'error',
+                        '-ss', str(start),
+                        '-accurate_seek',
+                        '-i', str(video_path),
+                        '-t', str(duration),
+                        '-fps_mode', 'cfr'
+                    ]
+                    if "blur" in aspect_lower or "rozm" in aspect_lower or "background" in aspect_lower:
+                        cmd_fallback.extend(['-filter_complex', vf_filter])
+                    else:
+                        cmd_fallback.extend(['-vf', vf_filter])
+                    cmd_fallback.extend(cmd[cmd.index('-af'):])
+                    result = self.run_subprocess(cmd_fallback, capture_output=True, text=True)
+
                 if result.returncode != 0:
                     logging.error(f"FFmpeg slice failed for segment {i+1}: {result.stderr}")
                     return i, None

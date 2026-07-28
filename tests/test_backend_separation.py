@@ -82,5 +82,15 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         self.assertIs(tk_mod.TRANSLATIONS, backend.TRANSLATIONS)
         self.assertIs(tk_mod.get_translation, backend.get_translation)
 
+    def test_gpu_acceleration_init_and_changelog(self):
+        """Verify GPU acceleration initializer runs cleanly and get_changelog_text returns valid version notes."""
+        import scenepack_generator_backend as backend
+        backend.init_gpu_acceleration()
+        cl_en = backend.get_changelog_text("English")
+        cl_pl = backend.get_changelog_text("Polski")
+        self.assertIn("v1.1.6", cl_en)
+        self.assertIn("v1.1.6", cl_pl)
+        self.assertIn("AMD GPU Acceleration", cl_en)
+
 if __name__ == "__main__":
     unittest.main()
