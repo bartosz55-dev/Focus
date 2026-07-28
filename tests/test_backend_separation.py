@@ -88,9 +88,9 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         backend.init_gpu_acceleration()
         cl_en = backend.get_changelog_text("English")
         cl_pl = backend.get_changelog_text("Polski")
-        self.assertIn("v1.1.6", cl_en)
-        self.assertIn("v1.1.6", cl_pl)
-        self.assertIn("AMD GPU Acceleration", cl_en)
+        self.assertIn("v1.1.8", cl_en)
+        self.assertIn("v1.1.8", cl_pl)
+        self.assertIn("Multi-Core Batch Frame Processing", cl_en)
 
 if __name__ == "__main__":
     unittest.main()
