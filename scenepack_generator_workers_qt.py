@@ -162,6 +162,9 @@ class RenderWorker(QThread):
                 Path(self.video_path), self.intervals, Path(self.output_path),
                 aspect_ratio=self.aspect_ratio
             )
+            self.queue_proxy.put(("progress", 1.0, "Render Complete!"))
+            self.queue_proxy.put(("show_render_success", str(self.output_path)))
+            self.queue_proxy.put(("reset_btn", None))
         except Exception as e:
             logging.error(f"Error occurred during clip rendering: {str(e)}")
             self.queue_proxy.put(("error", str(e)))
@@ -223,7 +226,7 @@ class GalleryScanWorker(QThread):
                 if fps <= 0: fps = 24.0
                 if total_frames <= 0: total_frames = 1000
 
-                sample_step = max(1, int(fps * 1.0))
+                sample_step = max(1, int(fps * 0.3))
                 curr_frame = 0
                 sampled_count = 0
                 raw_candidates = []
