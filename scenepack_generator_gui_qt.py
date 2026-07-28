@@ -1124,7 +1124,7 @@ class FocusApp(QMainWindow):
             vad_speaker_enabled = self.chk_speaker.isChecked()
             vad_speaker_threshold = float(self.slider_speaker.value()) / 100.0
         except ValueError:
-            QMessageBox.showerror(self, "Invalid Input", "Numeric parameters must be valid numbers.")
+            QMessageBox.critical(self, "Invalid Input", "Numeric parameters must be valid numbers.")
             return
 
         self.btn_generate.setEnabled(False)
@@ -1450,6 +1450,14 @@ class FocusApp(QMainWindow):
         self.btn_generate.setText(get_translation(self.current_lang, "generate"))
         self.lbl_eta.setText(f"Scan complete! Review {len(intervals)} clip(s) below and click Render.")
 
+        if self.is_batch_running:
+            out_dir = Path(self.output_path_str).parent if self.output_path_str else Path.home() / "Desktop"
+            v_name = Path(self.video_path_str).stem
+            auto_out_path = out_dir / f"{v_name}_scenepack.mp4"
+            self.output_path_str = str(auto_out_path)
+            self.lbl_output_path.setText(auto_out_path.name)
+            QTimer.singleShot(800, self.start_render)
+
     @Slot(str)
     def _on_render_complete(self, out_path: str):
         self.btn_render.setEnabled(True)
@@ -1458,7 +1466,11 @@ class FocusApp(QMainWindow):
         self.lbl_eta.setText(f"✨ Rendering complete! Saved to: {Path(out_path).name}")
         if self.chk_sound.isChecked():
             QApplication.beep()
-        QMessageBox.information(self, "Success", f"Scenepack successfully rendered and saved to:\n{out_path}")
+        if not self.is_batch_running:
+            QMessageBox.information(self, "Success", f"Scenepack successfully rendered and saved to:\n{out_path}")
+        else:
+            self.current_batch_index += 1
+            QTimer.singleShot(1000, self._process_next_batch_item)
 
     @Slot(str)
     def _on_error_msg(self, err: str):
