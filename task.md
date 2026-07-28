@@ -1,8 +1,17 @@
 # Focus AI Scenepack Generator — Task Tracking & Release Status
 
-## Current Release: `v1.1.9`
+## Current Release: `v1.2.0`
 
 ### Completed Tasks & Milestones
+
+- [x] **v1.2.0 — High-Speed Render, Bitrate Control & Precision Anime Face Matching**
+  - [x] Optimized rendering speed by limiting parallel FFmpeg slice workers to `min(2, cpu_count)`, eliminating AMD GPU/VideoToolbox driver queue thrashing.
+  - [x] Reduced output file size from 500MB+ down to crisp ~25MB–40MB via dynamic rate control (`-crf 20` for x264, `-b:v 2.5M -maxrate 4M -bufsize 8M` for GPU encoders).
+  - [x] Added `show_render_success` and `reset_btn` signals to `RenderWorker.run()`, ensuring GUI button resets from `Rendering Clips...` to active state with completion alert modal.
+  - [x] Implemented reference face encoding matching in Anime mode (`face_recognition.compare_faces`) when `ref_data` is provided to reject unrelated characters & background textures.
+  - [x] Increased Character Gallery (Beta) sampling resolution to 0.3s intervals (`fps * 0.3`).
+  - [x] Updated unit test suite (`tests/test_backend_separation.py`) and verified 100% test pass rate (27/27 tests passing).
+  - [x] Tagged `v1.2.0` and pushed to GitHub triggering automated CI/CD multi-platform builds for Windows (`Focus-Windows.zip`) and macOS (`Focus-macOS.zip`).
 
 - [x] **v1.1.9 — Persistent Diagnostic Crash Logging (`focus_debug.log`) & Render Validation**
   - [x] Implemented system-wide crash logger (`setup_crash_logger()`) creating `focus_debug.log` in app support directory.

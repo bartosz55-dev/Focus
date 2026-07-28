@@ -88,8 +88,8 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         backend.init_gpu_acceleration()
         cl_en = backend.get_changelog_text("English")
         cl_pl = backend.get_changelog_text("Polski")
-        self.assertIn("v1.1.9", cl_en)
-        self.assertIn("v1.1.9", cl_pl)
+        self.assertIn("v1.2.0", cl_en)
+        self.assertIn("v1.2.0", cl_pl)
 
     def test_focus_debug_log_creation(self):
         """Verify get_app_dir and focus_debug.log setup."""
