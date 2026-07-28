@@ -44,7 +44,7 @@ def get_cascade_classifier(cascade_path: str):
             raise RuntimeError(f"Could not load cv2.CascadeClassifier: {e}")
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.1.1"
+APP_VERSION = "v1.1.2"
 
 
 class PlatformManager:
