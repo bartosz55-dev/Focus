@@ -41,6 +41,7 @@ class QtQueueProxy(QObject):
     render_complete_signal = Signal(str)
     error_signal = Signal(str)
     reset_btn_signal = Signal()
+    audio_tracks_signal = Signal(list)
 
     def put(self, item: Tuple[Any, ...]):
         if not isinstance(item, tuple) or len(item) == 0:
@@ -70,6 +71,8 @@ class QtQueueProxy(QObject):
                 self.error_signal.emit(str(item[1]))
             elif tag == "reset_btn":
                 self.reset_btn_signal.emit()
+            elif tag == "audio_tracks" and len(item) >= 2:
+                self.audio_tracks_signal.emit(item[1])
         except Exception as e:
             logging.error(f"Error in QtQueueProxy: {e}")
 
@@ -139,6 +142,25 @@ class ScanWorker(QThread):
             self.queue_proxy.put(("error", str(e)))
             self.queue_proxy.put(("progress", 0.0, "Scan Error Occurred"))
             self.queue_proxy.put(("reset_btn", None))
+
+class AudioTrackWorker(QThread):
+    """Background worker for initializing FFmpeg and probing audio tracks."""
+    def __init__(self, generator_cls, video_path: str, mode: str, queue_proxy: QtQueueProxy):
+        super().__init__()
+        self.generator_cls = generator_cls
+        self.video_path = video_path
+        self.mode = mode
+        self.queue_proxy = queue_proxy
+
+    def run(self):
+        try:
+            gen = self.generator_cls(log_queue=self.queue_proxy, mode=self.mode)
+            tracks = gen.get_audio_tracks(Path(self.video_path))
+            self.queue_proxy.put(("audio_tracks", tracks))
+        except Exception as e:
+            logging.error(f"Could not probe audio tracks in background: {e}")
+            self.queue_proxy.put(("audio_tracks", [(0, "Default Audio Stream (Track 1)")]))
+
 
 class RenderWorker(QThread):
     """Background worker for extracting and concatenating selected video clips."""
@@ -251,9 +273,20 @@ class GalleryScanWorker(QThread):
                 crops_dir.mkdir(parents=True, exist_ok=True)
 
                 while curr_frame < total_frames and not self.is_cancelled:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, curr_frame)
-                    ret, frame = cap.read()
+                    if curr_frame > 0:
+                        # Fast-forward using grab() which is significantly faster on Windows than cap.set()
+                        skip_count = sample_step - 1
+                        for _ in range(skip_count):
+                            if not cap.grab():
+                                break
+                        curr_frame += skip_count
+                        
+                    ret = cap.grab()
                     if not ret:
+                        break
+                    
+                    ret_ret, frame = cap.retrieve()
+                    if not ret_ret or frame is None:
                         break
 
                     sampled_count += 1
@@ -357,7 +390,7 @@ class GalleryScanWorker(QThread):
                                     'anime_feature': feat
                                 })
 
-                    curr_frame += sample_step
+                    curr_frame += 1
             finally:
                 cap.release()
 
