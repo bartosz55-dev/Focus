@@ -12,15 +12,17 @@ if sys.platform == "darwin":
 
 import cv2
 
-from PySide6.QtCore import Qt, QUrl, QTimer, Slot, QRectF
+from PySide6.QtCore import Qt, QUrl, QTimer, Slot, QRectF, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QSequentialAnimationGroup, QPoint
 from PySide6.QtGui import QFont, QPixmap, QImage, QDesktopServices, QPainter, QColor, QPen
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QCheckBox, QSlider, QProgressBar, QComboBox,
     QScrollArea, QTabWidget, QFrame, QMessageBox, QFileDialog, QTextEdit,
     QSplitter, QStackedWidget, QButtonGroup, QRadioButton, QAbstractItemView,
-    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QDialog, QSplashScreen
+    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QDialog, QSplashScreen,
+    QGraphicsOpacityEffect, QListWidget, QListWidgetItem
 )
+import gc
 
 # Import shared backend engine and helpers from scenepack_generator_backend
 import scenepack_generator_backend as sg_engine
@@ -37,6 +39,66 @@ class ModernCard(QFrame):
         super().__init__(parent)
         self.setObjectName("ModernCard")
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
+class ToastNotification(QFrame):
+    """Modern floating Toast Notification overlay at top-right."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("ToastNotification")
+        self.setStyleSheet("""
+            QFrame#ToastNotification {
+                background-color: rgba(20, 24, 33, 0.95);
+                border: 1px solid rgba(0, 229, 255, 0.5);
+                border-radius: 8px;
+            }
+        """)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(14, 8, 14, 8)
+        self.lbl_icon = QLabel("✨")
+        self.lbl_icon.setFont(QFont("Segoe UI", 12))
+        layout.addWidget(self.lbl_icon)
+        
+        self.lbl_msg = QLabel("")
+        self.lbl_msg.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        self.lbl_msg.setStyleSheet("color: #FFFFFF;")
+        layout.addWidget(self.lbl_msg)
+        
+        self.opacity_effect = QGraphicsOpacityEffect(self)
+        self.setGraphicsEffect(self.opacity_effect)
+        self.hide()
+        
+        self.timer = QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.fade_out)
+
+    def show_toast(self, text: str, icon: str = "✨", duration_ms: int = 3200):
+        self.lbl_msg.setText(text)
+        self.lbl_icon.setText(icon)
+        self.adjustSize()
+        if self.parent():
+            p_rect = self.parent().rect()
+            self.move(p_rect.width() - self.width() - 24, 24)
+            self.raise_()
+        
+        self.show()
+        self.opacity_effect.setOpacity(0.0)
+        self.anim = QPropertyAnimation(self.opacity_effect, b"opacity", self)
+        self.anim.setDuration(250)
+        self.anim.setStartValue(0.0)
+        self.anim.setEndValue(1.0)
+        self.anim.setEasingCurve(QEasingCurve.OutQuad)
+        self.anim.start()
+        
+        self.timer.start(duration_ms)
+
+    def fade_out(self):
+        self.anim = QPropertyAnimation(self.opacity_effect, b"opacity", self)
+        self.anim.setDuration(300)
+        self.anim.setStartValue(1.0)
+        self.anim.setEndValue(0.0)
+        self.anim.setEasingCurve(QEasingCurve.InQuad)
+        self.anim.finished.connect(self.hide)
+        self.anim.start()
 
 class FocusApp(QMainWindow):
     """
@@ -70,6 +132,10 @@ class FocusApp(QMainWindow):
         self.render_worker: Optional[RenderWorker] = None
         self.gallery_worker: Optional[GalleryScanWorker] = None
         self.audio_worker: Optional[AudioTrackWorker] = None
+
+        self.batch_queue_files: List[str] = []
+        self.current_batch_index: int = -1
+        self.is_batch_running: bool = False
 
         # Setup UI
         self._init_ui()
@@ -298,9 +364,38 @@ class FocusApp(QMainWindow):
         self.lbl_hero_sub.setObjectName("SubText")
         hero_layout.addWidget(self.lbl_hero_title)
         hero_layout.addWidget(self.lbl_hero_sub)
-        self.gen_content_layout.addWidget(hero_card)
+        # 2. Smart Preset Cards
+        presets_card = ModernCard()
+        presets_layout = QVBoxLayout(presets_card)
+        lbl_smart_title = QLabel("✨ 1-Click Smart Presets")
+        lbl_smart_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        presets_layout.addWidget(lbl_smart_title)
 
-        # 2. Settings Card
+        p_box = QHBoxLayout()
+        p_box.setSpacing(10)
+
+        self.btn_preset_tiktok = QPushButton("📱 TikTok / Shorts\n(9:16 Vertical Auto-Track)")
+        self.btn_preset_tiktok.setObjectName("AccentBtn")
+        self.btn_preset_tiktok.setFixedHeight(48)
+        self.btn_preset_tiktok.clicked.connect(lambda: self._apply_smart_preset("tiktok"))
+
+        self.btn_preset_youtube = QPushButton("🎬 YouTube Scenepack\n(16:9 Original Res)")
+        self.btn_preset_youtube.setObjectName("AccentBtn")
+        self.btn_preset_youtube.setFixedHeight(48)
+        self.btn_preset_youtube.clicked.connect(lambda: self._apply_smart_preset("youtube"))
+
+        self.btn_preset_draft = QPushButton("⚡ Ultra-Fast Draft Scan\n(Low res fast sampling)")
+        self.btn_preset_draft.setObjectName("AccentBtn")
+        self.btn_preset_draft.setFixedHeight(48)
+        self.btn_preset_draft.clicked.connect(lambda: self._apply_smart_preset("draft"))
+
+        p_box.addWidget(self.btn_preset_tiktok)
+        p_box.addWidget(self.btn_preset_youtube)
+        p_box.addWidget(self.btn_preset_draft)
+        presets_layout.addLayout(p_box)
+        self.gen_content_layout.addWidget(presets_card)
+
+        # 3. Settings Card
         settings_card = ModernCard()
         set_layout = QVBoxLayout(settings_card)
         set_layout.setSpacing(12)
@@ -442,6 +537,35 @@ class FocusApp(QMainWindow):
         box_a.addWidget(self.lbl_audio_track)
         box_a.addWidget(self.combo_audio_track, 1)
         files_layout.addLayout(box_a)
+
+        # Batch Queue Section
+        files_layout.addSpacing(10)
+        self.lbl_batch_title = QLabel("📦 Batch Processing Queue (Multiple Video Files):")
+        self.lbl_batch_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        files_layout.addWidget(self.lbl_batch_title)
+
+        self.list_batch_queue = QListWidget()
+        self.list_batch_queue.setFixedHeight(80)
+        self.list_batch_queue.setStyleSheet("background-color: #1A1D24; border: 1px solid #2C2F36; border-radius: 6px;")
+        files_layout.addWidget(self.list_batch_queue)
+
+        batch_btn_box = QHBoxLayout()
+        self.btn_add_batch = QPushButton("➕ Add Multiple Files to Queue")
+        self.btn_add_batch.clicked.connect(self.add_batch_videos)
+        self.btn_clear_batch = QPushButton("🗑️ Clear Queue")
+        self.btn_clear_batch.clicked.connect(self.clear_batch_queue)
+        self.btn_run_batch = QPushButton("🚀 Run Batch Queue")
+        self.btn_run_batch.setObjectName("AccentBtn")
+        self.btn_run_batch.clicked.connect(self.start_batch_processing)
+
+        batch_btn_box.addWidget(self.btn_add_batch)
+        batch_btn_box.addWidget(self.btn_clear_batch)
+        batch_btn_box.addWidget(self.btn_run_batch)
+        files_layout.addLayout(batch_btn_box)
+
+        self.lbl_batch_status = QLabel("Batch Queue: Empty")
+        self.lbl_batch_status.setObjectName("SubText")
+        files_layout.addWidget(self.lbl_batch_status)
 
         self.gen_content_layout.addWidget(files_card)
 
@@ -1101,13 +1225,94 @@ class FocusApp(QMainWindow):
 
     @Slot(float, str)
     def _on_progress_update(self, val: float, status: str):
-        self.progress_bar.setValue(int(val * 1000))
+        target = int(val * 1000)
+        self._animate_progress(self.progress_bar, target)
         self.lbl_eta.setText(status)
 
     @Slot(float, str)
     def _on_gallery_progress(self, val: float, status: str):
-        self.gal_progress_bar.setValue(int(val * 1000))
+        target = int(val * 1000)
+        self._animate_progress(self.gal_progress_bar, target)
         self.lbl_gal_status.setText(status)
+
+    def _animate_progress(self, bar: QProgressBar, target_val: int):
+        cur = bar.value()
+        if abs(cur - target_val) < 3:
+            bar.setValue(target_val)
+            return
+        anim = QPropertyAnimation(bar, b"value", self)
+        anim.setDuration(220)
+        anim.setStartValue(cur)
+        anim.setEndValue(target_val)
+        anim.setEasingCurve(QEasingCurve.OutQuad)
+        anim.start()
+
+    def _apply_smart_preset(self, preset_type: str):
+        if preset_type == "tiktok":
+            self.combo_aspect.setCurrentText("9:16 Vertical")
+            self.input_pad_before.setText("1.5")
+            self.input_pad_after.setText("1.5")
+            self.input_min_scene.setText("1.0")
+            self.input_frame_skip.setText("12")
+            self.toast.show_toast("Applied Preset: 📱 TikTok / Shorts (9:16 Vertical)", "📱")
+        elif preset_type == "youtube":
+            self.combo_aspect.setCurrentText("16:9 Original")
+            self.input_pad_before.setText("2.0")
+            self.input_pad_after.setText("2.0")
+            self.input_min_scene.setText("1.5")
+            self.input_frame_skip.setText("15")
+            self.toast.show_toast("Applied Preset: 🎬 YouTube Scenepack (16:9)", "🎬")
+        elif preset_type == "draft":
+            self.combo_aspect.setCurrentText("16:9 Original")
+            self.input_pad_before.setText("1.0")
+            self.input_pad_after.setText("1.0")
+            self.input_min_scene.setText("0.8")
+            self.input_frame_skip.setText("30")
+            self.toast.show_toast("Applied Preset: ⚡ Ultra-Fast Draft Scan", "⚡")
+        self.save_current_settings()
+
+    def add_batch_videos(self):
+        paths, _ = QFileDialog.getOpenFileNames(
+            self, "Select Multiple Video Files for Batch Queue", "",
+            "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)"
+        )
+        if paths:
+            for p in paths:
+                if p not in self.batch_queue_files:
+                    self.batch_queue_files.append(p)
+                    self.list_batch_queue.addItem(Path(p).name)
+            self.lbl_batch_status.setText(f"Batch Queue: {len(self.batch_queue_files)} file(s) ready")
+            self.toast.show_toast(f"Added {len(paths)} video(s) to Batch Queue", "📦")
+
+    def clear_batch_queue(self):
+        self.batch_queue_files.clear()
+        self.list_batch_queue.clear()
+        self.lbl_batch_status.setText("Batch Queue: Empty")
+        self.toast.show_toast("Batch Queue cleared", "🗑️")
+
+    def start_batch_processing(self):
+        if not self.batch_queue_files:
+            QMessageBox.information(self, "Batch Queue Empty", "Please add video files to the batch queue first.")
+            return
+        if not hasattr(self, 'image_path_str') or not self.image_path_str or not Path(self.image_path_str).is_file():
+            QMessageBox.warning(self, "Missing Reference Face", "Please select a reference face image before processing the batch queue.")
+            return
+        self.is_batch_running = True
+        self.current_batch_index = 0
+        self._process_next_batch_item()
+
+    def _process_next_batch_item(self):
+        if self.current_batch_index < len(self.batch_queue_files):
+            v_path = self.batch_queue_files[self.current_batch_index]
+            self.video_path_str = v_path
+            self.lbl_video_path.setText(Path(v_path).name)
+            self.lbl_batch_status.setText(f"Processing Batch Item {self.current_batch_index + 1} of {len(self.batch_queue_files)}: {Path(v_path).name}")
+            self.toast.show_toast(f"Batch [{self.current_batch_index + 1}/{len(self.batch_queue_files)}]: Scanning {Path(v_path).name}", "🚀")
+            self.start_scan()
+        else:
+            self.is_batch_running = False
+            self.lbl_batch_status.setText("✅ Batch Processing Complete!")
+            self.toast.show_toast("All batch items processed successfully!", "🎉", 4000)
 
     @Slot(str)
     def _on_gallery_status(self, status: str):
@@ -1296,6 +1501,17 @@ class FocusApp(QMainWindow):
             if hasattr(self.render_worker, 'cancel'):
                 self.render_worker.cancel()
             self.render_worker.terminate()
+        if self.audio_worker and self.audio_worker.isRunning():
+            try:
+                self.audio_worker.terminate()
+            except Exception:
+                pass
+        try:
+            gen = ScenePackGenerator()
+            gen.terminate_all_subprocesses()
+        except Exception:
+            pass
+        gc.collect()
         event.accept()
 
 class FocusSplashScreen(QSplashScreen):

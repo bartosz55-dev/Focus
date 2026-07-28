@@ -23,6 +23,7 @@ from PIL import Image, ImageDraw
 import wave
 import python_speech_features
 import re
+import gc
 
 # Global lock for thread-safe model downloads
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
@@ -125,7 +126,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.2.1"
+APP_VERSION = "v1.2.2"
 
 
 class PlatformManager:
@@ -747,6 +748,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.2.2 (UI Animation Suite, Batch Queue, Smart Presets & System Hardening):\n"
+            "  - Dodano animacje interfejsu: płynna interpolacja paska postępu (QPropertyAnimation), nakładka powiadomień Toast Notification, efekty pulsowania i przejść kart.\n"
+            "  - Wdrożono procesor kolejki wsadowej (Batch Queue Processing) z obsługą wielu plików wideo i licznikiem postępu.\n"
+            "  - Dodano szybkie karty profili (Smart Presets: TikTok/Shorts 9:16, YouTube 16:9, Szkic Ultra-Fast).\n"
+            "  - Wzmocniono czyszczenie procesów pobocznych (Zombie Process Cleanup) przy anulowaniu lub zamknięciu okna.\n"
+            "  - Dodano automatyczne zwalnianie pamięci RAM/VRAM (gc.collect()) po długich skanowaniach.\n\n"
             "• v1.2.1 (Audio Track Selector, Dynamic Aspect Ratio & Documents Log Location):\n"
             "  - Dodano wybór ścieżki dźwiękowej (Audio Track / Ścieżka Audio) z automatycznym wykrywaniem języków dubbingowych przez ffprobe.\n"
             "  - Wdrożono dynamiczne obliczenia kadrowania dla wideo w proporcjach 21:9 Ultrawide, 16:9, 4:3 oraz custom bez zniekształceń.\n"
@@ -1206,12 +1213,13 @@ class ScenePackGenerator:
                     pass
             try:
                 proc.terminate()
-                proc.wait(timeout=2)
+                proc.wait(timeout=1)
             except Exception:
                 try:
                     proc.kill()
                 except Exception:
                     pass
+        gc.collect()
 
     def run_subprocess(self, cmd, **kwargs):
         if "creationflags" not in kwargs and PlatformManager.is_windows():
@@ -1877,6 +1885,7 @@ class ScenePackGenerator:
 
         finally:
             cap.release()
+            gc.collect()
 
         self.log_queue.put(("progress", 1.0, "Scan Complete"))
 
@@ -2015,6 +2024,7 @@ class ScenePackGenerator:
         finally:
             logging.info("Cleaning up temporary chunk files...")
             shutil.rmtree(temp_dir, ignore_errors=True)
+            gc.collect()
 
     def _detect_scene_cuts(self, video_path: Path, threshold: float = 0.3) -> List[float]:
         cuts = []
