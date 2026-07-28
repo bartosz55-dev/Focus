@@ -2,9 +2,8 @@ import os
 import sys
 import json
 import logging
-import tempfile
 from pathlib import Path
-from typing import List, Tuple, Any, Optional
+from typing import List, Tuple, Optional
 
 # macOS specific GUI fixes to prevent Cocoa/Qt/OpenCV collisions and window hiding
 if sys.platform == "darwin":
@@ -12,24 +11,21 @@ if sys.platform == "darwin":
     os.environ["OPENCV_UI_BACKEND"] = "none"
 
 import cv2
-import numpy as np
-from PIL import Image
 
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer, Slot
-from PySide6.QtGui import QIcon, QFont, QColor, QPalette, QPixmap, QImage, QDesktopServices
+from PySide6.QtCore import Qt, QUrl, QTimer, Slot
+from PySide6.QtGui import QFont, QPixmap, QImage, QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QCheckBox, QSlider, QProgressBar, QComboBox,
-    QScrollArea, QTabWidget, QFrame, QMessageBox, QFileDialog, QTextEdit,
-    QSplitter, QStackedWidget, QButtonGroup, QRadioButton, QAbstractItemView,
-    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy
+    QScrollArea, QFrame, QMessageBox, QFileDialog, QTextEdit,
+    QStackedWidget, QAbstractItemView,
+    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QDialog
 )
 
 # Import shared backend engine and helpers from scenepack_generator_backend
 import scenepack_generator_backend as sg_engine
 from scenepack_generator_backend import (
-    ScenePackGenerator, get_translation, TRANSLATIONS, canonicalize_mode,
-    make_square_crop, extract_anime_face_features, is_anime_feature_match, APP_VERSION
+    ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION
 )
 from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker
@@ -58,7 +54,7 @@ class FocusApp(QMainWindow):
         self.current_theme = self.settings.get("theme", "blue")
         self.current_lang = self.settings.get("language", "English")
         self.current_mode = self.settings.get("default_mode", "Real Faces")
-        
+
         # Selected data
         self.video_path_str = ""
         self.image_path_str = ""
@@ -79,7 +75,7 @@ class FocusApp(QMainWindow):
         self._apply_theme(self.current_theme)
         self._apply_language(self.current_lang)
         self._setup_logging()
-        
+
         logging.info("Focus GUI (PySide6 / Qt 6) initialized successfully.")
         self.queue_proxy.put(("log", "Welcome to Focus! AI Scenepack Generator ready."))
 
@@ -162,7 +158,7 @@ class FocusApp(QMainWindow):
 
         self.lbl_logo = QLabel("Focus")
         self.lbl_logo.setObjectName("LogoLabel")
-        self.lbl_logo.setFont(QFont("Segoe UI", 22, QFont.Bold))
+        self.lbl_logo.setFont(QFont("Segoe UI", 22, QFont.Weight.Bold))
         sidebar_layout.addWidget(self.lbl_logo)
 
         self.lbl_wf = QLabel("WORKFLOW")
@@ -218,7 +214,7 @@ class FocusApp(QMainWindow):
         # Header bar (Dashboard + Mode Switch + Tab Switcher)
         header_layout = QHBoxLayout()
         self.lbl_dashboard = QLabel("Dashboard")
-        self.lbl_dashboard.setFont(QFont("Segoe UI", 20, QFont.Bold))
+        self.lbl_dashboard.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
         header_layout.addWidget(self.lbl_dashboard)
         header_layout.addStretch()
 
@@ -234,7 +230,7 @@ class FocusApp(QMainWindow):
             self.btn_mode_real.setChecked(True)
         self.btn_mode_real.clicked.connect(lambda: self._on_mode_switched("Real Faces"))
         self.btn_mode_anime.clicked.connect(lambda: self._on_mode_switched("Anime"))
-        
+
         mode_box = QHBoxLayout()
         mode_box.setSpacing(4)
         mode_box.addWidget(self.btn_mode_real)
@@ -251,7 +247,7 @@ class FocusApp(QMainWindow):
         self.btn_tab_gen.setChecked(True)
         self.btn_tab_gen.clicked.connect(lambda: self._switch_main_view(0))
         self.btn_tab_gal.clicked.connect(lambda: self._switch_main_view(1))
-        
+
         tab_box = QHBoxLayout()
         tab_box.setSpacing(4)
         tab_box.addWidget(self.btn_tab_gen)
@@ -287,7 +283,7 @@ class FocusApp(QMainWindow):
         hero_card = ModernCard()
         hero_layout = QVBoxLayout(hero_card)
         self.lbl_hero_title = QLabel("Focus - AI Scenepack Generator")
-        self.lbl_hero_title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        self.lbl_hero_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         self.lbl_hero_sub = QLabel("Automated facial tracking and intelligent clip extraction.")
         self.lbl_hero_sub.setObjectName("SubText")
         hero_layout.addWidget(self.lbl_hero_title)
@@ -329,7 +325,7 @@ class FocusApp(QMainWindow):
         # Row 1: Numeric Inputs
         inputs_grid = QGridLayout()
         inputs_grid.setSpacing(10)
-        
+
         self.lbl_pad_before = QLabel("Padding Before (s):")
         self.input_pad_before = QLineEdit(str(self.settings.get("pad_before", 2.0)))
         self.lbl_pad_after = QLabel("Padding After (s):")
@@ -363,7 +359,7 @@ class FocusApp(QMainWindow):
         self.chk_vad.setChecked(self.settings.get("vad_enabled", True))
         self.chk_vad.toggled.connect(self.save_current_settings)
         vad_box.addWidget(self.chk_vad)
-        
+
         self.lbl_vad_buf = QLabel("Silence Snapping Buffer (ms):")
         vad_box.addWidget(self.lbl_vad_buf)
         self.input_vad_buffer = QLineEdit(str(self.settings.get("vad_buffer", 300)))
@@ -382,7 +378,7 @@ class FocusApp(QMainWindow):
 
         self.lbl_speaker_thresh = QLabel("Voice Similarity Threshold:")
         speaker_box.addWidget(self.lbl_speaker_thresh)
-        
+
         init_thresh = int(self.settings.get("vad_speaker_threshold", 0.68) * 100)
         self.slider_speaker = QSlider(Qt.Horizontal)
         self.slider_speaker.setRange(10, 99)
@@ -434,11 +430,11 @@ class FocusApp(QMainWindow):
         # 4. Action & Progress Card
         action_card = ModernCard()
         action_layout = QVBoxLayout(action_card)
-        
+
         self.btn_generate = QPushButton("1. Scan & Analyze Video")
         self.btn_generate.setObjectName("PrimaryActionBtn")
         self.btn_generate.setFixedHeight(46)
-        self.btn_generate.setFont(QFont("Segoe UI", 13, QFont.Bold))
+        self.btn_generate.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         self.btn_generate.clicked.connect(self.start_scan)
         action_layout.addWidget(self.btn_generate)
 
@@ -462,7 +458,7 @@ class FocusApp(QMainWindow):
         self.review_card.setVisible(False)
         rev_layout = QVBoxLayout(self.review_card)
         self.lbl_review_title = QLabel("Step 2: Review & Render Selected Clips")
-        self.lbl_review_title.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        self.lbl_review_title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         rev_layout.addWidget(self.lbl_review_title)
 
         self.table_review = QTableWidget(0, 5)
@@ -500,9 +496,9 @@ class FocusApp(QMainWindow):
         log_card = ModernCard()
         log_layout = QVBoxLayout(log_card)
         self.lbl_log_title = QLabel("Execution Logs & Diagnostics:")
-        self.lbl_log_title.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        self.lbl_log_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         log_layout.addWidget(self.lbl_log_title)
-        
+
         self.txt_log = QTextEdit()
         self.txt_log.setReadOnly(True)
         self.txt_log.setFixedHeight(140)
@@ -521,7 +517,7 @@ class FocusApp(QMainWindow):
         gal_top_card = ModernCard()
         gt_layout = QVBoxLayout(gal_top_card)
         self.lbl_gal_title = QLabel("Beta: Automated Character Discovery Gallery")
-        self.lbl_gal_title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        self.lbl_gal_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         self.lbl_gal_sub = QLabel("Scan your video to automatically discover all unique characters. Click any face card to select it as the Reference Face!")
         self.lbl_gal_sub.setObjectName("SubText")
         gt_layout.addWidget(self.lbl_gal_title)
@@ -853,16 +849,63 @@ class FocusApp(QMainWindow):
         QMessageBox.information(self, get_translation(self.current_lang, "tutorial_title"), get_translation(self.current_lang, "tutorial_body"))
 
     def open_changelog(self):
-        msg = (
-            f"Focus Release Notes ({APP_VERSION} - Production Release):\n\n"
-            "• Complete migration to PySide6 (Qt 6) with Modern Dark Studio UI.\n"
-            "• Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).\n"
-            "• Refined UI typography, professional labels, and polished layout.\n"
-            "• Robust multi-language support (English, Polish, German, Spanish, etc.).\n"
-            "• Hardware-accelerated FFmpeg scene extraction and concatenation.\n"
-            "• Interactive Character Auto-Gallery (AI Detection) for face pre-scanning."
-        )
-        QMessageBox.information(self, get_translation(self.current_lang, "changelog_title"), msg)
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"{get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})")
+        dialog.resize(640, 500)
+        dialog.setMinimumSize(480, 360)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+
+        header_title = QLabel(f"📜 {get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})", dialog)
+        header_font = QFont()
+        header_font.setPointSize(15)
+        header_font.setBold(True)
+        header_title.setFont(header_font)
+        layout.addWidget(header_title)
+
+        textbox = QTextEdit(dialog)
+        textbox.setReadOnly(True)
+        textbox.setStyleSheet("""
+            QTextEdit {
+                background-color: #14161B;
+                color: #E0E0E0;
+                border: 1px solid #2C2F36;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+            QScrollBar:vertical {
+                background: #14161B;
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #3A3D45;
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #50545F;
+            }
+        """)
+
+        history_text = sg_engine.get_changelog_text(self.current_lang)
+        textbox.setText(history_text)
+        layout.addWidget(textbox)
+
+        btn_close = QPushButton(get_translation(self.current_lang, "changelog_close"), dialog)
+        btn_close.setFixedWidth(120)
+        btn_close.clicked.connect(dialog.accept)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_close)
+        layout.addLayout(btn_layout)
+
+        dialog.exec()
 
     def select_video(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Input Video", "", "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)")
@@ -1093,30 +1136,30 @@ class FocusApp(QMainWindow):
         for idx, cluster in enumerate(clusters):
             r = idx // cols
             c = idx % cols
-            
+
             card = ModernCard()
             c_layout = QVBoxLayout(card)
-            c_layout.setAlignment(Qt.AlignCenter)
+            c_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
             c_layout.setSpacing(8)
 
             img_label = QLabel()
-            img_label.setAlignment(Qt.AlignCenter)
+            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             crop_path = cluster.get("crop_path")
             if crop_path and os.path.exists(crop_path):
-                pixmap = QPixmap(crop_path).scaled(110, 110, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                pixmap = QPixmap(crop_path).scaled(110, 110, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 img_label.setPixmap(pixmap)
             else:
                 img_label.setText("No Image")
             c_layout.addWidget(img_label)
 
             lbl_name = QLabel(f"Character #{cluster['id']}")
-            lbl_name.setFont(QFont("Segoe UI", 11, QFont.Bold))
-            lbl_name.setAlignment(Qt.AlignCenter)
+            lbl_name.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+            lbl_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
             c_layout.addWidget(lbl_name)
 
             lbl_count = QLabel(f"{cluster['count']} detection(s)")
             lbl_count.setObjectName("SubText")
-            lbl_count.setAlignment(Qt.AlignCenter)
+            lbl_count.setAlignment(Qt.AlignmentFlag.AlignCenter)
             c_layout.addWidget(lbl_count)
 
             btn_sel = QPushButton("Select as Reference")
@@ -1145,11 +1188,11 @@ class FocusApp(QMainWindow):
 
         for idx, (start, end, avg_x) in enumerate(intervals):
             self.table_review.setRowHeight(idx, 95)
-            
+
             # Col 0: Checkbox
             chk_widget = QWidget()
             chk_layout = QHBoxLayout(chk_widget)
-            chk_layout.setAlignment(Qt.AlignCenter)
+            chk_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
             chk_layout.setContentsMargins(0, 0, 0, 0)
             chk = QCheckBox()
             chk.setChecked(True)
@@ -1159,11 +1202,11 @@ class FocusApp(QMainWindow):
 
             # Col 1: Thumbnail
             thumb_label = QLabel()
-            thumb_label.setAlignment(Qt.AlignCenter)
+            thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             if idx < len(thumbnails) and thumbnails[idx] is not None:
                 pil_img = thumbnails[idx]
                 data = pil_img.convert("RGBA").tobytes("raw", "RGBA")
-                qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format_RGBA8888)
+                qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format.Format_RGBA8888)
                 pixmap = QPixmap.fromImage(qimg)
                 thumb_label.setPixmap(pixmap)
             else:
@@ -1172,15 +1215,15 @@ class FocusApp(QMainWindow):
 
             # Col 2, 3, 4: Times
             item_start = QTableWidgetItem(f"{start:.2f}s")
-            item_start.setTextAlignment(Qt.AlignCenter)
+            item_start.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_review.setItem(idx, 2, item_start)
 
             item_end = QTableWidgetItem(f"{end:.2f}s")
-            item_end.setTextAlignment(Qt.AlignCenter)
+            item_end.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_review.setItem(idx, 3, item_end)
 
             item_dur = QTableWidgetItem(f"{end - start:.2f}s")
-            item_dur.setTextAlignment(Qt.AlignCenter)
+            item_dur.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table_review.setItem(idx, 4, item_dur)
 
         self.review_card.setVisible(True)

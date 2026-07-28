@@ -14,7 +14,7 @@ import platform
 import zipfile
 import gzip
 import multiprocessing
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Optional
 import urllib.request
 import json
 import numpy as np
@@ -28,7 +28,7 @@ import re
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.0.4"
+APP_VERSION = "v1.0.6"
 
 
 class PlatformManager:
@@ -613,12 +613,256 @@ TRANSLATIONS = {
 }
 
 
-def get_translation(lang_name: str, key: str) -> str:
+def get_translation(lang_name: str, key: str) -> Any:
     """Safely retrieves a localized string with fallback to English and key name."""
     lang_dict = TRANSLATIONS.get(lang_name, TRANSLATIONS.get("English", {}))
     if key in lang_dict:
         return lang_dict[key]
     return TRANSLATIONS.get("English", {}).get(key, key)
+
+
+def get_changelog_text(lang_name: str = "English") -> str:
+    """Return complete multi-version scrollable changelog text for the given language."""
+    if lang_name in ("Polski", "Polish"):
+        return (
+            f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.0.6 (Przywrócenie Pełnej Historii Zmian):\n"
+            "  - Przywrócono pełne, szczegółowe dzienniki zmian od wersji v0.01 do v1.0.6 we wszystkich interfejsach.\n"
+            "  - Udoskonalono okno dialogowe Changelogu w PySide6 Qt6 (nowoczesny, stylizowany QDialog z suwakiem).\n"
+            "  - Zaktualizowano wersjonowanie systemowe i przeprowadzono weryfikację testów jednostkowych.\n\n"
+            "• v1.0.5 (Synchronizacja Changelogu i Dokumentacji):\n"
+            "  - Zsynchronizowano pełną historię wydań we wszystkich interfejsach GUI oraz zaktualizowano wersję do v1.0.5.\n\n"
+            "• v1.0.4 (Przewijany Widok i Sekcja Wyodrębnienia Abstrukcji OS):\n"
+            "  - Dodano pełny, interaktywny i przewijany widok historii wszystkich wersji aplikacji.\n"
+            "  - Wyodrębniono logikę specyficzną dla Windows/macOS do czystego modułu backendu (scenepack_generator_backend.py).\n"
+            "  - Naprawiono aktywację GUI Cocoa oraz pakowanie aplikacji na systemie macOS.\n\n"
+            "• v1.0.3 (Cross-Platform Stability & Hygiene Update):\n"
+            "  - Kompleksowe poprawki wieloplatformowe (Windows & macOS) oraz zarządzanie procesami w tle.\n"
+            "  - Eliminacja konsolowych okienek pop-up dzięki fladze CREATE_NO_WINDOW w procesach potomnych.\n"
+            "  - Pełna ochrona uchwytów wideo VideoCapture (try-finally) zapobiegająca blokowaniu plików w systemie.\n"
+            "  - Kodowanie UTF-8 i normalizacja ścieżek z ukośnikami dla stabilnego renderowania w FFmpeg.\n"
+            "  - Natychmiastowe zamykanie procesów tła po anulowaniu skanowania lub eksportu.\n\n"
+            "• v1.0.0 / v1.0.2 (Production Release):\n"
+            "  - Kompleksowa migracja interfejsu do nowoczesnego środowiska PySide6 (Qt 6) Studio.\n"
+            "  - Bezobsługowe skrypty startowe dla systemów Windows (.bat) i macOS (.command).\n"
+            "  - Wyrafinowana typografia UI, czytelne etykiety oraz ulepszony układ elementów.\n"
+            "  - Wzbogacone wsparcie wielojęzyczne (polski, angielski, niemiecki, hiszpański, francuski, japoński, rosyjski, ukraiński).\n"
+            "  - Sprzętowo akcelerowane wycinanie i scalanie fragmentów wideo przez FFmpeg.\n"
+            "  - Interaktywna Galeria Postaci (AI Detection) umożliwiająca automatyczne wstępne skanowanie twarzy.\n\n"
+            "• v1.0.1 (Audio & VAD Enhancement):\n"
+            "  - Integracja Silero VAD (Voice Activity Detection) dla inteligentnej ochrony dialogów przed obcinaniem słów.\n"
+            "  - Ekstrakcja odcisków głosowych (Voice Fingerprinting) i weryfikacja lektora/tła.\n"
+            "  - Pionowy tryb kadrowania 9:16 z automatycznym śledzeniem twarzy oraz opcją rozmytego tła (TikTok/Reels/Shorts).\n\n"
+            "=== Historia Historyczna (v0.01 – v0.95) ===\n\n"
+            "• v0.95 – Skonsolidowano kompilację Windows do pojedynczego pliku Focus.exe (--onefile) i naprawiono motywy kolorystyczne.\n"
+            "• v0.94 – Naprawiono błąd CascadeClassifier w PyInstaller i dodano bezkonsolowy launcher VBScript dla Windows.\n"
+            "• v0.93 – Automatyczne bezobsługowe launchery: dodano Uruchom_Focus.command (macOS) oraz Uruchom_Focus.bat (Windows).\n"
+            "• v0.92 – Naprawa reguł wyzwalania wydań CI/CD GitHub Release.\n"
+            "• v0.91 – Krytyczna poprawka uruchamiania na Windows: dodano wymaganie scipy i ukryte importy PyInstaller.\n"
+            "• v0.90 – Poprawka uprawnień wydań GitHub CI/CD: dodano uprawnienia zapisu dla generowania informacji o wydaniu.\n"
+            "• v0.89 – Uniwersalna akceleracja sprzętowa: dynamiczne wykrywanie GPU (NVENC/QSV/AMF/MF oraz VideoToolbox).\n"
+            "• v0.88 – Pełny port wieloplatformowy Windows 10/11 & macOS z automatycznym pobieraniem FFmpeg.\n"
+            "• v0.87 – Przygotowanie repozytorium do otwartego wydania open-source GitHub.\n"
+            "• v0.86 – Naprawiono błędy podpróbkowania obrazu (czarne linie) przy kadrowaniu 9:16 w FFmpeg.\n"
+            "• v0.85 – Wdrożono automatycznie przewijane okno logów oraz dynamiczne przyciski postępu.\n"
+            "• v0.84 – Wdrożono odciski głosowe postaci (Target Speaker Voice Fingerprinting) filtrujące osoby spoza kadru.\n"
+            "• v0.83 – Kompleksowa przebudowa UI/UX inspirowana nowoczesnymi ciemnymi pulpitami nawigacyjnymi.\n"
+            "• v0.81 – Wdrożono ekstrakcję miniaturek klatek wideo przez OpenCV w liście podglądu scen.\n"
+            "• v0.80 – Wdrożono pionowe kadrowanie 9:16 (Auto-Track i rozmyte tło) oraz dwufazową listę weryfikacji.\n"
+            "• v0.79 – Wdrożono detekcję aktywności głosowej AI (VAD) i przyciąganie cięć do pauz w wypowiedziach.\n"
+            "• v0.74 – Naprawiono obcinanie dźwięku i zaniki audio przez wyrównanie bufora apad i resamplera 48kHz.\n"
+            "• v0.72 – Dodano algorytm Smart Auto-Tune i dynamiczne profile (Anime, Cinematic, Fast Edits).\n"
+            "• v0.71 – Naprawiono zamrażanie klatek wideo i brak synchronizacji przez stałe resamplowanie PTS (-fps_mode cfr).\n"
+            "• v0.70 – Wewnętrzne aktualizacje stabilności oraz drobne szlify interfejsu.\n"
+            "• v0.67 – Przywrócono brakujący import concurrent.futures rozwiązujący NameError w równoległym wycinaniu. haha 67\n"
+            "• v0.66 – Udoskonalono grupowanie twarzy Anime z histogramem 1D Hue i 256-bitowym dopasowaniem dHash.\n"
+            "• v0.65 – Dodano etap grupowania i deduplikacji twarzy po skanowaniu z wyborem najlepszej miniaturki.\n"
+            "• v0.64 – Naprawiono renderowanie ikony aplikacji w macOS Dock oraz dodano eliptyczne maskowanie twarzy Anime.\n"
+            "• v0.63 – Naprawiono brakujący import PIL Image w skanerze galerii postaci.\n"
+            "• v0.62 – Udoskonalono Galerię Postaci Anime z użyciem histogramów 2D HSV i cech dHash.\n"
+            "• v0.61 – Wdrożono drugi przebieg scalania dla deduplikacji postaci w Galerii Beta.\n"
+            "• v0.60 – Naprawiono zawieszanie skanera w Galerii Beta i podłączono kolejkę zdarzeń.\n"
+            "• v0.59 – Naprawiono błąd lokalizacji trybu Beta w nieangielskich wersjach językowych UI.\n"
+            "• v0.58 – Przeniesiono skanowanie postaci do wielowątkowego pracownika w tle (krok 2.5s).\n"
+            "• v0.57 – Wprowadzono Galerię Postaci Beta z automatycznym wykrywaniem i wyborem postaci jednym kliknięciem.\n"
+            "• v0.56 – Naprawiono awarię podczas uruchamiania aplikacji przez zmianę kolejności inicjalizacji zmiennych.\n"
+            "• v0.55 – Naprawiono początkowe zamrażanie strumienia wideo (5s) przez bufory -accurate_seek i filtr min. czasu (1.0s).\n"
+            "• v0.54 – Głęboki audyt kodu: dynamiczne podpowiedzi (tooltips) i bezpieczne kolejki UI.\n"
+            "• v0.53 – Naprawiono odświeżanie tekstów podpowiedzi oraz mapowanie nazw motywów koloristycznych.\n"
+            "• v0.52 – Pełny audyt kodu i refaktoryzacja: wymuszenie niemutowalności ustawień i walidacji wejścia.\n"
+            "• v0.51 – Wyodrębniono czysty wektorowy symbol aparatu z ikonka.png dla kafli macOS Dock.\n"
+            "• v0.50 – Dodano dynamiczny generator ikon macOS squircle dla Docka i nagłówka okna.\n"
+            "• v0.59 – Zaktualizowano źródło ikon do ikonka.png i zregenerowano natywne zasoby icon.icns.\n"
+            "• v0.48 – Dodano wsparcie dla natywnych ikon aplikacji macOS (icon.icns) w skrypcie budowania.\n"
+            "• v0.47 – Wyeliminowano zacięcia wideo i rozjazd audio przy łączeniu fragmentów (zamknięte GOPy, genpts, moov faststart).\n"
+            "• v0.46 – Zoptymalizowano proces budowania aplikacji: wykluczono zbędne zależności i zmniejszono rozmiar paczki.\n"
+            "• v0.45 – Naprawiono regresję układu GUI przez usunięcie zduplikowanej ramki ustawień.\n"
+            "• v0.44 – Kompleksowy audyt kodu (poprawki wycieków uchwytów cv2.VideoCapture, ucieczki ścieżek concat).\n"
+            "• v0.43 – Dodano tolerancję przerw / mrugnięć (1.5s) zapobiegającą zbyt wczesnym cięciom przy obracaniu głowy.\n"
+            "• v0.42 – Naprawiono problemy z renderowaniem i stylami okien CTkToplevel na macOS.\n"
+            "• v0.41 – Naprawiono utratę stanu przycisków segmentowanych przy zmianie języka.\n"
+            "• v0.40 – Pełne tłumaczenia i18n interfejsu (tryby wyglądu, kolory, podpowiedzi, samouczek).\n"
+            "• v0.39 – Dodano obsługę wielu języków (polski, angielski, niemiecki, rosyjski, ukraiński, hiszpański, francuski, japoński).\n"
+            "• v0.38 – Wymuszono regułę wersjonowania (+0.01 per prompt) oraz potok filtrów setpts/asetpts.\n"
+            "• v0.37 – Hybrydowe szybkie wyszukiwanie (-ss przed -i) + filtry resetujące PTS dla idealnej synchronizacji A/V.\n"
+            "• v0.36 – Rozszerzono szczegółowe śledzenie historii wydań projektu.\n"
+            "• v0.35 – Zcentralizowano zmienną APP_VERSION we wszystkich oknach i nagłówkach.\n"
+            "• v0.34 – Dodano wbudowane okno Changelogu z początkową historią zmian.\n"
+            "• v0.33 – Dokładne wyszukiwanie klatek (-ss po -i) naprawiające zawieszanie klipów MKV.\n"
+            "• v0.32 – Zoptymalizowano pozycjonowanie parametrów szybkiego wyszukiwania w FFmpeg.\n"
+            "• v0.31 – Równoległe wycinanie fragmentów wideo z użyciem ThreadPoolExecutor (5-10x szybsze renderowanie).\n"
+            "• v0.30 – Dodano flagę -start_at_zero i zweryfikowano granice marginesu padding_after.\n"
+            "• v0.29 – Wymuszono stałą liczbę klatek na sekundę (CFR -r 24 -fps_mode cfr) i wyrównanie kluczowych klatek GOP.\n"
+            "• v0.28 – Skonfigurowano identyfikator pakietu Focus (com.focus.app) w PyInstaller build.py.\n"
+            "• v0.27 – Konwersja przewodnika obsługi do czytelnego CTkTextbox z zawijaniem wierszy.\n"
+            "• v0.26 – Nagłówek User-Agent GitHub dla pobierania klasyfikatorów XML oraz walidacja rozmiaru (>50KB).\n"
+            "• v0.25 – Dodano walidację ładowania kaskad OpenCV cascade.empty().\n"
+            "• v0.24 – Przeniesiono pliki wykonywalne i XML do ~/Library/Application Support/Focus dla bezpieczeństwa macOS.\n"
+            "• v0.25 – Dodano podpowiedzi dla trybów Real Faces i Anime.\n"
+            "• v0.22 – Dodano tryb detekcji twarzy Anime w OpenCV z użyciem lbpcascade_animeface.\n"
+            "• v0.21 – Naprawiono błąd AttributeError zakresu metod GUI przy uruchamianiu.\n"
+            "• v0.20 – Dodano wyskakujące okno samouczka 'How to Use'.\n"
+            "• v0.19 – Dodano flagi synchronizacji czasu audio (-avoid_negative_ts make_zero, -fflags +genpts, -async 1).\n"
+            "• v0.18 – Poprawka rozsynchronizowania długości wideo/audio przez ponowne kodowanie AAC.\n"
+            "• v0.17 – Oficjalny rebranding aplikacji na 'Focus'.\n"
+            "• v0.16 – Trwały zapis ustawień w pliku JSON (~/.scenepack_generator_settings.json).\n"
+            "• v0.15 – Zintegrowano natywne powiadomienie dźwiękowe po zakończeniu w macOS (afplay).\n"
+            "• v0.14 – Dodano własny silnik motywów kolorystycznych (generate_themes.py).\n"
+            "• v0.13 – Naprawiono artefakty szarych klatek kluczowych przez usunięcie kopiowania strumieni (-c copy).\n"
+            "• v0.12 – Sprzętowa akceleracja GPU Apple Silicon VideoToolbox (-c:v h264_videotoolbox).\n"
+            "• v0.11 – Dodano logikę łączenia strumieni wideo (concat demuxer).\n"
+            "• v0.10 – Początkowa logika wycinania fragmentów wideo przez FFmpeg.\n"
+            "• v0.09 – Parametr regulacji tolerancji rozpoznawania twarzy.\n"
+            "• v0.08 – Kontrola interwału pomijania klatek (Frame Skip) dla optymalizacji prędkości.\n"
+            "• v0.07 – Numeryczna konfiguracja marginesów przed i po scenie (Padding Before/After).\n"
+            "• v0.06 – Pasek postępu i wskaźnik procentowy w czasie rzeczywistym z szacowanym czasem ETA.\n"
+            "• v0.05 – Wybór lokalizacji zapisu pliku wyjściowego i konfiguracja nazwy.\n"
+            "• v0.04 – Wybór obrazu referencyjnego i podgląd miniaturki.\n"
+            "• v0.03 – Wybór pliku wideo wejściowego i wyświetlanie ścieżki.\n"
+            "• v0.02 – Utworzenie podstawowego układu graficznego w CustomTkinter.\n"
+            "• v0.01 – Początkowy prototyp CLI do wycinania scen wideo na podstawie rozpoznawania twarzy."
+        )
+    else:
+        return (
+            f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.0.6 (Complete Historical Changelog Restoration):\n"
+            "  - Restored full historical release notes (v0.01 to v1.0.6) across all application interfaces per user request.\n"
+            "  - Upgraded Qt6 GUI Changelog dialog to a modern, styled scrollable QDialog.\n"
+            "  - Enforced strict versioning rule (+0.01 bump) and validated unit tests.\n\n"
+            "• v1.0.5 (Changelog & Documentation Synchronization):\n"
+            "  - Synchronized complete release history across all GUI interfaces and updated versioning to v1.0.5.\n\n"
+            "• v1.0.4 (OS Abstraction Decoupling & Scrollable Changelog View):\n"
+            "  - Decoupled Windows/macOS platform logic into clean backend module (scenepack_generator_backend.py).\n"
+            "  - Added full interactive scrollable changelog view featuring complete release history.\n"
+            "  - Fixed Cocoa GUI activation and app bundling on macOS.\n\n"
+            "• v1.0.3 (Cross-Platform Stability & Hygiene Update):\n"
+            "  - Comprehensive Windows & macOS cross-platform fixes and background process management.\n"
+            "  - Elimination of console popups via subprocess CREATE_NO_WINDOW injection.\n"
+            "  - Complete VideoCapture handle protection (try-finally) preventing file locking.\n"
+            "  - UTF-8 concat list formatting with forward-slash normalization for FFmpeg.\n"
+            "  - Immediate background process termination upon scan/render cancellation.\n\n"
+            "• v1.0.0 / v1.0.2 (Production Release):\n"
+            "  - Complete UI migration to PySide6 (Qt 6) with Modern Dark Studio interface.\n"
+            "  - Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).\n"
+            "  - Refined UI typography, professional labels, and polished layout.\n"
+            "  - Robust multi-language support (English, Polish, German, Spanish, French, Japanese, Russian, Ukrainian).\n"
+            "  - Hardware-accelerated FFmpeg scene extraction and concatenation.\n"
+            "  - Interactive Character Auto-Gallery (AI Detection) for face pre-scanning.\n\n"
+            "• v1.0.1 (Audio & VAD Enhancement):\n"
+            "  - Integrated Silero VAD (Voice Activity Detection) for smart sentence boundary snapping.\n"
+            "  - Target Speaker Voice Matching with cosine similarity embeddings.\n"
+            "  - 9:16 vertical auto-tracking crop mode and blurred background options for TikTok/Shorts/Reels.\n\n"
+            "=== Legacy Development History (v0.01 – v0.95) ===\n\n"
+            "• v0.95 – Consolidated Windows build to a single standalone Focus.exe (--onefile mode) eliminating redundant launcher files and DLL clutter. Fixed UI color theme persistence across view navigation.\n"
+            "• v0.94 – Fix OpenCV CascadeClassifier missing attribute error in PyInstaller builds and added Windows VBScript zero-console launcher.\n"
+            "• v0.93 – Zero-Terminal Automated Launchers: added double-clickable Uruchom_Focus.command (macOS Gatekeeper auto-clear) and Uruchom_Focus.bat (Windows).\n"
+            "• v0.92 – CI/CD Release Trigger Fix: restored tag trigger pattern in release workflows.\n"
+            "• v0.91 – Critical Windows Execution Fix: added explicit scipy requirement and PyInstaller hidden imports.\n"
+            "• v0.90 – CI/CD GitHub Release Permissions Fix: added explicit write permissions for release notes generation.\n"
+            "• v0.89 – Universal Hardware Acceleration Support: dynamic runtime probing for GPU video encoders across Windows (NVENC/QSV/AMF/MF) and macOS (VideoToolbox).\n"
+            "• v0.88 – Full cross-platform port for Windows 10/11 & macOS with automated FFmpeg static binary downloading.\n"
+            "• v0.87 – Prepared repository for open-source GitHub release: sanitized local system paths and added comprehensive documentation.\n"
+            "• v0.86 – Fixed FFmpeg sub-sampling rendering errors (black line artifacts) on 9:16 crops and unified interface color elements.\n"
+            "• v0.85 – Implemented auto-scrolling log window and dynamic percent progress buttons.\n"
+            "• v0.84 – Implemented Target Speaker Voice Fingerprinting: profiles character voice from verified face frames and filters out non-target speakers.\n"
+            "• v0.83 – Complete UI/UX overhaul inspired by modern dark web dashboards with custom Tkinter animation loops.\n"
+            "• v0.81 – Implemented thumbnail extraction via OpenCV to display video frame previews alongside the checklist.\n"
+            "• v0.80 – Implemented 9:16 Vertical Cropping (Auto-Track & Blurred Background), FFmpeg Scene Cut Snapping, and two-phase Interactive Clip Review Checklist.\n"
+            "• v0.79 – Implemented AI Voice Activity Detection (VAD) & Active Speaker Alignment to intelligently extend scenes to the nearest silence pause.\n"
+            "• v0.74 – Fixed random audio truncation and dropouts by implementing Audio Frame Padding (apad) and 48kHz audio resampler alignment.\n"
+            "• v0.72 – Added Smart Auto-Tune algorithm and dynamic Presets (Anime, Cinematic, Fast Edits).\n"
+            "• v0.71 – Fixed audio/video freeze and frame stalls using hard A/V PTS resampling (-fps_mode cfr, min_hard_comp).\n"
+            "• v0.70 – Internal stability updates and minor UI refinements.\n"
+            "• v0.67 – Restored missing concurrent.futures import in GUI resolving NameError during parallel FFmpeg segment extraction. haha 67\n"
+            "• v0.66 – Upgraded Anime face clustering with 1D Hue histogram & 256-bit dHash matching to merge characters across shadows/lighting shifts.\n"
+            "• v0.65 – Added post-scan Face Clustering and Deduplication pass: automatically merges duplicate character captures and selects best thumbnail.\n"
+            "• v0.64 – Fixed macOS Dock app icon rendering using native Cocoa NSApplication icon binding. Enhanced Anime face clustering with center elliptical mask filtering.\n"
+            "• v0.63 – Fixed missing PIL Image import in character gallery pre-scanner.\n"
+            "• v0.62 – Upgraded Anime Character Gallery with 2D HSV Color Histogram + Perceptual dHash Feature Clustering.\n"
+            "• v0.61 – Implemented multi-encoding secondary merge pass for character deduplication in Beta Gallery.\n"
+            "• v0.60 – Fixed Beta character gallery pre-scanner stuck on initialization and wired missing gallery event queue listeners.\n"
+            "• v0.59 – Fixed Beta tab mode localization bug preventing face detection in non-English UI languages. Added live execution logging to GUI console.\n"
+            "• v0.58 – Fixed Beta tab freeze by moving character scanning to a multi-threaded background worker with 2.5s frame stepping.\n"
+            "• v0.57 – Introduced Beta Character Gallery: auto-scans video, clusters unique real/anime faces, and allows one-click character selection.\n"
+            "• v0.56 – Fixed application startup crash by reorganizing variable initialization sequence before UI option menu callbacks.\n"
+            "• v0.55 – Fixed initial 5s stream freeze via accurate seeking buffers (-accurate_seek) and added Minimum Scene Duration filter (1.0s).\n"
+            "• v0.54 – Exhaustive Deep Code Audit: Fully dynamic multi-language tooltips for Real Faces/Anime segmented buttons and thread-safe UI queues.\n"
+            "• v0.53 – Fixed tooltip text updating and localized color theme name mapping.\n"
+            "• v0.52 – Comprehensive Code Audit & Refactoring: Enforced immutability in settings state and strict input boundary validation.\n"
+            "• v0.51 – Extracted clean vector camera logo symbol from ikonka.png to eliminate background box artifacts on macOS Dock squircle tile.\n"
+            "• v0.50 – Added dynamic macOS squircle Dock & window icon generator matching system appearance mode and color theme.\n"
+            "• v0.49 – Updated application icon source to ikonka.png and regenerated native icon.icns bundle assets.\n"
+            "• v0.48 – Added native macOS application icon support (icon.icns) to build script and window header.\n"
+            "• v0.47 – Eliminated video freezing / audio drift at segment boundaries via closed GOPs (-bf 0), PTS regeneration (-fflags +genpts), and MOOV faststart.\n"
+            "• v0.46 – Optimized application build pipeline: excluded redundant dependencies and enabled binary stripping to drastically reduce bundle size.\n"
+            "• v0.45 – Fixed layout regression by removing duplicate settings frame from main container grid.\n"
+            "• v0.44 – Comprehensive deep code audit & refactoring (cv2.VideoCapture resource leak fixes, interval edge-case clamping, translation fallback keys, and concat file list escaping).\n"
+            "• v0.43 – Added Gap Bridging Tolerance (1.5s) to prevent premature scene cuts during head turns or temporary face occlusions.\n"
+            "• v0.42 – Fixed CTkToplevel window rendering and styling issue on macOS.\n"
+            "• v0.41 – Fixed segmented button selection state loss when switching languages (Real Faces/Anime & Light/Dark/System).\n"
+            "• v0.40 – Full UI i18n translations (Appearance modes, color names, tooltips, placeholders, tutorial & status labels).\n"
+            "• v0.39 – Added multi-language support (Polish, English, German, Russian, Ukrainian, Spanish, French, Japanese) with persistent language settings.\n"
+            "• v0.38 – Enforced permanent system versioning rule (+0.01 per prompt) & fast-seek setpts/asetpts filter pipeline.\n"
+            "• v0.37 – Hybrid fast seeking (-ss before -i) + setpts/asetpts PTS reset filters for high-speed & sync-perfect rendering.\n"
+            "• v0.36 – Expanded granular Changelog tracking all project iterations.\n"
+            "• v0.35 – Centralized APP_VERSION variable across all UI windows and headers.\n"
+            "• v0.34 – Added in-app Changelog window with initial version history.\n"
+            "• v0.33 – Frame-accurate seeking (-ss after -i) to fix ~40s initial clip freezes on raw MKV rips.\n"
+            "• v0.32 – Fast-seeking parameter positioning (-ss) in FFmpeg extraction.\n"
+            "• v0.31 – Multi-threaded parallel segment extraction using ThreadPoolExecutor for 5-10x faster generation.\n"
+            "• v0.30 – Added -start_at_zero flag and verified padding_after clip boundary logic.\n"
+            "• v0.29 – Enforced Constant Frame Rate (CFR -r 24 -fps_mode cfr) & GOP keyframe alignment (-g 24).\n"
+            "• v0.28 – Configured PyInstaller build.py with Focus bundle identifier (com.focus.app).\n"
+            "• v0.27 – Converted How-to-Use guide to read-only CTkTextbox with word wrapping.\n"
+            "• v0.26 – GitHub User-Agent header fix for XML downloads & size validation (>50KB check).\n"
+            "• v0.25 – Added OpenCV cascade.empty() load validation.\n"
+            "• v0.24 – Relocated external binaries and XML to ~/Library/Application Support/Focus for macOS bundle security.\n"
+            "• v0.23 – Tooltip helpers for Real Faces vs Anime modes.\n"
+            "• v0.22 – Added OpenCV Anime face detection mode using lbpcascade_animeface classifier.\n"
+            "• v0.21 – Fixed GUI method scope AttributeError on application startup.\n"
+            "• v0.20 – Added 'How to Use' tutorial Toplevel popup window.\n"
+            "• v0.19 – Audio sync timestamp flags (-avoid_negative_ts make_zero, -fflags +genpts, -async 1).\n"
+            "• v0.18 – Audio/Video duration drift fix using AAC re-encoding (-c:a aac -b:a 192k).\n"
+            "• v0.17 – Official application rebranding to 'Focus'.\n"
+            "• v0.16 – Persistent JSON settings storage (~/.scenepack_generator_settings.json).\n"
+            "• v0.15 – Integrated macOS native completion audio notification (afplay).\n"
+            "• v0.14 – Added custom color theme engine (generate_themes.py).\n"
+            "• v0.13 – Fixed keyframe gray smearing artifacts by removing stream copying (-c copy).\n"
+            "• v0.12 – VideoToolbox Apple Silicon GPU hardware acceleration (-c:v h264_videotoolbox).\n"
+            "• v0.11 – Added stream concat demuxer logic.\n"
+            "• v0.10 – Initial FFmpeg segment extraction logic.\n"
+            "• v0.09 – Face Recognition tolerance adjustment parameter.\n"
+            "• v0.08 – Frame Skip interval speed optimization control.\n"
+            "• v0.07 – Padding Before & Padding After numerical configuration.\n"
+            "• v0.06 – Progress bar and real-time scanning percentage ETA indicator.\n"
+            "• v0.05 – Output save location selector & filename configuration.\n"
+            "• v0.04 – Reference Image picker & preview integration.\n"
+            "• v0.03 – Input Video file picker & path display integration.\n"
+            "• v0.02 – Basic CustomTkinter GUI layout creation.\n"
+            "• v0.01 – Initial CLI prototype for face recognition scenepack cutting."
+        )
+
+
 
 
 def canonicalize_mode(mode_str: str) -> str:
@@ -627,7 +871,7 @@ def canonicalize_mode(mode_str: str) -> str:
         return "Real Faces"
     for lang_dict in TRANSLATIONS.values():
         anime_val = lang_dict.get("anime")
-        if anime_val and mode_str.strip().lower() in [anime_val.lower(), "anime", "аниме"]:
+        if isinstance(anime_val, str) and mode_str.strip().lower() in [anime_val.lower(), "anime", "аниме"]:
             return "Anime"
     return "Real Faces"
 
@@ -640,16 +884,16 @@ def make_square_crop(frame, top, right, bottom, left, pad_ratio=0.30):
     center_y = top + fh // 2
     center_x = left + fw // 2
     side = int(max(fw, fh) * (1.0 + pad_ratio * 2))
-    
+
     crop_top = max(0, center_y - side // 2)
     crop_bottom = min(h, center_y + side // 2)
     crop_left = max(0, center_x - side // 2)
     crop_right = min(w, center_x + side // 2)
-    
+
     crop = frame[crop_top:crop_bottom, crop_left:crop_right]
     if crop.size == 0:
         return None
-        
+
     ch, cw = crop.shape[:2]
     if ch != cw:
         max_dim = max(ch, cw)
@@ -658,7 +902,7 @@ def make_square_crop(frame, top, right, bottom, left, pad_ratio=0.30):
         off_x = (max_dim - cw) // 2
         square[off_y:off_y+ch, off_x:off_x+cw] = crop
         crop = square
-        
+
     return crop
 
 
@@ -725,7 +969,8 @@ class ScenePackGenerator:
         self.frame_skip = frame_skip
         self.tolerance = tolerance
         self.mode = mode
-        
+        self.is_cancelled = False
+
         # Determine the directory where the script is located
         if PlatformManager.is_windows():
             self.app_dir = Path(os.environ.get('APPDATA', os.path.expanduser('~'))) / "Focus"
@@ -734,16 +979,21 @@ class ScenePackGenerator:
         else:
             self.app_dir = Path(os.path.expanduser('~/.local/share/Focus'))
         self.app_dir.mkdir(parents=True, exist_ok=True)
-            
+
         self.anime_cascade_path = self.app_dir / "lbpcascade_animeface.xml"
-        
+
         self.bin_dir = self.app_dir / "bin"
         self.bin_dir.mkdir(parents=True, exist_ok=True)
         exe_suffix = PlatformManager.get_exe_suffix()
         self.ffmpeg_path = self.bin_dir / f"ffmpeg{exe_suffix}"
         self.ffprobe_path = self.bin_dir / f"ffprobe{exe_suffix}"
-        self._active_subprocesses = set()
+        self._active_subprocesses: set[subprocess.Popen] = set()
         self._subproc_lock = threading.Lock()
+        self._cached_best_vcodec: Optional[Tuple[str, List[str]]] = None
+
+    def cancel(self):
+        self.is_cancelled = True
+        self.terminate_all_subprocesses()
 
     def register_subprocess(self, proc: subprocess.Popen):
         with self._subproc_lock:
@@ -758,6 +1008,11 @@ class ScenePackGenerator:
             procs = list(self._active_subprocesses)
             self._active_subprocesses.clear()
         for proc in procs:
+            if PlatformManager.is_windows():
+                try:
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True)
+                except Exception:
+                    pass
             try:
                 proc.terminate()
                 proc.wait(timeout=2)
@@ -786,12 +1041,12 @@ class ScenePackGenerator:
     def _check_and_download_ffmpeg(self):
         if self.ffmpeg_path.exists() and self.ffprobe_path.exists():
             return
-            
+
         if shutil.which("ffmpeg") and shutil.which("ffprobe"):
             self.ffmpeg_path = Path(shutil.which("ffmpeg"))
             self.ffprobe_path = Path(shutil.which("ffprobe"))
             return
-            
+
         if not (PlatformManager.is_macos() or PlatformManager.is_windows()):
             self.log_queue.put(("log", "Warning: Auto-download for FFmpeg is currently only supported on macOS and Windows. Please install FFmpeg manually."))
             return
@@ -832,7 +1087,7 @@ class ScenePackGenerator:
                     zip_ref.extractall(self.bin_dir)
                 zip_path.unlink()
             os.chmod(self.ffmpeg_path, 0o755)
-            
+
         if not self.ffprobe_path.exists():
             self.log_queue.put(("log", "Downloading static FFprobe binary..."))
             if platform.machine() in ["arm64", "aarch64"]:
@@ -861,12 +1116,12 @@ class ScenePackGenerator:
                     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
                     with urllib.request.urlopen(req) as response, open(self.anime_cascade_path, 'wb') as out_file:
                         shutil.copyfileobj(response, out_file)
-                        
+
                     if self.anime_cascade_path.stat().st_size < 50000:
                         if self.anime_cascade_path.exists():
                             self.anime_cascade_path.unlink()
                         raise RuntimeError("Downloaded file size is under 50KB; download was likely blocked or corrupted.")
-                        
+
                     self.log_queue.put(("log", "Successfully downloaded anime face cascade model."))
                 except Exception as e:
                     if self.anime_cascade_path.exists():
@@ -900,7 +1155,7 @@ class ScenePackGenerator:
                 ("h264_amf", ["-quality", "speed"]),
                 ("libx264", ["-preset", "veryfast"])
             ]
-            
+
         for codec, args in candidates:
             if codec == "libx264":
                 self._cached_best_vcodec = (codec, args)
@@ -919,23 +1174,23 @@ class ScenePackGenerator:
                     return codec, args
             except Exception as e:
                 logging.debug(f"Codec probe failed for {codec}: {e}")
-                
+
         self._cached_best_vcodec = ("libx264", ["-preset", "veryfast"])
         return self._cached_best_vcodec
 
     def load_reference_face(self, ref_image_path: Path):
         if not ref_image_path.is_file():
             raise FileNotFoundError(f"Reference image not found: {ref_image_path}")
-            
+
         logging.info(f"Loading reference face from '{ref_image_path.name}'...")
-        
+
         if self.mode == "Real Faces":
             image = face_recognition.load_image_file(str(ref_image_path))
             encodings = face_recognition.face_encodings(image)
-            
+
             if not encodings:
                 raise ValueError(f"No face found in reference image: {ref_image_path.name}")
-                
+
             return encodings[0]
         else:
             return None
@@ -945,14 +1200,14 @@ class ScenePackGenerator:
             str(self.ffprobe_path), '-v', 'error', '-show_entries', 'format=duration',
             '-of', 'default=noprint_wrappers=1:nokey=1', str(video_path)
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = self.run_subprocess(cmd, capture_output=True, text=True)
         try:
             val = float(result.stdout.strip())
             if val > 0:
                 return val
         except ValueError:
             pass
-            
+
         logging.warning("Could not determine exact video duration via ffprobe. Falling back to OpenCV.")
         cap = cv2.VideoCapture(str(video_path))
         try:
@@ -968,7 +1223,7 @@ class ScenePackGenerator:
     def merge_intervals(self, timestamps: List[Any], padding_before: float, padding_after: float, duration: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0) -> List[Any]:
         if not timestamps:
             return []
-            
+
         is_tuple_input = False
         norm_ts = []
         for t in timestamps:
@@ -977,7 +1232,7 @@ class ScenePackGenerator:
                 norm_ts.append((t[0], t[1] if len(t) > 1 else 0.5))
             else:
                 norm_ts.append((float(t), 0.5))
-                
+
         sorted_ts = sorted([t for t in norm_ts if t[0] >= 0.0], key=lambda x: x[0])
         if not sorted_ts:
             return []
@@ -986,7 +1241,7 @@ class ScenePackGenerator:
         run_start = sorted_ts[0][0]
         run_end = sorted_ts[0][0]
         run_x_vals = [sorted_ts[0][1]]
-        
+
         for t, x_val in sorted_ts[1:]:
             if t - run_end <= max_gap_tolerance:
                 run_end = t
@@ -997,24 +1252,24 @@ class ScenePackGenerator:
                 run_start = t
                 run_end = t
                 run_x_vals = [x_val]
-                
+
         avg_x = sum(run_x_vals) / len(run_x_vals) if run_x_vals else 0.5
         runs.append((run_start, run_end, avg_x))
-        
+
         padded_intervals = []
         for start, end, avg_x in runs:
             clip_start = max(0.0, start - padding_before)
             clip_end = min(duration, end + padding_after) if duration > 0 and duration != float('inf') else (end + padding_after)
             if clip_end > clip_start + 0.05:
                 padded_intervals.append((clip_start, clip_end, avg_x))
-            
+
         if not padded_intervals:
             return []
 
         merged = []
         curr_start, curr_end, curr_x = padded_intervals[0]
         curr_x_list = [curr_x]
-        
+
         for start, end, avg_x in padded_intervals[1:]:
             if start <= curr_end:
                 curr_end = max(curr_end, end)
@@ -1024,10 +1279,10 @@ class ScenePackGenerator:
                 merged.append((curr_start, curr_end, merged_x))
                 curr_start, curr_end = start, end
                 curr_x_list = [avg_x]
-                
+
         merged_x = sum(curr_x_list) / len(curr_x_list)
         merged.append((curr_start, curr_end, merged_x))
-        
+
         final_scenes = []
         for start, end, avg_x in merged:
             scene_dur = end - start
@@ -1055,7 +1310,7 @@ class ScenePackGenerator:
                 result.append((c_start, c_end, m_x))
                 c_start, c_end = start, end
                 c_x_list = [avg_x]
-                
+
         m_x = sum(c_x_list) / len(c_x_list)
         result.append((c_start, c_end, m_x))
 
@@ -1077,22 +1332,22 @@ class ScenePackGenerator:
             output = result.stderr
             starts = re.findall(r'silence_start:\s*([\d\.]+)', output)
             ends = re.findall(r'silence_end:\s*([\d\.]+)', output)
-            
+
             for s, e in zip(starts, ends):
                 silences.append((float(s), float(e)))
         except Exception as e:
             logging.error(f"VAD Silence Detection failed: {e}")
-            
+
         return silences
 
-    def _extract_audio_embedding(self, video_path: Path, start_time: float, end_time: float) -> np.ndarray:
+    def _extract_audio_embedding(self, video_path: Path, start_time: float, end_time: float) -> Optional[np.ndarray]:
         try:
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
                 temp_wav_path = temp_wav.name
-            
+
             dur = end_time - start_time
             if dur <= 0: return None
-            
+
             cmd = [
                 str(self.ffmpeg_path),
                 "-y", "-ss", str(start_time), "-t", str(dur),
@@ -1101,25 +1356,25 @@ class ScenePackGenerator:
                 temp_wav_path
             ]
             self.run_subprocess(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
+
             if not os.path.exists(temp_wav_path):
                 return None
-            
+
             with wave.open(temp_wav_path, "rb") as wf:
                 rate = wf.getframerate()
                 sig = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)
             os.remove(temp_wav_path)
-            
+
             if len(sig) == 0:
                 return None
-                
+
             mfcc_feat = python_speech_features.mfcc(sig, rate)
             return np.mean(mfcc_feat, axis=0)
         except Exception as e:
             logging.error(f"Failed to extract audio embedding: {e}")
             return None
 
-    def _build_target_voice_print(self, video_path: Path, intervals: List[Tuple[float, float, float]]) -> np.ndarray:
+    def _build_target_voice_print(self, video_path: Path, intervals: List[Tuple[float, float, float]]) -> Optional[np.ndarray]:
         sorted_intervals = sorted(intervals, key=lambda x: x[1] - x[0], reverse=True)
         embeddings = []
         for s, e, _ in sorted_intervals[:3]:
@@ -1131,7 +1386,7 @@ class ScenePackGenerator:
             emb = self._extract_audio_embedding(video_path, test_s, test_e)
             if emb is not None:
                 embeddings.append(emb)
-                
+
         if len(embeddings) > 0:
             return np.mean(embeddings, axis=0)
         return None
@@ -1139,27 +1394,27 @@ class ScenePackGenerator:
     def _check_lip_movement(self, video_path: Path, timestamp: float, target_encoding: np.ndarray, duration_sec: float = 0.5) -> bool:
         if self.mode != "Real Faces" or target_encoding is None:
             return True
-            
+
         cap = cv2.VideoCapture(str(video_path))
         try:
             fps = cap.get(cv2.CAP_PROP_FPS) or 24
-            
+
             cap.set(cv2.CAP_PROP_POS_MSEC, max(0, timestamp) * 1000)
             frames_to_check = max(5, int(duration_sec * fps))
             mouth_distances = []
-            
+
             for _ in range(frames_to_check):
                 ret, frame = cap.read()
                 if not ret:
                     break
-                    
+
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 face_locations = face_recognition.face_locations(rgb_frame, model="hog")
                 if not face_locations:
                     continue
-                    
+
                 encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-                
+
                 for loc, enc in zip(face_locations, encodings):
                     match = face_recognition.compare_faces([target_encoding], enc, tolerance=0.5)[0]
                     if match:
@@ -1173,14 +1428,14 @@ class ScenePackGenerator:
                         break
         finally:
             cap.release()
-        
+
         if len(mouth_distances) > 2:
             variance = np.var(mouth_distances)
             return variance > 1.5
-            
+
         return False
 
-    def find_scenes(self, video_path: Path, ref_data, padding_before: float, padding_after: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0) -> List[Tuple[float, float]]:
+    def find_scenes(self, video_path: Path, ref_data, padding_before: float, padding_after: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0) -> List[Tuple[float, float, float]]:
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
             raise IOError(f"Could not open video file: {video_path}")
@@ -1195,7 +1450,7 @@ class ScenePackGenerator:
 
             frame_count = 0
             timestamps = []
-            
+
             cascade = None
             profile_cascade = None
             if self.mode == "Anime":
@@ -1205,31 +1460,35 @@ class ScenePackGenerator:
                 if cascade.empty():
                     raise RuntimeError("Failed to load anime face cascade XML. File may be missing or corrupted.")
             elif self.mode == "Real Faces":
-                profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')
+                profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')  # type: ignore[attr-defined]
                 profile_cascade = cv2.CascadeClassifier(profile_cascade_path)
 
             logging.info(f"Starting facial recognition scan in {self.mode} mode...")
             start_time = time.time()
-            
+
             while True:
+                if getattr(self, 'is_cancelled', False):
+                    logging.info("Scene extraction cancelled by user.")
+                    break
+
                 ret, frame = cap.read()
                 if not ret:
                     break
-                    
+
                 if frame_count % self.frame_skip == 0:
                     progress = frame_count / total_frames
                     elapsed = time.time() - start_time
                     eta_seconds = (elapsed / progress) - elapsed if progress > 0 else 0
-                        
+
                     eta_mins = int(eta_seconds // 60)
                     eta_secs = int(eta_seconds % 60)
-                    
+
                     self.log_queue.put(("progress", progress, f"ETA: {eta_mins}m {eta_secs}s  ({int(progress*100)}%)"))
-                    
+
                     processed_frames = frame_count // self.frame_skip
                     if processed_frames > 0 and processed_frames % 50 == 0:
                         logging.info(f"Scanning frame {frame_count}/{total_frames}...")
-                    
+
                     if self.mode == "Real Faces":
                         h, w = frame.shape[:2]
                         if w > 480:
@@ -1238,27 +1497,27 @@ class ScenePackGenerator:
                             small_frame = cv2.resize(frame, (480, new_h))
                         else:
                             small_frame = frame
-                            
+
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                         face_locations = face_recognition.face_locations(rgb_frame, model="hog")
-                        
+
                         if not face_locations and profile_cascade and not profile_cascade.empty():
                             gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                            
+
                             profiles_right = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                             for (x, y, w_box, h_box) in profiles_right:
                                 face_locations.append((y, x+w_box, y+h_box, x))
-                                
+
                             flipped_gray = cv2.flip(gray, 1)
                             profiles_left = profile_cascade.detectMultiScale(flipped_gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                             h_img, w_img = gray.shape
                             for (x, y, w_box, h_box) in profiles_left:
                                 x_real = w_img - (x + w_box)
                                 face_locations.append((y, x_real+w_box, y+h_box, x_real))
-                                
+
                         if face_locations:
                             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-                            
+
                             for idx, encoding in enumerate(face_encodings):
                                 matches = face_recognition.compare_faces([ref_data], encoding, tolerance=self.tolerance)
                                 if matches[0]:
@@ -1267,8 +1526,8 @@ class ScenePackGenerator:
                                     w_resized = small_frame.shape[1]
                                     rel_x = center_x / w_resized
                                     timestamps.append((frame_count / fps, rel_x))
-                                    break 
-                                
+                                    break
+
                     elif self.mode == "Anime":
                         h, w = frame.shape[:2]
                         if w > 480:
@@ -1277,26 +1536,27 @@ class ScenePackGenerator:
                             small_frame = cv2.resize(frame, (480, new_h))
                         else:
                             small_frame = frame
-                            
+
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+                        assert cascade is not None
                         faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24))
-                        
+
                         if len(faces) > 0:
                             (x_f, y_f, w_f, h_f) = faces[0]
                             center_x = x_f + w_f / 2.0
                             w_resized = small_frame.shape[1]
                             rel_x = center_x / w_resized
                             timestamps.append((frame_count / fps, rel_x))
-                
+
                 frame_count += 1
         finally:
             cap.release()
-        
+
         self.log_queue.put(("progress", 1.0, "Scan Complete"))
 
         duration = self._get_video_duration(video_path)
         merged_intervals = self.merge_intervals(timestamps, padding_before, padding_after, duration, max_gap_tolerance, min_scene_duration)
-        
+
         return merged_intervals
 
     def extract_and_concat(self, video_path: Path, intervals: List[Tuple[float, float, float]], output_path: Path, aspect_ratio: str = "16:9 Original"):
@@ -1306,7 +1566,7 @@ class ScenePackGenerator:
 
         temp_dir = Path(tempfile.mkdtemp(prefix="scenepack_tmp_"))
         concat_list_path = temp_dir / "concat_list.txt"
-        
+
         try:
             codec, extra_args = self._get_best_video_codec_and_args()
             logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec})...")
@@ -1322,7 +1582,7 @@ class ScenePackGenerator:
                 i, (start, end, avg_x) = index_and_interval
                 chunk_path = temp_dir / f"chunk_{i:04d}.ts"
                 duration = end - start
-                
+
                 vf_filter = "setpts=PTS-STARTPTS,fps=24"
                 aspect_lower = aspect_ratio.lower()
                 if "9:16" in aspect_ratio and ("vert" in aspect_lower or "auto" in aspect_lower or "pion" in aspect_lower or "vertical" in aspect_lower):
@@ -1331,20 +1591,20 @@ class ScenePackGenerator:
                     vf_filter = "[0:v]split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS,fps=24"
 
                 cmd = [
-                    str(self.ffmpeg_path), '-y', 
+                    str(self.ffmpeg_path), '-y',
                     '-hide_banner', '-loglevel', 'error',
-                    '-ss', str(start), 
+                    '-ss', str(start),
                     '-accurate_seek',
-                    '-i', str(video_path), 
-                    '-t', str(duration), 
+                    '-i', str(video_path),
+                    '-t', str(duration),
                     '-fps_mode', 'cfr'
                 ]
-                
+
                 if "blur" in aspect_lower or "rozm" in aspect_lower or "background" in aspect_lower:
                     cmd.extend(['-filter_complex', vf_filter])
                 else:
                     cmd.extend(['-vf', vf_filter])
-                
+
                 cmd.extend([
                     '-af', 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,aresample=async=1,apad',
                     '-c:v', codec,
@@ -1386,10 +1646,10 @@ class ScenePackGenerator:
 
             logging.info("Concatenating extracted scenes...")
             concat_cmd = [
-                str(self.ffmpeg_path), '-y', 
+                str(self.ffmpeg_path), '-y',
                 '-hide_banner', '-loglevel', 'error',
-                '-f', 'concat', 
-                '-safe', '0', 
+                '-f', 'concat',
+                '-safe', '0',
                 '-i', str(concat_list_path),
                 '-c', 'copy',
                 '-bsf:a', 'aac_adtstoasc',
@@ -1397,11 +1657,11 @@ class ScenePackGenerator:
                 '-movflags', '+faststart',
                 str(output_path)
             ]
-            
+
             concat_result = self.run_subprocess(concat_cmd, cwd=temp_dir, capture_output=True, text=True)
             if concat_result.returncode != 0:
                 raise RuntimeError(f"FFmpeg concat failed: {concat_result.stderr}")
-                
+
             logging.info(f"Successfully saved scenepack to:\n{output_path.name}")
 
         finally:
@@ -1427,16 +1687,16 @@ class ScenePackGenerator:
 
     def scan_and_prepare(self, video_path: Path, ref_image_path: Path, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, vad_enabled: bool = False, vad_buffer: int = 300, vad_speaker_enabled: bool = True, vad_speaker_threshold: float = 0.68) -> List[Tuple[float, float, float]]:
         self._check_and_download_ffmpeg()
-        
+
         if not video_path.is_file():
             raise FileNotFoundError(f"Video file not found: {video_path}")
 
         ref_data = self.load_reference_face(ref_image_path)
         intervals = self.find_scenes(video_path, ref_data, padding_before, padding_after, max_gap_tolerance, min_scene_duration)
-        
+
         logging.info("Detecting shot boundaries for scene snapping...")
         scene_cuts = self._detect_scene_cuts(video_path)
-        
+
         if vad_enabled:
             logging.info("VAD Protection Enabled. Running FFmpeg silence detection...")
             silences = self._detect_silences(video_path, vad_buffer)
@@ -1445,7 +1705,7 @@ class ScenePackGenerator:
                 refined_intervals = []
                 for start, end, avg_x in intervals:
                     new_start, new_end = start, end
-                    
+
                     if not any(s <= end <= e for s, e in silences):
                         next_silences = [s for s, e in silences if s >= end]
                         if next_silences:
@@ -1453,7 +1713,7 @@ class ScenePackGenerator:
                             if is_speaking:
                                 logging.info(f"Lip-Sync: Extending {end:.2f}s to {next_silences[0]:.2f}s.")
                                 new_end = next_silences[0]
-                                
+
                     if not any(s <= start <= e for s, e in silences):
                         prev_silences = [e for s, e in silences if e <= start]
                         if prev_silences:
@@ -1461,10 +1721,10 @@ class ScenePackGenerator:
                             if is_speaking_start:
                                 logging.info(f"Lip-Sync: Pulling {start:.2f}s back to {prev_silences[-1]:.2f}s.")
                                 new_start = prev_silences[-1]
-                                
+
                     refined_intervals.append((max(0.0, new_start), new_end, avg_x))
-                
-                final_intervals = []
+
+                final_intervals: List[Tuple[float, float, float]] = []
                 for s, e, avg_x in refined_intervals:
                     if not final_intervals:
                         final_intervals.append((s, e, avg_x))
@@ -1475,7 +1735,7 @@ class ScenePackGenerator:
                         else:
                             final_intervals.append((s, e, avg_x))
                 intervals = final_intervals
-                
+
                 if vad_speaker_enabled and len(intervals) > 0:
                     logging.info("Target Speaker Voice Matching Enabled. Enrolling Target Voice Print...")
                     voice_print = self._build_target_voice_print(video_path, intervals)
@@ -1495,7 +1755,7 @@ class ScenePackGenerator:
                                 sim = 0.0
                                 if norm_vp > 0 and norm_emb > 0:
                                     sim = np.dot(voice_print, emb) / (norm_vp * norm_emb)
-                                
+
                                 if sim >= vad_speaker_threshold:
                                     logging.info(f"Clip [{s:.2f}-{e:.2f}] Verified (Similarity: {sim:.3f} >= {vad_speaker_threshold})")
                                     verified_intervals.append((s, e, avg_x))
@@ -1514,19 +1774,19 @@ class ScenePackGenerator:
             if nearest_start_cut is not None:
                 logging.info(f"Snapping start {start:.2f}s to shot boundary {nearest_start_cut:.2f}s")
                 new_start = nearest_start_cut
-            
+
             nearest_end_cut = next((c for c in scene_cuts if abs(c - end) <= 1.0), None)
             if nearest_end_cut is not None:
                 logging.info(f"Snapping end {end:.2f}s to shot boundary {nearest_end_cut:.2f}s")
                 new_end = nearest_end_cut
-                
+
             snapped_intervals.append((new_start, new_end, avg_x))
         intervals = snapped_intervals
-        
+
         logging.info(f"Found {len(intervals)} contiguous scene(s) after merging overlaps.")
         for start, end, avg_x in intervals:
             logging.info(f"  -> Scene: {start:.2f}s to {end:.2f}s (Face X: {avg_x:.2f})")
-            
+
         if not intervals:
             raise ValueError("Target face was not detected in the video. Aborting.")
 
@@ -1560,4 +1820,3 @@ class ScenePackGenerator:
             intervals=intervals,
             output_path=output_path
         )
-
