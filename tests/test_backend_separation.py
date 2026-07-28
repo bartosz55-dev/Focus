@@ -46,9 +46,9 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         self.assertEqual(res.returncode, 0, f"Qt GUI import check failed: {res.stderr or res.stdout}")
 
     def test_app_version_is_incremented(self):
-        """Verify APP_VERSION in backend is incremented to v1.1.0."""
+        """Verify APP_VERSION in backend is incremented to v1.1.1."""
         import scenepack_generator_backend as backend
-        self.assertEqual(backend.APP_VERSION, "v1.1.0")
+        self.assertEqual(backend.APP_VERSION, "v1.1.1")
 
     def test_platform_manager_flags(self):
         """Verify PlatformManager isolates Windows creationflags from macOS/POSIX."""
