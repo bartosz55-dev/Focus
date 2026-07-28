@@ -28,7 +28,7 @@ import re
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.0.9"
+APP_VERSION = "v1.1.0"
 
 
 class PlatformManager:
@@ -1542,7 +1542,9 @@ class ScenePackGenerator:
 
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
                         assert cascade is not None
-                        faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24))
+                        faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+                        if len(faces) == 0:
+                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
 
                         if len(faces) > 0:
                             (x_f, y_f, w_f, h_f) = faces[0]

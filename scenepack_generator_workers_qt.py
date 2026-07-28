@@ -223,7 +223,7 @@ class GalleryScanWorker(QThread):
                 if fps <= 0: fps = 24.0
                 if total_frames <= 0: total_frames = 1000
 
-                sample_step = max(1, int(fps * 2.5))
+                sample_step = max(1, int(fps * 1.0))
                 curr_frame = 0
                 sampled_count = 0
                 raw_candidates = []
@@ -311,7 +311,9 @@ class GalleryScanWorker(QThread):
 
                     elif mode == "Anime" and cascade is not None:
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                        faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+                        faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+                        if len(faces) == 0:
+                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
                         for (x, y, fw, fh) in faces:
                             crop_bgr = self.engine_module.make_square_crop(small_frame, y, x + fw, y + fh, x, pad_ratio=0.30)
                             if crop_bgr is None or crop_bgr.size == 0:
