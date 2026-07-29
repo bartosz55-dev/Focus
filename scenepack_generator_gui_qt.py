@@ -33,6 +33,12 @@ from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker
 )
 
+def fix_qt_ampersand(text: str) -> str:
+    if not text:
+        return ""
+    import re
+    return re.sub(r'(?<!&)&(?!&)', '&&', text)
+
 class ModernCard(QFrame):
     """Rounded container frame with border styling for grouping UI elements."""
     def __init__(self, parent=None):
@@ -293,7 +299,7 @@ class FocusApp(QMainWindow):
         self.lbl_dashboard = QLabel("Dashboard")
         self.lbl_dashboard.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
         header_layout.addWidget(self.lbl_dashboard)
-        header_layout.addStretch()
+        header_layout.addStretch(1)
 
         # Mode switcher buttons
         self.btn_mode_real = QPushButton("Real Faces")
@@ -313,7 +319,7 @@ class FocusApp(QMainWindow):
         mode_box.addWidget(self.btn_mode_real)
         mode_box.addWidget(self.btn_mode_anime)
         header_layout.addLayout(mode_box)
-        header_layout.addSpacing(20)
+        header_layout.addSpacing(12)
 
         # Tab Switcher
         self.btn_tab_gen = QPushButton("Generator")
@@ -403,7 +409,7 @@ class FocusApp(QMainWindow):
         set_layout = QVBoxLayout(self.settings_card)
         set_layout.setSpacing(12)
 
-        # Top bar: Presets and Aspect Ratio
+        # Top bar: Presets Profile
         top_set_box = QHBoxLayout()
         self.lbl_presets_title = QLabel("Preset Profiles:")
         top_set_box.addWidget(self.lbl_presets_title)
@@ -421,18 +427,11 @@ class FocusApp(QMainWindow):
         self.btn_autotune.setObjectName("AccentBtn")
         self.btn_autotune.clicked.connect(self.apply_auto_tune)
         top_set_box.addWidget(self.btn_autotune)
-        top_set_box.addSpacing(15)
-
-        self.lbl_aspect_title = QLabel("Aspect Ratio:")
-        top_set_box.addWidget(self.lbl_aspect_title)
-        self.combo_aspect = QComboBox()
-        self.combo_aspect.addItems(["16:9 Original", "9:16 Vertical", "9:16 Blurred Background"])
-        top_set_box.addWidget(self.combo_aspect)
         set_layout.addLayout(top_set_box)
 
-        # Row 1: Numeric Inputs
+        # Inputs Grid (2 rows for clean responsive display without horizontal truncation)
         inputs_grid = QGridLayout()
-        inputs_grid.setSpacing(10)
+        inputs_grid.setSpacing(12)
 
         self.lbl_pad_before = QLabel("Padding Before (s):")
         self.input_pad_before = QLineEdit(str(self.settings.get("pad_before", 2.0)))
@@ -440,25 +439,35 @@ class FocusApp(QMainWindow):
         self.input_pad_after = QLineEdit(str(self.settings.get("pad_after", 2.0)))
         self.lbl_max_gap = QLabel("Max Gap Tolerance (s):")
         self.input_max_gap = QLineEdit(str(self.settings.get("max_gap_tolerance", 1.5)))
+
         self.lbl_min_scene = QLabel("Min Scene Length (s):")
         self.input_min_scene = QLineEdit(str(self.settings.get("min_scene_duration", 1.0)))
         self.lbl_frame_skip = QLabel("Frame Skip Interval:")
         self.input_frame_skip = QLineEdit(str(self.settings.get("frame_skip", 15)))
+        self.lbl_aspect_title = QLabel("Aspect Ratio:")
+        self.combo_aspect = QComboBox()
+        self.combo_aspect.addItems(["16:9 Original", "9:16 Vertical", "9:16 Blurred Background"])
 
         for edit in (self.input_pad_before, self.input_pad_after, self.input_max_gap, self.input_min_scene, self.input_frame_skip):
             edit.setFixedWidth(60)
             edit.editingFinished.connect(self.save_current_settings)
 
+        # Row 0 (3 parameters)
         inputs_grid.addWidget(self.lbl_pad_before, 0, 0)
         inputs_grid.addWidget(self.input_pad_before, 0, 1)
         inputs_grid.addWidget(self.lbl_pad_after, 0, 2)
         inputs_grid.addWidget(self.input_pad_after, 0, 3)
         inputs_grid.addWidget(self.lbl_max_gap, 0, 4)
         inputs_grid.addWidget(self.input_max_gap, 0, 5)
-        inputs_grid.addWidget(self.lbl_min_scene, 0, 6)
-        inputs_grid.addWidget(self.input_min_scene, 0, 7)
-        inputs_grid.addWidget(self.lbl_frame_skip, 0, 8)
-        inputs_grid.addWidget(self.input_frame_skip, 0, 9)
+
+        # Row 1 (3 parameters including Aspect Ratio)
+        inputs_grid.addWidget(self.lbl_min_scene, 1, 0)
+        inputs_grid.addWidget(self.input_min_scene, 1, 1)
+        inputs_grid.addWidget(self.lbl_frame_skip, 1, 2)
+        inputs_grid.addWidget(self.input_frame_skip, 1, 3)
+        inputs_grid.addWidget(self.lbl_aspect_title, 1, 4)
+        inputs_grid.addWidget(self.combo_aspect, 1, 5)
+
         set_layout.addLayout(inputs_grid)
 
         # Row 2: VAD & Lip Sync
@@ -547,7 +556,8 @@ class FocusApp(QMainWindow):
         self.lbl_batch_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         files_layout.addWidget(self.lbl_batch_title)
 
-        batch_mode_box = QHBoxLayout()
+        batch_mode_box = QVBoxLayout()
+        batch_mode_box.setSpacing(6)
         self.radio_batch_separate = QRadioButton("Render as Separate Video Files")
         self.radio_batch_single = QRadioButton("Concatenate All into Single Master Scenepack")
         self.radio_batch_separate.setChecked(True)
@@ -571,6 +581,7 @@ class FocusApp(QMainWindow):
 
         batch_btn_box.addWidget(self.btn_add_batch)
         batch_btn_box.addWidget(self.btn_clear_batch)
+        batch_btn_box.addStretch()
         batch_btn_box.addWidget(self.btn_run_batch)
         files_layout.addLayout(batch_btn_box)
 
@@ -654,6 +665,7 @@ class FocusApp(QMainWindow):
         self.lbl_log_title = QLabel("Execution Logs & Diagnostics:")
         self.lbl_log_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         log_header.addWidget(self.lbl_log_title)
+        log_header.addStretch()
         
         self.input_log_filter = QLineEdit()
         self.input_log_filter.setPlaceholderText("Filter logs...")
@@ -905,43 +917,43 @@ class FocusApp(QMainWindow):
         self.save_current_settings()
 
     def _apply_language(self, lang_name: str):
-        self.btn_changelog.setText(get_translation(lang_name, "changelog"))
+        self.btn_changelog.setText(fix_qt_ampersand(get_translation(lang_name, "changelog")))
         if hasattr(self, "lbl_sys"):
-            self.lbl_sys.setText(get_translation(lang_name, "sec_system"))
-        self.lbl_theme_title.setText(get_translation(lang_name, "theme"))
-        self.lbl_lang_title.setText(get_translation(lang_name, "language"))
-        self.chk_sound.setText(get_translation(lang_name, "play_sound"))
+            self.lbl_sys.setText(fix_qt_ampersand(get_translation(lang_name, "sec_system")))
+        self.lbl_theme_title.setText(fix_qt_ampersand(get_translation(lang_name, "theme")))
+        self.lbl_lang_title.setText(fix_qt_ampersand(get_translation(lang_name, "language")))
+        self.chk_sound.setText(fix_qt_ampersand(get_translation(lang_name, "play_sound")))
 
-        self.btn_mode_real.setText(get_translation(lang_name, "real_faces"))
-        self.btn_mode_anime.setText(get_translation(lang_name, "anime"))
-        self.btn_tab_gen.setText(get_translation(lang_name, "generator_tab"))
-        self.btn_tab_gal.setText(get_translation(lang_name, "gallery_tab"))
+        self.btn_mode_real.setText(fix_qt_ampersand(get_translation(lang_name, "real_faces")))
+        self.btn_mode_anime.setText(fix_qt_ampersand(get_translation(lang_name, "anime")))
+        self.btn_tab_gen.setText(fix_qt_ampersand(get_translation(lang_name, "generator_tab")))
+        self.btn_tab_gal.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_tab")))
 
-        self.lbl_hero_title.setText(get_translation(lang_name, "hero_title"))
-        self.lbl_hero_sub.setText(get_translation(lang_name, "hero_subtitle"))
-        self.lbl_presets_title.setText(get_translation(lang_name, "preset_label"))
-        self.btn_autotune.setText(get_translation(lang_name, "btn_auto_tune"))
-        self.lbl_aspect_title.setText(get_translation(lang_name, "aspect_label"))
-        self.lbl_pad_before.setText(get_translation(lang_name, "pad_before"))
-        self.lbl_pad_after.setText(get_translation(lang_name, "pad_after"))
-        self.lbl_max_gap.setText(get_translation(lang_name, "max_gap"))
-        self.lbl_min_scene.setText(get_translation(lang_name, "min_scene"))
-        self.lbl_frame_skip.setText(get_translation(lang_name, "frame_skip"))
-        self.chk_vad.setText(get_translation(lang_name, "vad_enable"))
-        self.lbl_vad_buf.setText(get_translation(lang_name, "vad_buffer"))
-        self.chk_speaker.setText(get_translation(lang_name, "vad_speaker_enable"))
-        self.lbl_speaker_thresh.setText(get_translation(lang_name, "vad_speaker_threshold"))
-        self.btn_select_video.setText(get_translation(lang_name, "sel_video"))
-        self.btn_select_image.setText(get_translation(lang_name, "sel_ref"))
-        self.btn_select_output.setText(get_translation(lang_name, "sel_output"))
-        self.btn_generate.setText(get_translation(lang_name, "generate"))
-        self.lbl_review_title.setText(get_translation(lang_name, "review_title"))
-        self.btn_render.setText(get_translation(lang_name, "btn_render"))
-        self.lbl_log_title.setText(get_translation(lang_name, "logs_title"))
-        self.lbl_gal_title.setText(get_translation(lang_name, "gallery_title"))
-        self.lbl_gal_sub.setText(get_translation(lang_name, "gallery_desc"))
-        self.btn_gal_scan.setText(get_translation(lang_name, "scan_chars"))
-        self.btn_gal_cancel.setText(get_translation(lang_name, "btn_cancel_gallery"))
+        self.lbl_hero_title.setText(fix_qt_ampersand(get_translation(lang_name, "hero_title")))
+        self.lbl_hero_sub.setText(fix_qt_ampersand(get_translation(lang_name, "hero_subtitle")))
+        self.lbl_presets_title.setText(fix_qt_ampersand(get_translation(lang_name, "preset_label")))
+        self.btn_autotune.setText(fix_qt_ampersand(get_translation(lang_name, "btn_auto_tune")))
+        self.lbl_aspect_title.setText(fix_qt_ampersand(get_translation(lang_name, "aspect_label")))
+        self.lbl_pad_before.setText(fix_qt_ampersand(get_translation(lang_name, "pad_before")))
+        self.lbl_pad_after.setText(fix_qt_ampersand(get_translation(lang_name, "pad_after")))
+        self.lbl_max_gap.setText(fix_qt_ampersand(get_translation(lang_name, "max_gap")))
+        self.lbl_min_scene.setText(fix_qt_ampersand(get_translation(lang_name, "min_scene")))
+        self.lbl_frame_skip.setText(fix_qt_ampersand(get_translation(lang_name, "frame_skip")))
+        self.chk_vad.setText(fix_qt_ampersand(get_translation(lang_name, "vad_enable")))
+        self.lbl_vad_buf.setText(fix_qt_ampersand(get_translation(lang_name, "vad_buffer")))
+        self.chk_speaker.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_enable")))
+        self.lbl_speaker_thresh.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_threshold")))
+        self.btn_select_video.setText(fix_qt_ampersand(get_translation(lang_name, "sel_video")))
+        self.btn_select_image.setText(fix_qt_ampersand(get_translation(lang_name, "sel_ref")))
+        self.btn_select_output.setText(fix_qt_ampersand(get_translation(lang_name, "sel_output")))
+        self.btn_generate.setText(fix_qt_ampersand(get_translation(lang_name, "generate")))
+        self.lbl_review_title.setText(fix_qt_ampersand(get_translation(lang_name, "review_title")))
+        self.btn_render.setText(fix_qt_ampersand(get_translation(lang_name, "btn_render")))
+        self.lbl_log_title.setText(fix_qt_ampersand(get_translation(lang_name, "logs_title")))
+        self.lbl_gal_title.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_title")))
+        self.lbl_gal_sub.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_desc")))
+        self.btn_gal_scan.setText(fix_qt_ampersand(get_translation(lang_name, "scan_chars")))
+        self.btn_gal_cancel.setText(fix_qt_ampersand(get_translation(lang_name, "btn_cancel_gallery")))
 
         self.btn_play_orig.setText(get_translation(lang_name, "play_orig"))
         self.btn_play_res.setText(get_translation(lang_name, "play_result"))

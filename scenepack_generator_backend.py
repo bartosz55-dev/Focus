@@ -122,7 +122,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.2.8"
+APP_VERSION = "v1.2.9"
 
 
 class PlatformManager:
@@ -374,7 +374,6 @@ TRANSLATIONS = {
         ),
         "changelog_title": "Historia Projektu i Zmiany",
         "changelog_close": "Zamknij",
-        "dashboard": "Panel Sterowania",
         "appearance": "Wygląd Aplikacji:",
         "theme": "Motyw Kolorystyczny:",
         "language": "Język Interfejsu:",
@@ -908,6 +907,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.2.1 (Audio Track Selector, Dynamic Aspect Ratio & Documents Log Location):\n"
+            "  - Added Audio Track selector allowing users to select secondary audio streams (English/Japanese Dubs).\n"
+            "  - Enhanced dynamic 9:16 vertical subject auto-tracking and blurred background modes.\n\n"
             "• v1.2.0 (High-Speed Render, Bitrate Control & Precision Anime Matching):\n"
             "  - Optimized rendering speed by limiting parallel FFmpeg slice concurrency to 2, eliminating AMD GPU & VideoToolbox queue thrashing.\n"
             "  - Optimized output file size from 500MB+ down to ~25MB–40MB via dynamic rate control (`CRF 20` / `2.5M VBR`).\n"
