@@ -1485,6 +1485,19 @@ class ScenePackGenerator:
         self._cached_best_vcodec = ("libx264", ["-preset", "veryfast"])
         return self._cached_best_vcodec
 
+    def _extract_encodings_list(self, ref_data: Any) -> List[Any]:
+        if ref_data is None:
+            return []
+        if isinstance(ref_data, dict):
+            if "encodings" in ref_data and ref_data["encodings"]:
+                return ref_data["encodings"]
+            elif "encoding" in ref_data and ref_data["encoding"] is not None:
+                return [ref_data["encoding"]]
+            return []
+        if isinstance(ref_data, (list, tuple)):
+            return list(ref_data)
+        return [ref_data]
+
     def load_reference_face(self, ref_image_path: Any):
         if isinstance(ref_image_path, dict) or ref_image_path is None:
             return ref_image_path
@@ -1729,10 +1742,14 @@ class ScenePackGenerator:
                 if not face_locations:
                     continue
 
-                encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-
+                ref_encs = self._extract_encodings_list(target_encoding)
                 for loc, enc in zip(face_locations, encodings):
-                    match = face_recognition.compare_faces([target_encoding], enc, tolerance=0.5)[0]
+                    if ref_encs:
+                        matches = face_recognition.compare_faces(ref_encs, enc, tolerance=0.5)
+                        match = any(matches)
+                    else:
+                        match = True
+
                     if match:
                         landmarks = face_recognition.face_landmarks(rgb_frame, [loc])
                         if landmarks and 'top_lip' in landmarks[0] and 'bottom_lip' in landmarks[0]:
@@ -1782,6 +1799,8 @@ class ScenePackGenerator:
             logging.info(f"Starting high-speed multi-core facial recognition scan in {self.mode} mode...")
             start_time = time.time()
 
+            ref_encs_list = self._extract_encodings_list(ref_data)
+
             target_indices = list(range(0, total_frames, max(1, self.frame_skip)))
             total_targets = len(target_indices)
 
@@ -1822,8 +1841,14 @@ class ScenePackGenerator:
                         face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
 
                         for idx_enc, encoding in enumerate(face_encodings):
-                            matches = face_recognition.compare_faces([ref_data], encoding, tolerance=self.tolerance)
-                            if matches[0]:
+                            if ref_encs_list:
+                                matches = face_recognition.compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
+                                if any(matches):
+                                    top, right, bottom, left = face_locations[idx_enc]
+                                    center_x = (left + right) / 2.0
+                                    rel_x = center_x / w_resized
+                                    return (target_idx / fps, rel_x)
+                            else:
                                 top, right, bottom, left = face_locations[idx_enc]
                                 center_x = (left + right) / 2.0
                                 rel_x = center_x / w_resized
@@ -1837,13 +1862,13 @@ class ScenePackGenerator:
                             faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(24, 24))
 
                         if len(faces) > 0:
-                            if ref_data is not None:
+                            if ref_encs_list:
                                 rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                                 face_boxes = [(int(y), int(x+w_f), int(y+h_f), int(x)) for (x, y, w_f, h_f) in faces]
                                 face_encs = face_recognition.face_encodings(rgb_frame, face_boxes)
                                 for idx_enc, encoding in enumerate(face_encs):
-                                    matches = face_recognition.compare_faces([ref_data], encoding, tolerance=self.tolerance)
-                                    if matches[0]:
+                                    matches = face_recognition.compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
+                                    if any(matches):
                                         top, right, bottom, left = face_boxes[idx_enc]
                                         rel_x = ((left + right) / 2.0) / w_resized
                                         return (target_idx / fps, rel_x)
@@ -1856,11 +1881,11 @@ class ScenePackGenerator:
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                         face_locs = face_recognition.face_locations(rgb_frame, model="hog")
                         if face_locs:
-                            if ref_data is not None:
+                            if ref_encs_list:
                                 face_encs = face_recognition.face_encodings(rgb_frame, face_locs)
                                 for idx_enc, encoding in enumerate(face_encs):
-                                    matches = face_recognition.compare_faces([ref_data], encoding, tolerance=self.tolerance)
-                                    if matches[0]:
+                                    matches = face_recognition.compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
+                                    if any(matches):
                                         top, right, bottom, left = face_locs[idx_enc]
                                         rel_x = ((left + right) / 2.0) / w_resized
                                         return (target_idx / fps, rel_x)
