@@ -122,7 +122,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.2.6"
+APP_VERSION = "v1.2.7"
 
 
 class PlatformManager:
@@ -2068,7 +2068,7 @@ class ScenePackGenerator:
 
                 return i, chunk_path
 
-            max_workers = min(2, os.cpu_count() or 2)
+            max_workers = min(6, max(2, (os.cpu_count() or 4) - 1))
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(executor.map(process_segment, enumerate(intervals)))
 
