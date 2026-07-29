@@ -163,8 +163,8 @@ def write_concat_list(chunk_paths: List[Path], concat_list_path: Path):
     with open(concat_list_path, "w", encoding="utf-8") as f:
         for chunk_path in chunk_paths:
             if chunk_path:
-                safe_name = str(chunk_path.name).replace('\\', '/').replace("'", "'\\''")
-                f.write(f"file '{safe_name}'\n")
+                safe_path = str(chunk_path.resolve()).replace('\\', '/').replace("'", "'\\''")
+                f.write(f"file '{safe_path}'\n")
 
 
 TRANSLATIONS = {
