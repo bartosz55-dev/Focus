@@ -43,6 +43,7 @@ from scenepack_generator_backend import (
     extract_anime_face_features,
     is_anime_feature_match,
     TRANSLATIONS,
+    get_app_dir,
     get_translation,
     get_changelog_text,
     TextboxLogHandler,
@@ -155,7 +156,7 @@ class FocusApp(ctk.CTk if ctk else object):
         self._is_scanning = False
         self._is_rendering = False
 
-        self.app_dir = Path(os.path.expanduser('~/Library/Application Support/Focus'))
+        self.app_dir = get_app_dir()
         self.app_dir.mkdir(parents=True, exist_ok=True)
         self.anime_cascade_path = self.app_dir / "lbpcascade_animeface.xml"
         
@@ -1010,16 +1011,25 @@ class FocusApp(ctk.CTk if ctk else object):
                         shutil.copyfileobj(response, out_file)
                         
                     if self.anime_cascade_path.stat().st_size < 50000:
-                        if self.anime_cascade_path.exists():
-                            self.anime_cascade_path.unlink()
-                        raise RuntimeError("Downloaded file size is under 50KB; download was likely blocked or corrupted.")
+                        try:
+                            self.anime_cascade_path.unlink(missing_ok=True)
+                        except Exception:
+                            pass
+                        err_msg = "Downloaded file size is under 50KB; download was likely blocked or corrupted."
+                        self.log_queue.put(("log", err_msg))
+                        self.log_queue.put(("gallery_error", err_msg))
+                        return
                         
                     self.log_queue.put(("log", "Successfully downloaded anime face cascade model."))
                 except Exception as e:
-                    if self.anime_cascade_path.exists():
-                        self.anime_cascade_path.unlink()
-                    self.log_queue.put(("log", f"Failed to download anime cascade model: {e}"))
-                    raise RuntimeError(f"Failed to download anime cascade model: {e}")
+                    try:
+                        self.anime_cascade_path.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                    err_msg = f"Failed to download anime cascade model: {e}"
+                    self.log_queue.put(("log", err_msg))
+                    self.log_queue.put(("gallery_error", err_msg))
+                    return
 
     def start_gallery_scan(self):
         v_path = self.video_path_var.get()
@@ -1087,8 +1097,8 @@ class FocusApp(ctk.CTk if ctk else object):
                 if mode == "Anime":
                     self.log_queue.put(("log", "Downloading/preparing anime face cascade classifier..."))
                     self._download_anime_cascade()
-                    cascade = cv2.CascadeClassifier(str(self.anime_cascade_path))
-                    if cascade.empty():
+                    cascade = sg_engine.get_cascade_classifier(str(self.anime_cascade_path))
+                    if cascade is None or (hasattr(cascade, 'empty') and cascade.empty()):
                         err_msg = "Failed to load anime cascade classifier XML model."
                         logging.error(err_msg)
                         self.log_queue.put(("log", err_msg))
@@ -1096,7 +1106,7 @@ class FocusApp(ctk.CTk if ctk else object):
                         return
                 elif mode == "Real Faces":
                     profile_cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')
-                    profile_cascade = cv2.CascadeClassifier(profile_cascade_path)
+                    profile_cascade = sg_engine.get_cascade_classifier(profile_cascade_path)
     
                 crops_dir = Path(tempfile.gettempdir()) / "focus_gallery_crops"
                 if crops_dir.exists():

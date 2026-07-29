@@ -1356,6 +1356,8 @@ class FocusApp(QMainWindow):
                 self.lbl_batch_status.setText(f"Master Scenepack Created: {master_out.name}")
                 self.toast.show_toast(f"Master Scenepack Created: {master_out.name}", duration_ms=4000)
                 QMessageBox.information(self, "Master Scenepack Complete", f"Consolidated Master Scenepack saved to:\n{master_out}")
+            else:
+                QMessageBox.warning(self, "Master Scenepack Error", "No valid rendered outputs found to concatenate. Make sure you have successfully rendered clips first.")
         except Exception as e:
             logging.error(f"Master concatenation failed: {e}")
 

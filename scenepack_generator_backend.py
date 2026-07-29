@@ -60,12 +60,8 @@ def init_gpu_acceleration():
     """
     try:
         if hasattr(cv2, 'ocl') and cv2.ocl.haveOpenCL():
-            cv2.ocl.setUseOpenCL(True)
-            if cv2.ocl.useOpenCL():
-                dev = cv2.ocl.Device.getDefault()
-                logging.info(f"OpenCV OpenCL GPU Acceleration Enabled: '{dev.name()}' ({dev.vendorName()})")
-            else:
-                logging.info("OpenCV OpenCL is available but setUseOpenCL returned False.")
+            cv2.ocl.setUseOpenCL(False)
+            logging.info("OpenCV OpenCL hardware acceleration has been explicitly disabled for thread safety.")
         else:
             logging.info("OpenCV OpenCL hardware acceleration is not supported on this platform/driver.")
     except Exception as e:
@@ -126,7 +122,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.2.4"
+APP_VERSION = "v1.2.6"
 
 
 class PlatformManager:
@@ -1251,6 +1247,10 @@ class ScenePackGenerator:
             stdout, stderr = proc.communicate(timeout=timeout)
             retcode = proc.poll()
             return subprocess.CompletedProcess(cmd, retcode, stdout, stderr)
+        except subprocess.TimeoutExpired as e:
+            proc.kill()
+            stdout, stderr = proc.communicate()
+            raise subprocess.TimeoutExpired(cmd, timeout, output=stdout, stderr=stderr) from e
         finally:
             self.unregister_subprocess(proc)
 
@@ -1804,6 +1804,8 @@ class ScenePackGenerator:
             target_indices = list(range(0, total_frames, max(1, self.frame_skip)))
             total_targets = len(target_indices)
 
+            thread_local_data = threading.local()
+
             def _process_single_frame(item):
                 target_idx, frame = item
                 if frame is None or frame.size == 0:
@@ -1823,15 +1825,24 @@ class ScenePackGenerator:
                     rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                     face_locations = face_recognition.face_locations(rgb_frame, model="hog")
 
-                    if not face_locations and profile_cascade and hasattr(profile_cascade, 'empty') and not profile_cascade.empty():
+                    if not hasattr(thread_local_data, 'profile_cascade'):
+                        if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                            p_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')
+                            thread_local_data.profile_cascade = get_cascade_classifier(p_path)
+                        else:
+                            thread_local_data.profile_cascade = None
+                            
+                    local_profile_cascade = thread_local_data.profile_cascade
+
+                    if not face_locations and local_profile_cascade and hasattr(local_profile_cascade, 'empty') and not local_profile_cascade.empty():
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
 
-                        profiles_right = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+                        profiles_right = local_profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                         for (x, y, w_box, h_box) in profiles_right:
                             face_locations.append((y, x+w_box, y+h_box, x))
 
                         flipped_gray = cv2.flip(gray, 1)
-                        profiles_left = profile_cascade.detectMultiScale(flipped_gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+                        profiles_left = local_profile_cascade.detectMultiScale(flipped_gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                         h_img, w_img = gray.shape
                         for (x, y, w_box, h_box) in profiles_left:
                             x_real = w_img - (x + w_box)
@@ -1855,11 +1866,16 @@ class ScenePackGenerator:
                                 return (target_idx / fps, rel_x)
 
                 elif self.mode == "Anime":
-                    if cascade is not None and hasattr(cascade, 'empty') and not cascade.empty():
+                    if not hasattr(thread_local_data, 'anime_cascade'):
+                        thread_local_data.anime_cascade = get_cascade_classifier(str(self.anime_cascade_path))
+                        
+                    local_anime_cascade = thread_local_data.anime_cascade
+                    
+                    if local_anime_cascade is not None and hasattr(local_anime_cascade, 'empty') and not local_anime_cascade.empty():
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                        faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=5, minSize=(24, 24))
+                        faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=5, minSize=(24, 24))
                         if len(faces) == 0:
-                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(24, 24))
+                            faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(24, 24))
 
                         if len(faces) > 0:
                             if ref_encs_list:
