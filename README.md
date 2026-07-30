@@ -1,6 +1,6 @@
-# Focus - AI-Powered Scenepack Generator (v1.3.0)
+# Focus - AI-Powered Scenepack Generator (v1.3.1)
 
-![Version](https://img.shields.io/badge/version-v1.3.0-purple.svg)
+![Version](https://img.shields.io/badge/version-v1.3.1-purple.svg)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -10,6 +10,28 @@
 **Focus** is a high-performance, AI-driven video processing studio engineered for content creators, video editors, and researchers. It automates the tedious process of finding, tracking, cropping, and extracting character-specific scenes from movies, anime episodes, or long video files—converting raw footage into high-quality, ready-to-edit scenepacks in minutes.
 
 By combining **Facial Recognition**, **Voice Fingerprinting (VAD)**, **Multi-Core GPU Acceleration**, and advanced **FFmpeg processing**, Focus processes entire video libraries and extracts only the exact moments that matter.
+
+---
+
+## 🖥️ System & Hardware Requirements
+
+Focus is optimized to run smoothly across a wide range of hardware, from laptops to high-end editing workstations.
+
+| Component | Minimum Requirements | Recommended Requirements |
+| :--- | :--- | :--- |
+| **OS** | Windows 10/11 (64-bit) or macOS 12+ (Monterey) | Windows 11 (64-bit) or macOS 14+ (Sonoma / Sequoia) |
+| **CPU** | Quad-Core CPU (Intel Core i5 / AMD Ryzen 5) | 8+ Core CPU (Intel Core i7/i9, AMD Ryzen 7/9, Apple M1/M2/M3/M4) |
+| **RAM** | 8 GB RAM | 16 GB - 32 GB RAM |
+| **GPU / Hardware Accel** | Integrated Graphics (Intel HD/UHD, AMD Radeon Vega) | Dedicated GPU: NVIDIA RTX / GTX (NVENC), AMD RX 6000/7000 (AMF), or Apple Silicon Neural Engine |
+| **Storage** | 5 GB available SSD storage | High-speed NVMe SSD (for 4K video rendering) |
+| **Dependencies** | Python 3.10+, FFmpeg | Pre-compiled Standalone Executable (`Focus.exe` / `Focus.app`) |
+
+### 🚀 Hardware Acceleration Support
+Focus automatically detects and utilizes hardware encoders available on your system:
+* **NVIDIA GPUs:** Hardware-accelerated decoding & encoding via **NVIDIA NVENC/NVDEC** (`h264_nvenc`, `hevc_nvenc`).
+* **AMD GPUs:** Hardware encoding via **AMD AMF** (`h264_amf`, `h264_mf`).
+* **Intel CPUs/GPUs:** Hardware encoding via **Intel QuickSync (QSV)** (`h264_qsv`).
+* **Apple Silicon / Mac:** Hardware acceleration via **Apple VideoToolbox** (`h264_videotoolbox`, `hevc_videotoolbox`).
 
 ---
 
