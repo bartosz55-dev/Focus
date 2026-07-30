@@ -1,55 +1,86 @@
-# Focus - AI-Powered Scenepack Generator
+# Focus - AI-Powered Scenepack Generator (v1.3.0)
 
+![Version](https://img.shields.io/badge/version-v1.3.0-purple.svg)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Open Source](https://img.shields.io/badge/Open%20Source-Yes-orange.svg)
 
-## About Focus
-Focus is a powerful, AI-driven video processing tool built for creators, editors, and researchers. It automates the tedious task of finding, cropping, and extracting character-specific scenes from long video files, turning them into high-quality, ready-to-edit scenepacks. By combining Facial Recognition, Voice Fingerprinting, and advanced FFmpeg processing, Focus allows you to process entire movies or episodes and extract only the moments that matter.
+## 🎬 About Focus
+**Focus** is a high-performance, AI-driven video processing studio engineered for content creators, video editors, and researchers. It automates the tedious process of finding, tracking, cropping, and extracting character-specific scenes from movies, anime episodes, or long video files—converting raw footage into high-quality, ready-to-edit scenepacks in minutes.
 
-## Key Features
-* **Intelligent Auto-Tune:** Automatically adjusts sensitivity and processing parameters based on your selected preset (Anime, Real Faces, Fast Edits, Cinematic).
-* **AI Face Tracking & Cropping:** Detects and tracks faces across frames. Supports both Real Faces (via dlib/face_recognition) and Anime (via specialized LBP cascades).
-* **9:16 Vertical Cropping & Blurred Backgrounds:** Ready for TikTok, Reels, and Shorts. Automatically tracks the subject in a vertical 9:16 frame and optionally fills the background with a blurred version of the video.
-* **Target Speaker Voice Fingerprinting:** Extracts speaker embeddings and filters out narrators, intro music, or background chatter, ensuring the clips contain the actual character speaking.
-* **Interactive Beta / Character Gallery:** Scan videos to build a gallery of unique faces. Select your target character to instruct the AI exactly who to track and extract.
-* **Smart Audio Trimming & Scene Snapping:** Uses Voice Activity Detection (VAD) to align cuts with natural speech pauses, preventing dialogue from being cut off mid-word.
+By combining **Facial Recognition**, **Voice Fingerprinting (VAD)**, **Multi-Core GPU Acceleration**, and advanced **FFmpeg processing**, Focus processes entire video libraries and extracts only the exact moments that matter.
 
-## Installation & Setup (Automated / Zero-Terminal)
+---
 
-We provide automated double-clickable launchers for Windows and macOS that automatically set up Python virtual environments, install required libraries (including PySide6 Qt 6 and OpenCV), check for FFmpeg, and launch the application without opening a terminal!
+## ⚡ Key Features
 
-### 🚀 Automatic Launchers
-* **Windows:** Simply double-click `Uruchom_Focus_Windows.bat` in the project folder. It will automatically create the virtual environment, install dependencies, check for FFmpeg (and install via winget if missing), and open the Focus Studio UI.
-* **macOS:** Double-click `Uruchom_Focus_Mac.command` in Finder. It will automatically set up the virtual environment and launch the application.
-* **Linux / Manual Setup:** If you prefer running manually via terminal:
-  ```bash
-  python3 -m venv venv
-  source venv/bin/activate  # On Windows: venv\Scripts\activate
-  pip install -r requirements.txt
-  python3 scenepack_generator_gui_qt.py
-  ```
+* **🚀 PySide6 / Qt 6 Modern Studio UI:** Powered by a responsive, high-DPI dark studio layout with smooth animations, custom themes, and zero visual glitches across all screen sizes.
+* **🎯 AI Face Tracking & Precision Cropping:** Detects and tracks faces across video frames. Supports both **Real Faces** (via deep learning) and **Anime / 2D Animation** (via specialized LBP cascades).
+* **📱 9:16 Vertical Cropping & Blurred Backgrounds:** Built for TikTok, Instagram Reels, and YouTube Shorts. Automatically tracks subjects in vertical 9:16 aspect ratio or fills background borders with blurred video.
+* **🎙️ Target Speaker Voice Fingerprinting & VAD:** Integrates Voice Activity Detection (VAD) and speaker embeddings to filter out background chatter, narrators, or intro music, ensuring dialog is never cut off mid-word.
+* **📦 Batch Processing Queue:** Load multiple video files at once. Choose to export clips as separate video files or merge everything into a single **Master Scenepack**.
+* **✨ Interactive Beta Character Gallery:** Pre-scans videos to discover all unique characters. Click any character card to instruct the AI exactly who to track.
+* **🎧 Audio Track Selector:** Easily switch between multi-audio streams (e.g., English Dub, Japanese Original, Commentary).
+* **🎨 Customizable Color Themes & Multi-Language Support:** Includes 8 color themes (*Blue, Green, Orange, Red, Indigo, Violet, Pink, Yellow*) and full localization for **English, Polski, Deutsch, Русский, Українська, Español, Français, 日本語**.
+* **💻 Windows Taskbar Icon & Hardened Stability:** Includes native `AppUserModelID` integration for Windows taskbar branding, OpenCL thread-safety protections, and zero-zombie process management.
 
-### Prerequisites
-- **Python 3.10+** is required.
-- **FFmpeg** must be installed on your system (our automatic Windows launcher can install it via winget; on macOS use `brew install ffmpeg`).
+---
 
-## Usage & Building
+## 📥 Pre-Built Downloads (Releases)
 
-### Running from Source
-To launch the modern Qt 6 application directly from the source code:
+Ready-to-run executables with zero installation required are published automatically on GitHub Releases:
+
+👉 **[Download Latest Releases (Windows & macOS)](https://github.com/bartosz55-dev/Focus/releases)**
+
+* **Windows (`Focus.exe`):** Standalone executable with pre-configured PySide6 Qt 6 and OpenCV dependencies.
+* **macOS (`Focus.app`):** Native macOS application bundle optimized for Apple Silicon (M1/M2/M3/M4) and Intel Macs.
+
+---
+
+## 🚀 Installation & Local Development
+
+We provide double-clickable automated launchers for instant zero-terminal startup:
+
+### Automatic Launchers
+* **Windows:** Double-click `Uruchom_Focus_Windows.bat` in the project root. It creates a virtual environment, installs dependencies, verifies FFmpeg (installing via winget if missing), and opens Focus Studio.
+* **macOS:** Double-click `Uruchom_Focus_Mac.command` in Finder. It sets up the environment and launches the studio automatically.
+
+### Manual Setup (CLI / Terminal)
 ```bash
+# 1. Clone the repository
+git clone https://github.com/bartosz55-dev/Focus.git
+cd Focus
+
+# 2. Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Launch the application
 python3 scenepack_generator_gui_qt.py
 ```
 
-### Building the Standalone Executable
-Focus includes an automated build script utilizing PyInstaller to package the application into a single standalone executable (`Focus.exe` on Windows, or `Focus.app` / `Focus-macOS.zip` on macOS).
+### Prerequisites
+- **Python 3.10+**
+- **FFmpeg** (Windows: automatic via launcher/winget; macOS: `brew install ffmpeg`)
+
+---
+
+## 🔨 Building Standalone Executables
+
+Focus includes an automated build script utilizing PyInstaller to package the studio into a single distribution executable:
+
 ```bash
 python3 build.py
 ```
-The compiled application will be available in the `dist/` folder.
+Outputs compiled binaries to the `dist/` directory.
 
-## LEGAL DISCLAIMER & COPYRIGHT NOTICE
+---
+
+## 📜 Legal Disclaimer & Copyright Notice
 
 **Focus is a free and open-source video processing tool designed strictly for educational, research, and personal creative fair-use editing.**
 
