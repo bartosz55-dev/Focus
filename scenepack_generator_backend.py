@@ -69,14 +69,20 @@ def init_gpu_acceleration():
 
 
 def get_app_dir() -> Path:
-    """Returns application logs directory in user Documents folder with resilient write fallback."""
+    """Returns application logs directory in user Library/Logs folder on macOS or LocalAppData/Documents on Windows with fallback."""
     try:
-        docs_dir = Path(os.path.expanduser('~/Documents'))
-        app_dir = docs_dir / "Focus_Logs"
+        if platform.system() == "Darwin":
+            app_dir = Path.home() / "Library" / "Logs" / "Focus"
+        elif platform.system() == "Windows":
+            local_appdata = os.environ.get("LOCALAPPDATA")
+            if local_appdata:
+                app_dir = Path(local_appdata) / "Focus" / "Logs"
+            else:
+                app_dir = Path.home() / "Documents" / "Focus_Logs"
+        else:
+            app_dir = Path.home() / ".focus" / "logs"
+
         app_dir.mkdir(parents=True, exist_ok=True)
-        test_file = app_dir / ".write_test"
-        test_file.touch()
-        test_file.unlink(missing_ok=True)
         return app_dir
     except Exception:
         fallback_dir = Path(tempfile.gettempdir()) / "Focus_Logs"
@@ -122,7 +128,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.3.4"
+APP_VERSION = "v1.3.5"
 
 
 class PlatformManager:
