@@ -1651,6 +1651,16 @@ class FocusSplashScreen(QSplashScreen):
 
 
 def main():
+    if sys.platform == "darwin":
+        try:
+            exe_path = os.path.abspath(sys.executable)
+            if ".app/Contents" in exe_path:
+                bundle_root = exe_path.split(".app/Contents")[0] + ".app"
+                subprocess.run(["xattr", "-cr", bundle_root], capture_output=True)
+                subprocess.run(["xattr", "-dr", "com.apple.quarantine", bundle_root], capture_output=True)
+        except Exception:
+            pass
+
     if sys.platform == "win32":
         try:
             import ctypes

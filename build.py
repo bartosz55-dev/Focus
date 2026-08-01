@@ -133,8 +133,12 @@ if dist_dir.exists():
     mac_launcher_content = (
         "#!/usr/bin/env bash\n"
         "DIR=\"$( cd \"$( dirname \"${BASH_SOURCE[0]}\" )\" && pwd )\"\n"
-        "# Automatically strip macOS Gatekeeper quarantine attribute if present\n"
+        "echo '[Focus Launcher] Fixing macOS security permissions & starting Focus...'\n"
+        "xattr -cr \"$DIR\" 2>/dev/null || true\n"
+        "xattr -dr com.apple.quarantine \"$DIR\" 2>/dev/null || true\n"
         "xattr -cr \"$DIR/Focus.app\" 2>/dev/null || true\n"
+        "xattr -dr com.apple.quarantine \"$DIR/Focus.app\" 2>/dev/null || true\n"
+        "chmod -R +x \"$DIR/Focus.app\" 2>/dev/null || true\n"
         "open \"$DIR/Focus.app\"\n"
     )
     with open(mac_launcher, "w") as f:
