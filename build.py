@@ -30,7 +30,6 @@ print(f"Located cv2 at: {cv2_path}")
 args = [
     'scenepack_generator_gui_qt.py',
     '--name=Focus',
-    '--onefile',       # Bundle everything into a single standalone executable!
     '--windowed',      # Don't open a terminal window when launching the built app
     '--noconfirm',     # Overwrite output directory if it exists
     '--clean',         # Clean PyInstaller cache and remove temporary files before building
@@ -69,7 +68,10 @@ if platform.system() != "Windows":
     args.append('--strip')  # Strip debug symbols from binaries on macOS/Linux
 
 if platform.system() == "Darwin":
+    args.append('--onedir') # macOS security requires onedir for .app bundles
     args.append('--osx-bundle-identifier=com.focus.app')
+else:
+    args.append('--onefile') # Windows users prefer a single .exe
 
 # Dynamic macOS & Application Icon Support
 icns_path = Path("icon.icns")
