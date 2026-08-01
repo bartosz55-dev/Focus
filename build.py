@@ -63,9 +63,7 @@ args = [
     '--exclude-module=setuptools',
     '--exclude-module=distutils',
 ]
-
-if platform.system() != "Windows":
-    args.append('--strip')  # Strip debug symbols from binaries on macOS/Linux
+# Removed --strip as it corrupts SciPy .so files on macOS (__DATA/__thread_bss zero-fill error)
 
 if platform.system() == "Darwin":
     args.append('--onedir') # macOS security requires onedir for .app bundles
