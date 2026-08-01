@@ -122,7 +122,7 @@ setup_crash_logger()
 init_gpu_acceleration()
 
 # STRICT PERMANENT VERSIONING RULE: ALWAYS increment APP_VERSION by exactly +0.01 for EVERY user prompt/request.
-APP_VERSION = "v1.3.2"
+APP_VERSION = "v1.3.3"
 
 
 class PlatformManager:
