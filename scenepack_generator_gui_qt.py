@@ -1661,8 +1661,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    if sys.platform == "darwin":
-        app.setQuitOnLastWindowClosed(True)
+    app.setQuitOnLastWindowClosed(False)
 
     # 1. Instant Startup Splash Screen
     splash = FocusSplashScreen()
@@ -1688,6 +1687,7 @@ def main():
         QTimer.singleShot(500, _force_macos_focus)
 
     splash.finish(window)
+    app.setQuitOnLastWindowClosed(True)
     sys.exit(app.exec())
 
 
