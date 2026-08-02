@@ -211,6 +211,8 @@ class FocusApp(QMainWindow):
         self.queue_proxy.error_signal.connect(self._on_error_msg)
         self.queue_proxy.reset_btn_signal.connect(self._on_reset_buttons)
         self.queue_proxy.audio_tracks_signal.connect(self._on_audio_tracks_loaded)
+        self.queue_proxy.master_concat_complete_signal.connect(self._on_master_concat_complete)
+        self.queue_proxy.master_concat_complete_signal.connect(self._on_master_concat_complete)
 
     @Slot(list)
     def _on_audio_tracks_loaded(self, tracks):
@@ -1342,6 +1344,8 @@ class FocusApp(QMainWindow):
         if not hasattr(self, 'image_path_str') or (not self.image_path_str and self.selected_ref_data is None):
             QMessageBox.warning(self, "Missing Reference Face", "Please select a reference face image before processing the batch queue.")
             return
+        
+        self.btn_run_batch.setEnabled(False)
         self.is_batch_running = True
         self.batch_rendered_outputs = []
         self.current_batch_index = 0
@@ -1360,6 +1364,7 @@ class FocusApp(QMainWindow):
             if self.radio_batch_single.isChecked() and len(self.batch_rendered_outputs) > 1:
                 self._concatenate_master_scenepack()
             else:
+                self.btn_run_batch.setEnabled(True)
                 self.lbl_batch_status.setText("Batch Processing Complete!")
                 self.toast.show_toast("All batch items processed successfully!", "Success", 4000)
 
@@ -1369,23 +1374,26 @@ class FocusApp(QMainWindow):
             master_out = out_dir / "Master_Consolidated_Scenepack.mp4"
             valid_paths = [Path(p) for p in self.batch_rendered_outputs if os.path.exists(p)]
             if valid_paths:
-                tmp_dir = Path(tempfile.mkdtemp(prefix="master_concat_"))
-                concat_list = tmp_dir / "master_list.txt"
-                sg_engine.write_concat_list(valid_paths, concat_list)
-                gen = ScenePackGenerator()
-                cmd = [
-                    str(gen.ffmpeg_path), '-y', '-f', 'concat', '-safe', '0',
-                    '-i', str(concat_list), '-c', 'copy', str(master_out)
-                ]
-                gen.run_subprocess(cmd, cwd=tmp_dir)
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-                self.lbl_batch_status.setText(f"Master Scenepack Created: {master_out.name}")
-                self.toast.show_toast(f"Master Scenepack Created: {master_out.name}", duration_ms=4000)
-                QMessageBox.information(self, "Master Scenepack Complete", f"Consolidated Master Scenepack saved to:\n{master_out}")
+                self.lbl_batch_status.setText("Creating Master Scenepack in background...")
+                self.master_concat_worker = MasterConcatWorker(sg_engine, valid_paths, master_out, self.queue_proxy)
+                self.master_concat_worker.start()
             else:
+                self.btn_run_batch.setEnabled(True)
                 QMessageBox.warning(self, "Master Scenepack Error", "No valid rendered outputs found to concatenate. Make sure you have successfully rendered clips first.")
         except Exception as e:
+            self.btn_run_batch.setEnabled(True)
             logging.error(f"Master concatenation failed: {e}")
+
+    @Slot(str)
+    def _on_master_concat_complete(self, master_out: str):
+        self.btn_run_batch.setEnabled(True)
+        if master_out:
+            master_out_path = Path(master_out)
+            self.lbl_batch_status.setText(f"Master Scenepack Created: {master_out_path.name}")
+            self.toast.show_toast(f"Master Scenepack Created: {master_out_path.name}", duration_ms=4000)
+            QMessageBox.information(self, "Master Scenepack Complete", f"Consolidated Master Scenepack saved to:\n{master_out_path}")
+        else:
+            self.lbl_batch_status.setText("Master Scenepack Creation Failed.")
 
     @Slot(str)
     def _on_gallery_status(self, status: str):

@@ -43,6 +43,7 @@ class QtQueueProxy(QObject):
     error_signal = Signal(str)
     reset_btn_signal = Signal()
     audio_tracks_signal = Signal(list)
+    master_concat_complete_signal = Signal(str)
 
     def put(self, item: Tuple[Any, ...]):
         if not isinstance(item, tuple) or len(item) == 0:
@@ -74,6 +75,8 @@ class QtQueueProxy(QObject):
                 self.reset_btn_signal.emit()
             elif tag == "audio_tracks" and len(item) >= 2:
                 self.audio_tracks_signal.emit(item[1])
+            elif tag == "master_concat_complete" and len(item) >= 2:
+                self.master_concat_complete_signal.emit(str(item[1]))
         except Exception as e:
             logging.error(f"Error in QtQueueProxy: {e}")
 
@@ -472,3 +475,38 @@ class GalleryScanWorker(QThread):
             logging.error(err_msg)
             self.queue_proxy.put(("log", err_msg))
             self.queue_proxy.put(("gallery_error", err_msg))
+
+class MasterConcatWorker(QThread):
+    """Background worker for concatenating multiple output files into a single master scenepack."""
+    def __init__(self, engine_module, valid_paths: list, master_out: Path, queue_proxy: QtQueueProxy):
+        super().__init__()
+        self.engine_module = engine_module
+        self.valid_paths = valid_paths
+        self.master_out = master_out
+        self.queue_proxy = queue_proxy
+        self.sg_engine = None
+
+    def cancel(self):
+        if self.sg_engine and hasattr(self.sg_engine, 'terminate_all_subprocesses'):
+            self.sg_engine.terminate_all_subprocesses()
+
+    def run(self):
+        import tempfile
+        import shutil
+        import os
+        try:
+            tmp_dir = Path(tempfile.mkdtemp(prefix="master_concat_"))
+            concat_list = tmp_dir / "master_list.txt"
+            self.engine_module.write_concat_list(self.valid_paths, concat_list)
+            self.sg_engine = self.engine_module.ScenePackGenerator(log_queue=None)
+            cmd = [
+                str(self.sg_engine.ffmpeg_path), '-y', '-f', 'concat', '-safe', '0',
+                '-i', str(concat_list), '-c', 'copy', str(self.master_out)
+            ]
+            self.sg_engine.run_subprocess(cmd, cwd=tmp_dir)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            self.queue_proxy.put(("master_concat_complete", str(self.master_out)))
+        except Exception as e:
+            self.queue_proxy.put(("error", f"Master concatenation failed: {e}"))
+            self.queue_proxy.put(("master_concat_complete", ""))
+
