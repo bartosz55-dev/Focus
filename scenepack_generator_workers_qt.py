@@ -172,7 +172,7 @@ class AudioTrackWorker(QThread):
 class RenderWorker(QThread):
     """Background worker for extracting and concatenating selected video clips."""
     def __init__(self, generator_instance, video_path: str, intervals: List[Tuple[float, float, float]],
-                 output_path: str, aspect_ratio: str, queue_proxy: QtQueueProxy, audio_track_index: int = 0):
+                 output_path: str, aspect_ratio: str, queue_proxy: QtQueueProxy, audio_track_index: int = 0, export_quality: str = "Medium"):
         super().__init__()
         self.generator_instance = generator_instance
         self.video_path = video_path
@@ -181,6 +181,7 @@ class RenderWorker(QThread):
         self.aspect_ratio = aspect_ratio
         self.queue_proxy = queue_proxy
         self.audio_track_index = audio_track_index
+        self.export_quality = export_quality
 
     def cancel(self):
         if hasattr(self, 'generator_instance') and self.generator_instance and hasattr(self.generator_instance, 'cancel'):
@@ -190,7 +191,8 @@ class RenderWorker(QThread):
         try:
             self.generator_instance.extract_and_concat(
                 Path(self.video_path), self.intervals, Path(self.output_path),
-                aspect_ratio=self.aspect_ratio, audio_track_index=self.audio_track_index
+                aspect_ratio=self.aspect_ratio, audio_track_index=self.audio_track_index,
+                export_quality=self.export_quality
             )
             self.queue_proxy.put(("progress", 1.0, "Render Complete!"))
             self.queue_proxy.put(("show_render_success", str(self.output_path)))
@@ -224,8 +226,14 @@ class GalleryScanWorker(QThread):
             return
         url = "https://raw.githubusercontent.com/nagadomi/lbpcascade_animeface/master/lbpcascade_animeface.xml"
         import urllib.request
+        import ssl
         self.queue_proxy.put(("log", f"Downloading anime face classifier from {url}..."))
-        urllib.request.urlretrieve(url, str(self.anime_cascade_path))
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urllib.request.urlopen(url, context=ctx) as response, open(self.anime_cascade_path, 'wb') as out_file:
+            import shutil
+            shutil.copyfileobj(response, out_file)
         self.queue_proxy.put(("log", "Successfully downloaded anime face cascade model."))
 
     def run(self):

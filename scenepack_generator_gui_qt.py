@@ -182,6 +182,7 @@ class FocusApp(QMainWindow):
                 "max_gap_tolerance": float(self.input_max_gap.text() or 1.5),
                 "min_scene_duration": float(self.input_min_scene.text() or 1.0),
                 "frame_skip": int(self.input_frame_skip.text() or 15),
+                "export_quality": self.combo_export_quality.currentText(),
                 "vad_enabled": self.chk_vad.isChecked(),
                 "vad_buffer": int(self.input_vad_buffer.text() or 300),
                 "vad_speaker_enabled": self.chk_speaker.isChecked(),
@@ -449,6 +450,12 @@ class FocusApp(QMainWindow):
         self.combo_aspect = QComboBox()
         self.combo_aspect.addItems(["16:9 Original", "9:16 Vertical", "9:16 Blurred Background"])
 
+        self.lbl_quality_title = QLabel("Export Quality:")
+        self.combo_export_quality = QComboBox()
+        self.combo_export_quality.addItems(["High (CRF 16)", "Medium (CRF 20)", "Low (CRF 24)"])
+        self.combo_export_quality.setCurrentText(self.settings.get("export_quality", "Medium (CRF 20)"))
+        self.combo_export_quality.currentTextChanged.connect(self.save_current_settings)
+
         for edit in (self.input_pad_before, self.input_pad_after, self.input_max_gap, self.input_min_scene, self.input_frame_skip):
             edit.setFixedWidth(60)
             edit.editingFinished.connect(self.save_current_settings)
@@ -469,9 +476,13 @@ class FocusApp(QMainWindow):
         inputs_grid.addWidget(self.lbl_aspect_title, 1, 4)
         inputs_grid.addWidget(self.combo_aspect, 1, 5)
 
+        # Row 2 (Quality parameter)
+        inputs_grid.addWidget(self.lbl_quality_title, 2, 0)
+        inputs_grid.addWidget(self.combo_export_quality, 2, 1, 1, 5)
+
         set_layout.addLayout(inputs_grid)
 
-        # Row 2: VAD & Lip Sync
+        # Row 3: VAD & Lip Sync
         vad_box = QHBoxLayout()
         self.chk_vad = QCheckBox("Smart Sentence Protection (VAD & Lip-Sync)")
         self.chk_vad.setChecked(self.settings.get("vad_enabled", True))
@@ -1217,10 +1228,12 @@ class FocusApp(QMainWindow):
             audio_track_idx = 0
 
         generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
+        export_quality = self.combo_export_quality.currentText()
         self.render_worker = RenderWorker(
             generator_inst, self.video_path_str, selected_intervals,
             self.output_path_str, aspect_canonical, self.queue_proxy,
-            audio_track_index=audio_track_idx
+            audio_track_index=audio_track_idx,
+            export_quality=export_quality
         )
         self.render_worker.start()
 

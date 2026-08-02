@@ -126,7 +126,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.8"
+APP_VERSION = "v1.3.9"
 
 
 class PlatformManager:
@@ -747,6 +747,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.9 (SSL Download Fix & Export Quality Setting):\n"
+            "  - Naprawiono błąd SSL (CERTIFICATE_VERIFY_FAILED) podczas pobierania detektora twarzy Anime z GitHuba.\n"
+            "  - Dodano opcję 'Jakość eksportu' pozwalającą na wybór High (CRF 16), Medium (CRF 20) lub Low (CRF 24).\n\n"
             "• v1.2.4 (UI De-Cluttering, Master Batch Concatenation & Beta Gallery Fix):\n"
             "  - Wyczyszczono zbędne ikonki i emoji z interfejsu (czysty, minimalistyczny wygląd dark studio).\n"
             "  - Dodano przełącznik trybu kolejki wsadowej (Batch Mode): osobne pliki wideo vs połączony jeden plik główny (Master Scenepack).\n"
@@ -911,6 +914,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.9 (SSL Download Fix & Export Quality Setting):\n"
+            "  - Fixed SSL CERTIFICATE_VERIFY_FAILED error when downloading Anime face detector from GitHub.\n"
+            "  - Added 'Export Quality' option allowing users to select High (CRF 16), Medium (CRF 20), or Low (CRF 24).\n\n"
             "• v1.2.1 (Audio Track Selector, Dynamic Aspect Ratio & Documents Log Location):\n"
             "  - Added Audio Track selector allowing users to select secondary audio streams (English/Japanese Dubs).\n"
             "  - Enhanced dynamic 9:16 vertical subject auto-tracking and blurred background modes.\n\n"
@@ -1349,8 +1355,12 @@ class ScenePackGenerator:
                 self.log_queue.put(("log", "Downloading anime face cascade model..."))
                 url = "https://raw.githubusercontent.com/nagadomi/lbpcascade_animeface/master/lbpcascade_animeface.xml"
                 try:
+                    import ssl
+                    ctx = ssl.create_default_context()
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
                     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req) as response, open(self.anime_cascade_path, 'wb') as out_file:
+                    with urllib.request.urlopen(req, context=ctx) as response, open(self.anime_cascade_path, 'wb') as out_file:
                         shutil.copyfileobj(response, out_file)
 
                     if self.anime_cascade_path.stat().st_size < 50000:
@@ -2024,7 +2034,7 @@ class ScenePackGenerator:
 
         return merged_intervals
 
-    def extract_and_concat(self, video_path: Path, intervals: List[Tuple[float, float, float]], output_path: Path, aspect_ratio: str = "16:9 Original", audio_track_index: int = 0):
+    def extract_and_concat(self, video_path: Path, intervals: List[Tuple[float, float, float]], output_path: Path, aspect_ratio: str = "16:9 Original", audio_track_index: int = 0, export_quality: str = "Medium"):
         if not intervals:
             logging.warning("No scenes to extract.")
             return
@@ -2072,7 +2082,23 @@ class ScenePackGenerator:
                 else:
                     cmd.extend(['-vf', vf_filter])
 
-                rate_control_args = ['-crf', '20'] if codec == 'libx264' else ['-b:v', '2M', '-maxrate', '3M', '-bufsize', '6M']
+                if "High" in export_quality:
+                    crf_val = '16'
+                    b_val = '5M'
+                    maxrate_val = '8M'
+                    buf_val = '16M'
+                elif "Low" in export_quality:
+                    crf_val = '24'
+                    b_val = '1M'
+                    maxrate_val = '1.5M'
+                    buf_val = '3M'
+                else: # Medium
+                    crf_val = '20'
+                    b_val = '2M'
+                    maxrate_val = '3M'
+                    buf_val = '6M'
+
+                rate_control_args = ['-crf', crf_val] if codec == 'libx264' else ['-b:v', b_val, '-maxrate', maxrate_val, '-bufsize', buf_val]
                 cmd.extend([
                     '-map', '0:v:0',
                     '-map', f'0:a:{audio_track_index}?',
@@ -2283,7 +2309,7 @@ class ScenePackGenerator:
 
         return intervals
 
-    def generate(self, video_path: Path, ref_image_path: Path, output_path: Path, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0):
+    def generate(self, video_path: Path, ref_image_path: Path, output_path: Path, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, export_quality: str = "Medium"):
         """
         Main pipeline method to generate a scenepack (CLI compatibility wrapper).
         """
@@ -2309,5 +2335,6 @@ class ScenePackGenerator:
         self.extract_and_concat(
             video_path=video_path,
             intervals=intervals,
-            output_path=output_path
+            output_path=output_path,
+            export_quality=export_quality
         )

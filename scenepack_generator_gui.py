@@ -1006,8 +1006,12 @@ class FocusApp(ctk.CTk if ctk else object):
                 self.log_queue.put(("log", "Downloading anime face cascade model..."))
                 url = "https://raw.githubusercontent.com/nagadomi/lbpcascade_animeface/master/lbpcascade_animeface.xml"
                 try:
+                    import ssl
+                    ctx = ssl.create_default_context()
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
                     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req) as response, open(self.anime_cascade_path, 'wb') as out_file:
+                    with urllib.request.urlopen(req, context=ctx) as response, open(self.anime_cascade_path, 'wb') as out_file:
                         shutil.copyfileobj(response, out_file)
                         
                     if self.anime_cascade_path.stat().st_size < 50000:
@@ -1651,7 +1655,7 @@ class FocusApp(ctk.CTk if ctk else object):
         
     def run_render_backend(self, v_path, o_path, intervals, aspect_ratio):
         try:
-            self.generator.extract_and_concat(Path(v_path), intervals, Path(o_path), aspect_ratio)
+            self.generator.extract_and_concat(Path(v_path), intervals, Path(o_path), aspect_ratio, export_quality="Medium (CRF 20)")
             logging.info("Finished! Focus generation complete.")
             self.log_queue.put(("progress", 1.0, "Rendering Complete!"))
         except Exception as e:
