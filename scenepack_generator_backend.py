@@ -1558,7 +1558,28 @@ class ScenePackGenerator:
 
             return encodings[0]
         else:
-            return None
+            image_bgr = cv2.imread(str(path_obj))
+            if image_bgr is None:
+                raise ValueError(f"Could not load reference image: {path_obj}")
+            gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+            self._download_anime_cascade()
+            anime_cascade = get_cascade_classifier(str(self.anime_cascade_path))
+            if anime_cascade is None or (hasattr(anime_cascade, 'empty') and anime_cascade.empty()):
+                return None
+            
+            faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
+            if len(faces) == 0:
+                err_tmpl = get_translation(self.current_lang, "err_no_human_face")
+                if "{name}" in err_tmpl:
+                    err_msg = err_tmpl.format(name=getattr(path_obj, 'name', str(path_obj)))
+                else:
+                    err_msg = err_tmpl
+                raise ValueError(f"{err_msg} (Anime)")
+            
+            x, y, w, h = faces[0]
+            crop_bgr = image_bgr[y:y+h, x:x+w]
+            features = extract_anime_face_features(crop_bgr)
+            return features
 
     def _get_video_duration(self, video_path: Path) -> float:
         cmd = [
@@ -1596,6 +1617,7 @@ class ScenePackGenerator:
                 is_tuple_input = True
                 norm_ts.append((t[0], t[1] if len(t) > 1 else 0.5))
             else:
+                is_tuple_input = True
                 norm_ts.append((float(t), 0.5))
 
         sorted_ts = sorted([t for t in norm_ts if t[0] >= 0.0], key=lambda x: x[0])
@@ -1728,7 +1750,6 @@ class ScenePackGenerator:
             with wave.open(temp_wav_path, "rb") as wf:
                 rate = wf.getframerate()
                 sig = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)
-            os.remove(temp_wav_path)
 
             if len(sig) == 0:
                 return None
@@ -1740,6 +1761,12 @@ class ScenePackGenerator:
         except Exception as e:
             logging.error(f"Failed to extract audio embedding: {e}")
             return None
+        finally:
+            if 'temp_wav_path' in locals() and os.path.exists(temp_wav_path):
+                try:
+                    os.remove(temp_wav_path)
+                except OSError:
+                    pass
 
     @staticmethod
     def _compute_numpy_mfcc(sig: np.ndarray, rate: int = 16000, num_cep: int = 13, nfft: int = 512) -> Optional[np.ndarray]:
@@ -2139,6 +2166,8 @@ class ScenePackGenerator:
                 ])
 
                 result = self.run_subprocess(cmd, capture_output=True, text=True)
+                if getattr(self, 'is_cancelled', False):
+                    return i, None
                 if result.returncode != 0 and hwaccel_flags:
                     # Retry without hwaccel flags if hardware decoding fails for specific container/codecs
                     cmd_fallback = [
