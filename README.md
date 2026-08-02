@@ -1,6 +1,6 @@
-# Focus - AI-Powered Scenepack Generator (v1.3.9)
+# Focus - AI-Powered Scenepack Generator (v1.3.10)
 
-![Version](https://img.shields.io/badge/version-v1.3.9-purple.svg)
+![Version](https://img.shields.io/badge/version-v1.3.10-purple.svg)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
