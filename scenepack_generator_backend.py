@@ -21,7 +21,6 @@ import numpy as np
 import concurrent.futures
 from PIL import Image, ImageDraw
 import wave
-import python_speech_features
 import re
 import gc
 
@@ -127,7 +126,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.7"
+APP_VERSION = "v1.3.8"
 
 
 class PlatformManager:
@@ -1704,10 +1703,58 @@ class ScenePackGenerator:
             if len(sig) == 0:
                 return None
 
-            mfcc_feat = python_speech_features.mfcc(sig, rate)
+            mfcc_feat = self._compute_numpy_mfcc(sig, rate)
+            if mfcc_feat is None or len(mfcc_feat) == 0:
+                return None
             return np.mean(mfcc_feat, axis=0)
         except Exception as e:
             logging.error(f"Failed to extract audio embedding: {e}")
+            return None
+
+    @staticmethod
+    def _compute_numpy_mfcc(sig: np.ndarray, rate: int = 16000, num_cep: int = 13, nfft: int = 512) -> Optional[np.ndarray]:
+        """Pure NumPy implementation of MFCC feature extraction (zero SciPy / C-extension dependencies)."""
+        try:
+            sig = sig.astype(np.float64)
+            emphasized = np.append(sig[0], sig[1:] - 0.97 * sig[:-1])
+            frame_len = int(round(0.025 * rate))
+            frame_step = int(round(0.010 * rate))
+            sig_len = len(emphasized)
+            if sig_len < frame_len:
+                return None
+            num_frames = int(np.ceil(float(np.abs(sig_len - frame_len)) / frame_step)) + 1
+            pad_len = (num_frames - 1) * frame_step + frame_len
+            pad_sig = np.append(emphasized, np.zeros((pad_len - sig_len)))
+            indices = np.tile(np.arange(0, frame_len), (num_frames, 1)) + np.tile(np.arange(0, num_frames * frame_step, frame_step), (frame_len, 1)).T
+            frames = pad_sig[indices.astype(np.int32, copy=False)]
+            frames *= np.hamming(frame_len)
+            mag_frames = np.absolute(np.fft.rfft(frames, nfft))
+            pow_frames = (1.0 / nfft) * (mag_frames ** 2)
+            nfilt = 26
+            low_mel = 0
+            high_mel = 2595 * np.log10(1 + (rate / 2) / 700)
+            mel_points = np.linspace(low_mel, high_mel, nfilt + 2)
+            hz_points = 700 * (10**(mel_points / 2595) - 1)
+            bin_idx = np.floor((nfft + 1) * hz_points / rate)
+            fbank = np.zeros((nfilt, int(np.floor(nfft / 2 + 1))))
+            for m in range(1, nfilt + 1):
+                f_m_minus = int(bin_idx[m - 1])
+                f_m = int(bin_idx[m])
+                f_m_plus = int(bin_idx[m + 1])
+                for k in range(f_m_minus, f_m):
+                    fbank[m - 1, k] = (k - bin_idx[m - 1]) / max(1e-5, (bin_idx[m] - bin_idx[m - 1]))
+                for k in range(f_m, f_m_plus):
+                    fbank[m - 1, k] = (bin_idx[m + 1] - k) / max(1e-5, (bin_idx[m + 1] - bin_idx[m]))
+            feat = np.dot(pow_frames, fbank.T)
+            feat = np.where(feat == 0, np.finfo(float).eps, feat)
+            feat = 20 * np.log10(feat)
+            n_feat = feat.shape[1]
+            n_arr = np.arange(n_feat)
+            k_arr = np.arange(num_cep)[:, None]
+            dct_m = np.cos(np.pi / n_feat * (n_arr + 0.5) * k_arr)
+            mfcc = np.dot(feat, dct_m.T)
+            return mfcc
+        except Exception:
             return None
 
     def _build_target_voice_print(self, video_path: Path, intervals: List[Tuple[float, float, float]]) -> Optional[np.ndarray]:
