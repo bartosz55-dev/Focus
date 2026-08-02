@@ -126,7 +126,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.9"
+APP_VERSION = "v1.3.10"
 
 
 class PlatformManager:
@@ -755,6 +755,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.10 (Major Stability & Backend Overhaul):\n"
+            "  - Resolved critical 'Zombie Subprocess' leaks during interrupted hardware encoding.\n"
+            "  - Fixed VAD audio temp file leaks and tuple unpacking mismatches.\n"
+            "  - Re-engineered 'Master Scenepack' concatenation to execute asynchronously, unblocking the GUI.\n"
+            "  - Implemented missing fallback validations for Anime reference images.\n"
+            "  - Prevented destructive UI interactions during Batch Mode processing.\n\n"
             "• v1.3.9 (SSL Download Fix & Export Quality Setting):\n"
             "  - Naprawiono błąd SSL (CERTIFICATE_VERIFY_FAILED) podczas pobierania detektora twarzy Anime z GitHuba.\n"
             "  - Dodano opcję 'Jakość eksportu' pozwalającą na wybór High (CRF 16), Medium (CRF 20) lub Low (CRF 24).\n\n"
@@ -928,6 +934,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.10 (Duża Aktualizacja Stabilności i Silnika):\n"
+            "  - Wyeliminowano wycieki pamięci 'Zombie Subprocess' podczas przerywania kodowania sprzętowego.\n"
+            "  - Naprawiono wycieki plików tymczasowych VAD oraz błędy z tuple unpacking.\n"
+            "  - Przepisano łączenie 'Master Scenepack' na tryb asynchroniczny, odblokowując interfejs.\n"
+            "  - Dodano brakujące walidacje dla obrazów referencyjnych w trybie Anime.\n"
+            "  - Zabezpieczono UI przed destruktywnymi interakcjami w Trybie Wsadowym.\n\n"
             "• v1.3.9 (SSL Download Fix & Export Quality Setting):\n"
             "  - Fixed SSL CERTIFICATE_VERIFY_FAILED error when downloading Anime face detector from GitHub.\n"
             "  - Added 'Export Quality' option allowing users to select High (CRF 16), Medium (CRF 20), or Low (CRF 24).\n\n"
