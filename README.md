@@ -1,6 +1,6 @@
-# Focus - AI-Powered Scenepack Generator (v1.3.1)
+# Focus - AI-Powered Scenepack Generator (v1.3.9)
 
-![Version](https://img.shields.io/badge/version-v1.3.1-purple.svg)
+![Version](https://img.shields.io/badge/version-v1.3.9-purple.svg)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -42,6 +42,7 @@ Focus automatically detects and utilizes hardware encoders available on your sys
 * **📱 9:16 Vertical Cropping & Blurred Backgrounds:** Built for TikTok, Instagram Reels, and YouTube Shorts. Automatically tracks subjects in vertical 9:16 aspect ratio or fills background borders with blurred video.
 * **🎙️ Target Speaker Voice Fingerprinting & VAD:** Integrates Voice Activity Detection (VAD) and speaker embeddings to filter out background chatter, narrators, or intro music, ensuring dialog is never cut off mid-word.
 * **📦 Batch Processing Queue:** Load multiple video files at once. Choose to export clips as separate video files or merge everything into a single **Master Scenepack**.
+* **🎛️ Export Quality Control:** Choose between High (CRF 16), Medium (CRF 20), or Low (CRF 24) export bitrates to balance quality and storage.
 * **✨ Interactive Beta Character Gallery:** Pre-scans videos to discover all unique characters. Click any character card to instruct the AI exactly who to track.
 * **🎧 Audio Track Selector:** Easily switch between multi-audio streams (e.g., English Dub, Japanese Original, Commentary).
 * **🎨 Customizable Color Themes & Multi-Language Support:** Includes 8 color themes (*Blue, Green, Orange, Red, Indigo, Violet, Pink, Yellow*) and full localization for **English, Polski, Deutsch, Русский, Українська, Español, Français, 日本語**.
