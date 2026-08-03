@@ -79,6 +79,12 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         self.assertEqual(result[0][1], 13.0)
         self.assertAlmostEqual(result[0][2], 0.3)
 
+    def test_dlib_thread_lock_exists(self):
+        import scenepack_generator_backend as backend
+        import threading
+        self.assertTrue(hasattr(backend, 'DLIB_THREAD_LOCK'))
+        self.assertIsInstance(backend.DLIB_THREAD_LOCK, type(threading.Lock()))
+
 
 class TestTranslationFallback(unittest.TestCase):
 

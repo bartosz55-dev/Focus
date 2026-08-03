@@ -24,8 +24,35 @@ import wave
 import re
 import gc
 
-# Global lock for thread-safe model downloads
+# Global lock for thread-safe model downloads and native C++ dlib operations
 CASCADE_DOWNLOAD_LOCK = threading.Lock()
+DLIB_THREAD_LOCK = threading.Lock()
+
+
+def safe_face_locations(img, number_of_times_to_upsample=1, model="hog"):
+    with DLIB_THREAD_LOCK:
+        return face_recognition.face_locations(img, number_of_times_to_upsample=number_of_times_to_upsample, model=model)
+
+
+def safe_face_encodings(face_image, known_face_locations=None, num_jitters=1, model="small"):
+    with DLIB_THREAD_LOCK:
+        return face_recognition.face_encodings(face_image, known_face_locations=known_face_locations, num_jitters=num_jitters, model=model)
+
+
+def safe_compare_faces(known_face_encodings, face_encoding_to_check, tolerance=0.6):
+    with DLIB_THREAD_LOCK:
+        return face_recognition.compare_faces(known_face_encodings, face_encoding_to_check, tolerance=tolerance)
+
+
+def safe_face_landmarks(face_image, face_locations=None, model="large"):
+    with DLIB_THREAD_LOCK:
+        return face_recognition.face_landmarks(face_image, face_locations=face_locations, model=model)
+
+
+def safe_face_distance(face_encodings, face_to_compare):
+    with DLIB_THREAD_LOCK:
+        return face_recognition.face_distance(face_encodings, face_to_compare)
+
 
 
 def get_cascade_classifier(cascade_path: Optional[str]):
@@ -126,7 +153,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.13"
+APP_VERSION = "v1.3.14"
 
 
 class PlatformManager:
@@ -1622,7 +1649,7 @@ class ScenePackGenerator:
 
         if self.mode == "Real Faces":
             image = face_recognition.load_image_file(str(path_obj))
-            encodings = face_recognition.face_encodings(image)
+            encodings = safe_face_encodings(image)
 
             if not encodings:
                 err_tmpl = get_translation(self.current_lang, "err_no_human_face")
@@ -1924,20 +1951,20 @@ class ScenePackGenerator:
                     break
 
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+                face_locations = safe_face_locations(rgb_frame, model="hog")
                 if not face_locations:
                     continue
 
                 ref_encs = self._extract_encodings_list(target_encoding)
                 for loc, enc in zip(face_locations, encodings):
                     if ref_encs:
-                        matches = face_recognition.compare_faces(ref_encs, enc, tolerance=0.5)
+                        matches = safe_compare_faces(ref_encs, enc, tolerance=0.5)
                         match = any(matches)
                     else:
                         match = True
 
                     if match:
-                        landmarks = face_recognition.face_landmarks(rgb_frame, [loc])
+                        landmarks = safe_face_landmarks(rgb_frame, [loc])
                         if landmarks and 'top_lip' in landmarks[0] and 'bottom_lip' in landmarks[0]:
                             top_lip = landmarks[0]['top_lip']
                             bottom_lip = landmarks[0]['bottom_lip']
@@ -2009,7 +2036,7 @@ class ScenePackGenerator:
 
                 if self.mode == "Real Faces":
                     rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                    face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+                    face_locations = safe_face_locations(rgb_frame, model="hog")
 
                     if not hasattr(thread_local_data, 'profile_cascade'):
                         if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
@@ -2035,11 +2062,11 @@ class ScenePackGenerator:
                             face_locations.append((y, x_real+w_box, y+h_box, x_real))
 
                     if face_locations:
-                        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                        face_encodings = safe_face_encodings(rgb_frame, face_locations)
 
                         for idx_enc, encoding in enumerate(face_encodings):
                             if ref_encs_list:
-                                matches = face_recognition.compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
+                                matches = safe_compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
                                 if any(matches):
                                     top, right, bottom, left = face_locations[idx_enc]
                                     center_x = (left + right) / 2.0
@@ -2067,9 +2094,9 @@ class ScenePackGenerator:
                             if ref_encs_list:
                                 rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                                 face_boxes = [(int(y), int(x+w_f), int(y+h_f), int(x)) for (x, y, w_f, h_f) in faces]
-                                face_encs = face_recognition.face_encodings(rgb_frame, face_boxes)
+                                face_encs = safe_face_encodings(rgb_frame, face_boxes)
                                 for idx_enc, encoding in enumerate(face_encs):
-                                    matches = face_recognition.compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
+                                    matches = safe_compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
                                     if any(matches):
                                         top, right, bottom, left = face_boxes[idx_enc]
                                         rel_x = ((left + right) / 2.0) / w_resized
@@ -2081,12 +2108,12 @@ class ScenePackGenerator:
                                 return (target_idx / fps, rel_x)
                     else:
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                        face_locs = face_recognition.face_locations(rgb_frame, model="hog")
+                        face_locs = safe_face_locations(rgb_frame, model="hog")
                         if face_locs:
                             if ref_encs_list:
-                                face_encs = face_recognition.face_encodings(rgb_frame, face_locs)
+                                face_encs = safe_face_encodings(rgb_frame, face_locs)
                                 for idx_enc, encoding in enumerate(face_encs):
-                                    matches = face_recognition.compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
+                                    matches = safe_compare_faces(ref_encs_list, encoding, tolerance=self.tolerance)
                                     if any(matches):
                                         top, right, bottom, left = face_locs[idx_enc]
                                         rel_x = ((left + right) / 2.0) / w_resized
