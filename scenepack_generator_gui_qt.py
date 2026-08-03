@@ -1127,13 +1127,23 @@ class FocusApp(QMainWindow):
 
 
     def select_video(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Select Input Video", "", "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)")
-        if path:
-            self.video_path_str = path
-            self.lbl_video_path.setText("Loading video information...")
+        paths, _ = QFileDialog.getOpenFileNames(self, "Select Input Video(s)", "", "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)")
+        if paths:
+            if len(paths) == 1:
+                self.video_path_str = paths[0]
+                self.lbl_video_path.setText(Path(paths[0]).name)
+            else:
+                self.video_path_str = ";".join(paths)
+                names = [Path(p).name for p in paths]
+                if len(names) <= 2:
+                    display_txt = f"🎬 {len(paths)} Videos Selected ({', '.join(names)})"
+                else:
+                    display_txt = f"🎬 {len(paths)} Videos Selected ({names[0]}, {names[1]}...)"
+                self.lbl_video_path.setText(display_txt)
+
             self.apply_auto_tune()
             
-            self.audio_worker = AudioTrackWorker(ScenePackGenerator, path, self.current_mode, self.queue_proxy)
+            self.audio_worker = AudioTrackWorker(ScenePackGenerator, paths[0], self.current_mode, self.queue_proxy)
             self.audio_worker.start()
 
     def select_image(self):
@@ -1585,8 +1595,15 @@ class FocusApp(QMainWindow):
         self.table_review.setRowHeight(0, 95)
 
         for idx, item in enumerate(intervals):
-            start, end = item[0], item[1]
-            avg_x = item[2] if len(item) > 2 else 0.5
+            if len(item) >= 4 and isinstance(item[0], (str, Path)):
+                v_src = str(item[0])
+                start, end = float(item[1]), float(item[2])
+                avg_x = float(item[3])
+            else:
+                v_src = self.video_path_str
+                start, end = float(item[0]), float(item[1])
+                avg_x = float(item[2]) if len(item) > 2 else 0.5
+
             self.table_review.setRowHeight(idx, 95)
 
             # Col 0: Checkbox
@@ -1598,7 +1615,7 @@ class FocusApp(QMainWindow):
             chk.setChecked(True)
             chk_layout.addWidget(chk)
             self.table_review.setCellWidget(idx, 0, chk_widget)
-            self.review_checkboxes.append(((start, end, avg_x), chk))
+            self.review_checkboxes.append((item, chk))
 
             # Col 1: Thumbnail
             thumb_label = QLabel()
@@ -1616,6 +1633,8 @@ class FocusApp(QMainWindow):
             # Col 2, 3, 4: Times
             item_start = QTableWidgetItem(f"{start:.2f}s")
             item_start.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            if len(item) >= 4:
+                item_start.setToolTip(f"Source File: {Path(v_src).name}")
             self.table_review.setItem(idx, 2, item_start)
 
             item_end = QTableWidgetItem(f"{end:.2f}s")
@@ -1629,7 +1648,7 @@ class FocusApp(QMainWindow):
             # Col 5: Mini-Preview Button
             btn_prev = QPushButton("▶️ Preview")
             btn_prev.setFixedWidth(85)
-            btn_prev.clicked.connect(lambda chk=False, s=start, e=end: self._open_mini_preview(s, e))
+            btn_prev.clicked.connect(lambda chk=False, src=v_src, s=start, e=end: self._open_mini_preview(s, e, src_video=src))
             self.table_review.setCellWidget(idx, 5, btn_prev)
 
         self.review_card.setVisible(True)
@@ -1653,11 +1672,12 @@ class FocusApp(QMainWindow):
             self.lbl_output_path.setText(auto_out_path.name)
             QTimer.singleShot(800, self.start_render)
 
-    def _open_mini_preview(self, start_sec: float, end_sec: float):
-        if not self.video_path_str or not os.path.exists(self.video_path_str):
+    def _open_mini_preview(self, start_sec: float, end_sec: float, src_video: Optional[str] = None):
+        target_video = src_video if src_video and os.path.exists(src_video) else self.video_path_str
+        if not target_video or not os.path.exists(target_video):
             QMessageBox.warning(self, "No Video", "Video file unavailable for preview.")
             return
-        dlg = MiniPreviewDialog(self, self.video_path_str, start_sec, end_sec)
+        dlg = MiniPreviewDialog(self, target_video, start_sec, end_sec)
         dlg.exec()
 
     def copy_diagnostics(self):

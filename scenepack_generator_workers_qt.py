@@ -123,7 +123,7 @@ class ScanWorker(QThread):
             )
             ref_arg = self.image_path if isinstance(self.image_path, dict) or self.image_path is None else Path(self.image_path)
             scanned_intervals = self.generator_instance.scan_and_prepare(
-                Path(self.video_path), ref_arg,
+                self.video_path, ref_arg,
                 self.pad_before, self.pad_after, self.max_gap, self.min_scene,
                 self.vad_enabled, self.vad_buffer,
                 self.vad_speaker_enabled, self.vad_speaker_threshold
@@ -131,12 +131,22 @@ class ScanWorker(QThread):
             logging.info(f"Finished Scanning! Found {len(scanned_intervals)} clips. Generating thumbnails...")
 
             thumbnails = []
-            cap = cv2.VideoCapture(self.video_path)
+            caps = {}
             try:
-                if cap.isOpened():
-                    for interval in scanned_intervals:
-                        start, end = interval[0], interval[1]
-                        try:
+                for interval in scanned_intervals:
+                    if len(interval) >= 4 and isinstance(interval[0], (str, Path)):
+                        v_src = str(interval[0])
+                        start = float(interval[1])
+                    else:
+                        v_src = str(self.video_path) if not isinstance(self.video_path, list) else str(self.video_path[0])
+                        start = float(interval[0])
+
+                    if v_src not in caps:
+                        caps[v_src] = cv2.VideoCapture(v_src)
+                    cap = caps[v_src]
+
+                    try:
+                        if cap.isOpened():
                             cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
                             ret, frame = cap.read()
                             if ret and frame is not None:
@@ -146,12 +156,13 @@ class ScanWorker(QThread):
                                 thumbnails.append(img)
                             else:
                                 thumbnails.append(None)
-                        except Exception:
+                        else:
                             thumbnails.append(None)
-                else:
-                    thumbnails = [None] * len(scanned_intervals)
+                    except Exception:
+                        thumbnails.append(None)
             finally:
-                cap.release()
+                for cap in caps.values():
+                    cap.release()
 
             self.queue_proxy.put(("progress", 1.0, "Scan Complete"))
             self.queue_proxy.put(("show_review_checklist", (scanned_intervals, thumbnails)))
