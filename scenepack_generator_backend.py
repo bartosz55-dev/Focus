@@ -126,7 +126,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.10"
+APP_VERSION = "v1.3.11"
 
 
 class PlatformManager:
@@ -755,6 +755,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.11 (OOM & Memory Leak Fixes):\n"
+            "  - Naprawiono błąd SIGSEGV (brak pamięci w dlib) podczas ładowania bardzo dużych materiałów wideo.\n"
+            "  - Usunięto przetrzymywanie ogromnych obrazów w pamięci podręcznej podczas wstępnego skanowania twarzy.\n"
+            "  - Zredukowano liczbę równoległych wątków skanujących i wdrożono Garbage Collection.\n\n"
             "• v1.3.10 (Major Stability & Backend Overhaul):\n"
             "  - Resolved critical 'Zombie Subprocess' leaks during interrupted hardware encoding.\n"
             "  - Fixed VAD audio temp file leaks and tuple unpacking mismatches.\n"
@@ -956,6 +960,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.11 (OOM & Memory Leak Fixes):\n"
+            "  - Fixed critical SIGSEGV (Out of Memory in dlib) when loading very large video assets.\n"
+            "  - Eliminated massive in-memory caching of PIL images during pre-scan phase.\n"
+            "  - Capped concurrent facial scanning threads and introduced periodic Garbage Collection.\n\n"
             "• v1.3.10 (Major Stability & Backend Overhaul):\n"
             "  - Eliminated 'Zombie Subprocess' memory leaks during interrupted hardware encoding.\n"
             "  - Fixed VAD audio temp file leaks and tuple unpacking errors.\n"
@@ -2080,7 +2088,7 @@ class ScenePackGenerator:
                 return None
 
             batch_size = 32
-            max_workers = min(12, os.cpu_count() or 4)
+            max_workers = min(4, os.cpu_count() or 4)
 
             current_idx = 0
             target_idx_set = set(target_indices)
@@ -2125,6 +2133,7 @@ class ScenePackGenerator:
 
                 if len(timestamps) % (batch_size * 2) < batch_size:
                     logging.info(f"Scanned {min(current_frame, total_frames)}/{total_frames} frames ({int(progress*100)}%)...")
+                    gc.collect()
 
         finally:
             cap.release()
