@@ -10,6 +10,12 @@ import cv2
 from PIL import Image
 import face_recognition
 
+from scenepack_generator_backend import (
+    safe_face_locations,
+    safe_face_encodings,
+    safe_face_distance
+)
+
 from PySide6.QtCore import QThread, Signal, QObject
 
 class QtLogHandler(logging.Handler):
@@ -335,7 +341,7 @@ class GalleryScanWorker(QThread):
 
                     if mode == "Real Faces":
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                        face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+                        face_locations = safe_face_locations(rgb_frame, model="hog")
 
                         if not face_locations and profile_cascade and not profile_cascade.empty():
                             gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
@@ -351,7 +357,7 @@ class GalleryScanWorker(QThread):
                                 face_locations.append((y, x_real+w, y+h, x_real))
 
                         if face_locations:
-                            encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                            encodings = safe_face_encodings(rgb_frame, face_locations)
                             for loc, encoding in zip(face_locations, encodings):
                                 top, right, bottom, left = loc
                                 face_crop_rgb = self.engine_module.make_square_crop(rgb_frame, top, right, bottom, left, pad_ratio=0.30)
@@ -394,7 +400,7 @@ class GalleryScanWorker(QThread):
                                 })
                         else:
                             rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                            face_locs = face_recognition.face_locations(rgb_frame, model="hog")
+                            face_locs = safe_face_locations(rgb_frame, model="hog")
                             for loc in face_locs:
                                 top, right, bottom, left = loc
                                 face_crop_rgb = self.engine_module.make_square_crop(rgb_frame, top, right, bottom, left, pad_ratio=0.30)
@@ -424,7 +430,7 @@ class GalleryScanWorker(QThread):
                 matched_merged = None
                 if mode == "Real Faces" and candidate['encoding'] is not None:
                     for mc in merged_clusters:
-                        dists = face_recognition.face_distance(mc['encodings'], candidate['encoding'])
+                        dists = safe_face_distance(mc['encodings'], candidate['encoding'])
                         if len(dists) > 0 and min(dists) <= 0.55:
                             matched_merged = mc
                             break
