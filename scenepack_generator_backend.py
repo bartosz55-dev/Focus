@@ -126,7 +126,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.11"
+APP_VERSION = "v1.3.12"
 
 
 class PlatformManager:
@@ -755,6 +755,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.12 (Batch Queue Engine Overhaul & Full Stability Fix):\n"
+            "  - Naprawiono błąd 'Tag Mismatch' w sygnałach Qt (`show_render_success` vs `render_complete`), który powodował zatrzymanie przetwarzania wsadowego po 1 odcinku.\n"
+            "  - Zaimplementowano brakującą klasę `MiniPreviewDialog` (eliminacja błędu `NameError` przy kliknięciu przycisku Podgląd).\n"
+            "  - Zezwolono na automatyczne kontynuowanie kolejki wsadowej w przypadku braku wykrytych twarzy lub błędu w konkretnym pliku wideo.\n"
+            "  - Dodano automatyczne rozszerzenie kodowania w scalaniu głównym (Master Concat Fallback), gdy połączenie bezprzetwarzaniowe nie powiedzie się.\n"
+            "  - Zabezpieczono zamykanie aplikacji przed wymuszonym killowaniem wątków C++ (`QThread.terminate()`).\n\n"
             "• v1.3.11 (OOM & Memory Leak Fixes):\n"
             "  - Naprawiono błąd SIGSEGV (brak pamięci w dlib) podczas ładowania bardzo dużych materiałów wideo.\n"
             "  - Usunięto przetrzymywanie ogromnych obrazów w pamięci podręcznej podczas wstępnego skanowania twarzy.\n"
@@ -960,6 +966,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.12 (Batch Queue Engine Overhaul & Full Stability Fix):\n"
+            "  - Fixed Qt signal tag mismatch (`show_render_success` vs `render_complete`) that caused batch queue to halt after 1 episode.\n"
+            "  - Implemented missing `MiniPreviewDialog` class (fixed `NameError` crash when clicking Preview button).\n"
+            "  - Added auto-advancing non-blocking batch queue workflow on 0 clips detected or individual file errors.\n"
+            "  - Implemented robust re-encoding fallback for Master Concat when stream copy fails.\n"
+            "  - Hardened UI thread shutdown against unsafe C++ thread terminations.\n\n"
             "• v1.3.11 (OOM & Memory Leak Fixes):\n"
             "  - Fixed critical SIGSEGV (Out of Memory in dlib) when loading very large video assets.\n"
             "  - Eliminated massive in-memory caching of PIL images during pre-scan phase.\n"
