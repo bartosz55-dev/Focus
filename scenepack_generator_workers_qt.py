@@ -317,6 +317,9 @@ class GalleryScanWorker(QThread):
                     if sampled_count % 15 == 0 or sampled_count == 1:
                         logging.info(status_text)
                         self.queue_proxy.put(("log", status_text))
+                    
+                    if sampled_count % 200 == 0:
+                        gc.collect()
 
                     h, w = frame.shape[:2]
                     if w > 480:
@@ -357,7 +360,6 @@ class GalleryScanWorker(QThread):
 
                                 raw_candidates.append({
                                     'crop_path': str(crop_path),
-                                    'pil_image': pil_crop,
                                     'resolution': pil_crop.width * pil_crop.height,
                                     'encoding': encoding,
                                     'anime_feature': None
@@ -382,7 +384,6 @@ class GalleryScanWorker(QThread):
                                 feat = self.engine_module.extract_anime_face_features(crop_bgr)
                                 raw_candidates.append({
                                     'crop_path': str(crop_path),
-                                    'pil_image': pil_crop,
                                     'resolution': pil_crop.width * pil_crop.height,
                                     'encoding': None,
                                     'anime_feature': feat
@@ -404,7 +405,6 @@ class GalleryScanWorker(QThread):
                                 feat = self.engine_module.extract_anime_face_features(bgr_crop)
                                 raw_candidates.append({
                                     'crop_path': str(crop_path),
-                                    'pil_image': pil_crop,
                                     'resolution': pil_crop.width * pil_crop.height,
                                     'encoding': None,
                                     'anime_feature': feat
@@ -453,7 +453,10 @@ class GalleryScanWorker(QThread):
             for mc in merged_clusters:
                 best_crop = max(mc['crops'], key=lambda item: item['resolution'])
                 mc['crop_path'] = best_crop['crop_path']
-                mc['pil_image'] = best_crop['pil_image']
+                try:
+                    mc['pil_image'] = Image.open(best_crop['crop_path']).copy()
+                except Exception:
+                    mc['pil_image'] = None
 
             merged_clusters.sort(key=lambda x: x['count'], reverse=True)
             for idx, mc in enumerate(merged_clusters, 1):
