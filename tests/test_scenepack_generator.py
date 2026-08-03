@@ -85,6 +85,22 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         self.assertTrue(hasattr(backend, 'DLIB_THREAD_LOCK'))
         self.assertIsInstance(backend.DLIB_THREAD_LOCK, type(threading.Lock()))
 
+    def test_parse_video_paths(self):
+        from scenepack_generator_backend import parse_video_paths
+        from pathlib import Path
+        
+        # Single string
+        res = parse_video_paths("/path/to/vid1.mp4")
+        self.assertEqual(res, [Path("/path/to/vid1.mp4").resolve()])
+        
+        # List of strings
+        res = parse_video_paths(["/path/to/v1.mp4", "/path/to/v2.mp4"])
+        self.assertEqual(len(res), 2)
+        
+        # Semicolon separated string
+        res = parse_video_paths("/path/to/v1.mp4;/path/to/v2.mp4")
+        self.assertEqual(len(res), 2)
+
 
 class TestTranslationFallback(unittest.TestCase):
 

@@ -79,6 +79,32 @@ def get_cascade_classifier(cascade_path: Optional[str]):
     return None
 
 
+def parse_video_paths(video_input: Any) -> List[Path]:
+    """
+    Normalizes a single path string, a list of strings/Paths, or a semicolon/comma-separated string into a list of resolved Path objects.
+    """
+    if not video_input:
+        return []
+    if isinstance(video_input, (list, tuple)):
+        res = []
+        for item in video_input:
+            if item:
+                res.append(Path(item).resolve())
+        return res
+    elif isinstance(video_input, (str, Path)):
+        str_val = str(video_input).strip()
+        if ";" in str_val:
+            parts = [p.strip() for p in str_val.split(";") if p.strip()]
+            return [Path(p).resolve() for p in parts]
+        elif "," in str_val and not os.path.exists(str_val):
+            parts = [p.strip() for p in str_val.split(",") if p.strip()]
+            return [Path(p).resolve() for p in parts]
+        else:
+            return [Path(str_val).resolve()]
+    return []
+
+
+
 def init_gpu_acceleration():
     """
     Enables OpenCV OpenCL hardware acceleration on supported GPUs (e.g. AMD Radeon RX 7800 XT, NVIDIA, Intel).
@@ -153,7 +179,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.14"
+APP_VERSION = "v1.3.15"
 
 
 class PlatformManager:
@@ -2204,8 +2230,17 @@ class ScenePackGenerator:
 
             def process_segment(index_and_interval):
                 i, interval = index_and_interval
-                start, end = interval[0], interval[1]
-                avg_x = interval[2] if len(interval) > 2 else 0.5
+                if len(interval) >= 4 and isinstance(interval[0], (str, Path)):
+                    src_video = Path(interval[0])
+                    start = float(interval[1])
+                    end = float(interval[2])
+                    avg_x = float(interval[3])
+                else:
+                    src_video = Path(video_path) if video_path else Path(interval[0])
+                    start = float(interval[0])
+                    end = float(interval[1])
+                    avg_x = float(interval[2]) if len(interval) > 2 else 0.5
+
                 chunk_path = temp_dir / f"chunk_{i:04d}.ts"
                 duration = end - start
 
@@ -2223,7 +2258,7 @@ class ScenePackGenerator:
                 ] + hwaccel_flags + [
                     '-ss', str(start),
                     '-accurate_seek',
-                    '-i', str(video_path),
+                    '-i', str(src_video),
                     '-t', str(duration),
                     '-fps_mode', 'cfr'
                 ]
@@ -2352,115 +2387,139 @@ class ScenePackGenerator:
             logging.error(f"Scene cut detection failed: {e}")
         return cuts
 
-    def scan_and_prepare(self, video_path: Path, ref_image_path: Path, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, vad_enabled: bool = False, vad_buffer: int = 300, vad_speaker_enabled: bool = True, vad_speaker_threshold: float = 0.68) -> List[Tuple[float, float, float]]:
+    def scan_and_prepare(self, video_path: Any, ref_image_path: Any, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, vad_enabled: bool = False, vad_buffer: int = 300, vad_speaker_enabled: bool = True, vad_speaker_threshold: float = 0.68) -> List[Any]:
         self._check_and_download_ffmpeg()
 
-        if not video_path.is_file():
-            raise FileNotFoundError(f"Video file not found: {video_path}")
+        video_paths = parse_video_paths(video_path)
+        if not video_paths:
+            raise FileNotFoundError(f"No valid video file(s) provided: {video_path}")
 
         if isinstance(ref_image_path, dict):
             ref_data = ref_image_path
         else:
             ref_data = self.load_reference_face(ref_image_path)
-        intervals = self.find_scenes(video_path, ref_data, padding_before, padding_after, max_gap_tolerance, min_scene_duration)
 
-        logging.info("Detecting shot boundaries for scene snapping...")
-        scene_cuts = self._detect_scene_cuts(video_path)
+        all_intervals = []
+        total_videos = len(video_paths)
+        for idx, v_path in enumerate(video_paths):
+            if not v_path.is_file():
+                logging.warning(f"Video file not found: {v_path}, skipping.")
+                continue
 
-        if vad_enabled:
-            logging.info("VAD Protection Enabled. Running FFmpeg silence detection...")
-            silences = self._detect_silences(video_path, vad_buffer)
-            if silences:
-                logging.info(f"Detected {len(silences)} silence intervals. Snapping boundaries...")
-                refined_intervals = []
-                for start, end, avg_x in intervals:
-                    new_start, new_end = start, end
+            if total_videos > 1:
+                msg = f"Scanning input video {idx + 1}/{total_videos}: '{v_path.name}'..."
+                logging.info(msg)
+                if hasattr(self, "log_queue") and self.log_queue:
+                    self.log_queue.put(("log", msg))
+                    self.log_queue.put(("progress", idx / float(total_videos), msg))
 
-                    if not any(s <= end <= e for s, e in silences):
-                        next_silences = [s for s, e in silences if s >= end]
-                        if next_silences:
-                            is_speaking = self._check_lip_movement(video_path, end - 0.2, ref_data)
-                            if is_speaking:
-                                logging.info(f"Lip-Sync: Extending {end:.2f}s to {next_silences[0]:.2f}s.")
-                                new_end = next_silences[0]
+            intervals = self.find_scenes(v_path, ref_data, padding_before, padding_after, max_gap_tolerance, min_scene_duration)
 
-                    if not any(s <= start <= e for s, e in silences):
-                        prev_silences = [e for s, e in silences if e <= start]
-                        if prev_silences:
-                            is_speaking_start = self._check_lip_movement(video_path, start, ref_data)
-                            if is_speaking_start:
-                                logging.info(f"Lip-Sync: Pulling {start:.2f}s back to {prev_silences[-1]:.2f}s.")
-                                new_start = prev_silences[-1]
+            logging.info(f"[{v_path.name}] Detecting shot boundaries for scene snapping...")
+            scene_cuts = self._detect_scene_cuts(v_path)
 
-                    refined_intervals.append((max(0.0, new_start), new_end, avg_x))
+            if vad_enabled:
+                logging.info(f"[{v_path.name}] VAD Protection Enabled. Running FFmpeg silence detection...")
+                silences = self._detect_silences(v_path, vad_buffer)
+                if silences:
+                    logging.info(f"[{v_path.name}] Detected {len(silences)} silence intervals. Snapping boundaries...")
+                    refined_intervals = []
+                    for item in intervals:
+                        start, end = item[0], item[1]
+                        avg_x = item[2] if len(item) > 2 else 0.5
+                        new_start, new_end = start, end
 
-                final_intervals: List[Tuple[float, float, float]] = []
-                for s, e, avg_x in refined_intervals:
-                    if not final_intervals:
-                        final_intervals.append((s, e, avg_x))
-                    else:
-                        prev_s, prev_e, prev_avg_x = final_intervals[-1]
-                        if s <= prev_e:
-                            final_intervals[-1] = (prev_s, max(prev_e, e), (prev_avg_x + avg_x) / 2.0)
-                        else:
+                        if not any(s <= end <= e for s, e in silences):
+                            next_silences = [s for s, e in silences if s >= end]
+                            if next_silences:
+                                is_speaking = self._check_lip_movement(v_path, end - 0.2, ref_data)
+                                if is_speaking:
+                                    logging.info(f"Lip-Sync: Extending {end:.2f}s to {next_silences[0]:.2f}s.")
+                                    new_end = next_silences[0]
+
+                        if not any(s <= start <= e for s, e in silences):
+                            prev_silences = [e for s, e in silences if e <= start]
+                            if prev_silences:
+                                is_speaking_start = self._check_lip_movement(v_path, start, ref_data)
+                                if is_speaking_start:
+                                    logging.info(f"Lip-Sync: Pulling {start:.2f}s back to {prev_silences[-1]:.2f}s.")
+                                    new_start = prev_silences[-1]
+
+                        refined_intervals.append((max(0.0, new_start), new_end, avg_x))
+
+                    final_intervals: List[Tuple[float, float, float]] = []
+                    for s, e, avg_x in refined_intervals:
+                        if not final_intervals:
                             final_intervals.append((s, e, avg_x))
-                intervals = final_intervals
-
-                if vad_speaker_enabled and len(intervals) > 0:
-                    logging.info("Target Speaker Voice Matching Enabled. Enrolling Target Voice Print...")
-                    voice_print = self._build_target_voice_print(video_path, intervals)
-                    if voice_print is not None:
-                        logging.info(f"Target Voice Enrolled. Verifying speakers across {len(intervals)} clips...")
-                        verified_intervals = []
-                        for s, e, avg_x in intervals:
-                            dur = e - s
-                            if dur < 0.2:
-                                continue
-                            test_s = s + (dur / 2) - min(1.0, dur / 2)
-                            test_e = test_s + min(2.0, dur)
-                            emb = self._extract_audio_embedding(video_path, test_s, test_e)
-                            if emb is not None:
-                                norm_vp = np.linalg.norm(voice_print)
-                                norm_emb = np.linalg.norm(emb)
-                                sim = 0.0
-                                if norm_vp > 0 and norm_emb > 0:
-                                    sim = np.dot(voice_print, emb) / (norm_vp * norm_emb)
-
-                                if sim >= vad_speaker_threshold:
-                                    logging.info(f"Clip [{s:.2f}-{e:.2f}] Verified (Similarity: {sim:.3f} >= {vad_speaker_threshold})")
-                                    verified_intervals.append((s, e, avg_x))
-                                else:
-                                    logging.warning(f"Clip [{s:.2f}-{e:.2f}] Discarded! Background/Narrator detected (Similarity: {sim:.3f} < {vad_speaker_threshold})")
+                        else:
+                            prev_s, prev_e, prev_avg_x = final_intervals[-1]
+                            if s <= prev_e:
+                                final_intervals[-1] = (prev_s, max(prev_e, e), (prev_avg_x + avg_x) / 2.0)
                             else:
-                                verified_intervals.append((s, e, avg_x))
-                        intervals = verified_intervals
-                    else:
-                        logging.warning("Failed to build Target Voice Print. Skipping speaker verification.")
+                                final_intervals.append((s, e, avg_x))
+                    intervals = final_intervals
 
-        snapped_intervals = []
-        for start, end, avg_x in intervals:
-            new_start, new_end = start, end
-            nearest_start_cut = next((c for c in scene_cuts if abs(c - start) <= 1.0), None)
-            if nearest_start_cut is not None:
-                logging.info(f"Snapping start {start:.2f}s to shot boundary {nearest_start_cut:.2f}s")
-                new_start = nearest_start_cut
+                    if vad_speaker_enabled and len(intervals) > 0:
+                        logging.info(f"[{v_path.name}] Target Speaker Voice Matching Enabled. Enrolling Target Voice Print...")
+                        voice_print = self._build_target_voice_print(v_path, intervals)
+                        if voice_print is not None:
+                            logging.info(f"[{v_path.name}] Target Voice Enrolled. Verifying speakers across {len(intervals)} clips...")
+                            verified_intervals = []
+                            for item in intervals:
+                                s, e = item[0], item[1]
+                                avg_x = item[2] if len(item) > 2 else 0.5
+                                dur = e - s
+                                if dur < 0.2:
+                                    continue
+                                test_s = s + (dur / 2) - min(1.0, dur / 2)
+                                test_e = test_s + min(2.0, dur)
+                                emb = self._extract_audio_embedding(v_path, test_s, test_e)
+                                if emb is not None:
+                                    norm_vp = np.linalg.norm(voice_print)
+                                    norm_emb = np.linalg.norm(emb)
+                                    sim = 0.0
+                                    if norm_vp > 0 and norm_emb > 0:
+                                        sim = np.dot(voice_print, emb) / (norm_vp * norm_emb)
 
-            nearest_end_cut = next((c for c in scene_cuts if abs(c - end) <= 1.0), None)
-            if nearest_end_cut is not None:
-                logging.info(f"Snapping end {end:.2f}s to shot boundary {nearest_end_cut:.2f}s")
-                new_end = nearest_end_cut
+                                    if sim >= vad_speaker_threshold:
+                                        logging.info(f"Clip [{s:.2f}-{e:.2f}] Verified (Similarity: {sim:.3f} >= {vad_speaker_threshold})")
+                                        verified_intervals.append((s, e, avg_x))
+                                    else:
+                                        logging.warning(f"Clip [{s:.2f}-{e:.2f}] Discarded! Background/Narrator detected (Similarity: {sim:.3f} < {vad_speaker_threshold})")
+                                else:
+                                    verified_intervals.append((s, e, avg_x))
+                            intervals = verified_intervals
+                        else:
+                            logging.warning(f"[{v_path.name}] Failed to build Target Voice Print. Skipping speaker verification.")
 
-            snapped_intervals.append((new_start, new_end, avg_x))
-        intervals = snapped_intervals
+            snapped_intervals = []
+            for item in intervals:
+                start, end = item[0], item[1]
+                avg_x = item[2] if len(item) > 2 else 0.5
+                new_start, new_end = start, end
+                nearest_start_cut = next((c for c in scene_cuts if abs(c - start) <= 1.0), None)
+                if nearest_start_cut is not None:
+                    new_start = nearest_start_cut
 
-        logging.info(f"Found {len(intervals)} contiguous scene(s) after merging overlaps.")
-        for start, end, avg_x in intervals:
-            logging.info(f"  -> Scene: {start:.2f}s to {end:.2f}s (Face X: {avg_x:.2f})")
+                nearest_end_cut = next((c for c in scene_cuts if abs(c - end) <= 1.0), None)
+                if nearest_end_cut is not None:
+                    new_end = nearest_end_cut
 
-        if not intervals:
-            raise ValueError("Target face was not detected in the video. Aborting.")
+                snapped_intervals.append((new_start, new_end, avg_x))
+            intervals = snapped_intervals
 
-        return intervals
+            for item in intervals:
+                start, end = item[0], item[1]
+                avg_x = item[2] if len(item) > 2 else 0.5
+                if total_videos > 1:
+                    all_intervals.append((str(v_path), start, end, avg_x))
+                else:
+                    all_intervals.append((start, end, avg_x))
+
+        if not all_intervals:
+            raise ValueError("Target face was not detected in any of the input videos.")
+
+        return all_intervals
 
     def generate(self, video_path: Path, ref_image_path: Path, output_path: Path, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, export_quality: str = "Medium"):
         """
