@@ -107,6 +107,64 @@ class ToastNotification(QFrame):
         self.anim.finished.connect(self.hide)
         self.anim.start()
 
+class MiniPreviewDialog(QDialog):
+    """Mini-preview dialog showing segment preview information and option to play."""
+    def __init__(self, parent, video_path: str, start_sec: float, end_sec: float):
+        super().__init__(parent)
+        self.setWindowTitle(f"Clip Preview ({start_sec:.2f}s - {end_sec:.2f}s)")
+        self.setMinimumSize(440, 260)
+        self.video_path = video_path
+        self.start_sec = start_sec
+        self.end_sec = end_sec
+
+        layout = QVBoxLayout(self)
+        
+        lbl_info = QLabel(f"<b>Video:</b> {Path(video_path).name}<br><b>Segment:</b> {start_sec:.2f}s to {end_sec:.2f}s (Duration: {end_sec - start_sec:.2f}s)")
+        lbl_info.setWordWrap(True)
+        layout.addWidget(lbl_info)
+
+        self.lbl_frame = QLabel()
+        self.lbl_frame.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_frame.setFixedHeight(150)
+        layout.addWidget(self.lbl_frame)
+
+        self._load_preview_frame()
+
+        btn_layout = QHBoxLayout()
+        btn_play = QPushButton("▶️ Play Video in System Player")
+        btn_play.clicked.connect(self._play_video)
+        btn_close = QPushButton("Close")
+        btn_close.clicked.connect(self.accept)
+        btn_layout.addWidget(btn_play)
+        btn_layout.addWidget(btn_close)
+        layout.addLayout(btn_layout)
+
+    def _load_preview_frame(self):
+        try:
+            cap = cv2.VideoCapture(self.video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS) or 24.0
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.start_sec * fps))
+            ret, frame = cap.read()
+            cap.release()
+
+            if ret and frame is not None:
+                h, w = frame.shape[:2]
+                new_w = 320
+                new_h = int(h * (new_w / w))
+                frame_resized = cv2.resize(frame, (new_w, new_h))
+                rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+                qimg = QImage(rgb.data, new_w, new_h, new_w * 3, QImage.Format.Format_RGB888)
+                self.lbl_frame.setPixmap(QPixmap.fromImage(qimg))
+            else:
+                self.lbl_frame.setText("Preview frame unavailable")
+        except Exception as e:
+            logging.error(f"Failed to load preview frame: {e}")
+            self.lbl_frame.setText("Preview frame unavailable")
+
+    def _play_video(self):
+        if self.video_path and os.path.exists(self.video_path):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(self.video_path))
+
 class FocusApp(QMainWindow):
     """
     Main Application Window in PySide6 (Qt 6).
@@ -211,7 +269,6 @@ class FocusApp(QMainWindow):
         self.queue_proxy.error_signal.connect(self._on_error_msg)
         self.queue_proxy.reset_btn_signal.connect(self._on_reset_buttons)
         self.queue_proxy.audio_tracks_signal.connect(self._on_audio_tracks_loaded)
-        self.queue_proxy.master_concat_complete_signal.connect(self._on_master_concat_complete)
         self.queue_proxy.master_concat_complete_signal.connect(self._on_master_concat_complete)
 
     @Slot(list)
@@ -1151,6 +1208,12 @@ class FocusApp(QMainWindow):
         self.lbl_eta.setText(f"Applied Preset: {preset}")
 
     def start_scan(self):
+        if self.is_batch_running and not self.output_path_str:
+            v_name = Path(self.video_path_str).stem
+            out_dir = Path.home() / "Desktop"
+            self.output_path_str = str(out_dir / f"{v_name}_scenepack.mp4")
+            self.lbl_output_path.setText(Path(self.output_path_str).name)
+
         if not self.video_path_str or not self.output_path_str:
             QMessageBox.warning(self, "Missing Files", "Please select both an Input Video and Save Location.")
             return
@@ -1200,8 +1263,14 @@ class FocusApp(QMainWindow):
                 selected_intervals.append(interval)
 
         if not selected_intervals:
-            QMessageBox.warning(self, "No Clips Selected", "Please select at least one clip in the table to render.")
-            return
+            if self.is_batch_running:
+                logging.warning(f"Batch item {self.current_batch_index + 1}: No clips selected for render.")
+                self.current_batch_index += 1
+                QTimer.singleShot(500, self._process_next_batch_item)
+                return
+            else:
+                QMessageBox.warning(self, "No Clips Selected", "Please select at least one clip in the table to render.")
+                return
 
         if not self.output_path_str:
             path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", "scenepack.mp4", "MP4 Video (*.mp4);;All Files (*.*)")
@@ -1346,27 +1415,56 @@ class FocusApp(QMainWindow):
             return
         
         self.btn_run_batch.setEnabled(False)
+        self.btn_generate.setEnabled(False)
         self.is_batch_running = True
         self.batch_rendered_outputs = []
         self.current_batch_index = 0
         self._process_next_batch_item()
 
     def _process_next_batch_item(self):
+        if not self.is_batch_running:
+            self.btn_run_batch.setEnabled(True)
+            self.btn_generate.setEnabled(True)
+            return
+
         if self.current_batch_index < len(self.batch_queue_files):
             v_path = self.batch_queue_files[self.current_batch_index]
             self.video_path_str = v_path
             self.lbl_video_path.setText(Path(v_path).name)
             self.lbl_batch_status.setText(f"Processing Batch Item {self.current_batch_index + 1} of {len(self.batch_queue_files)}: {Path(v_path).name}")
             self.toast.show_toast(f"Batch [{self.current_batch_index + 1}/{len(self.batch_queue_files)}]: Scanning {Path(v_path).name}")
+            
+            # Reset audio tracks for current batch file
+            self.combo_audio_track.clear()
+            self.combo_audio_track.addItem("Default Audio Stream (Track 1)", 0)
+
             self.start_scan()
         else:
             self.is_batch_running = False
-            if self.radio_batch_single.isChecked() and len(self.batch_rendered_outputs) > 1:
-                self._concatenate_master_scenepack()
+            self.btn_run_batch.setEnabled(True)
+            self.btn_generate.setEnabled(True)
+
+            valid_rendered = [p for p in self.batch_rendered_outputs if os.path.exists(p)]
+            
+            if self.radio_batch_single.isChecked():
+                if len(valid_rendered) > 1:
+                    self._concatenate_master_scenepack()
+                elif len(valid_rendered) == 1:
+                    out_dir = Path(self.output_path_str).parent if self.output_path_str else Path.home() / "Desktop"
+                    master_out = out_dir / "Master_Consolidated_Scenepack.mp4"
+                    try:
+                        shutil.copy2(valid_rendered[0], master_out)
+                        self.lbl_batch_status.setText(f"Master Scenepack Created: {master_out.name}")
+                        self.toast.show_toast("Batch Processing Complete!", "Success", 4000)
+                    except Exception as e:
+                        logging.error(f"Copying single master scenepack failed: {e}")
+                        self.lbl_batch_status.setText("Batch Processing Complete!")
+                else:
+                    self.lbl_batch_status.setText("Batch Processing Complete (No clips rendered).")
+                    self.toast.show_toast("Batch ended with 0 clips rendered.", "Warning", 4000)
             else:
-                self.btn_run_batch.setEnabled(True)
                 self.lbl_batch_status.setText("Batch Processing Complete!")
-                self.toast.show_toast("All batch items processed successfully!", "Success", 4000)
+                self.toast.show_toast(f"Batch complete: Rendered {len(valid_rendered)} file(s).", "Success", 4000)
 
     def _concatenate_master_scenepack(self):
         try:
@@ -1538,6 +1636,14 @@ class FocusApp(QMainWindow):
         self.lbl_eta.setText(f"Scan complete! Review {len(intervals)} clip(s) below and click Render.")
 
         if self.is_batch_running:
+            if not intervals:
+                logging.info(f"Batch item {self.current_batch_index + 1} yielded 0 clips. Skipping to next batch item...")
+                self.lbl_batch_status.setText(f"Item {self.current_batch_index + 1} yielded 0 clips. Moving to next...")
+                self.toast.show_toast(f"No clips found in item {self.current_batch_index + 1}, skipping...", "Info", 3000)
+                self.current_batch_index += 1
+                QTimer.singleShot(500, self._process_next_batch_item)
+                return
+
             out_dir = Path(self.output_path_str).parent if self.output_path_str else Path.home() / "Desktop"
             v_name = Path(self.video_path_str).stem
             auto_out_path = out_dir / f"{v_name}_scenepack.mp4"
@@ -1588,6 +1694,15 @@ class FocusApp(QMainWindow):
         self.btn_generate.setText(get_translation(self.current_lang, "generate"))
         self.btn_render.setEnabled(True)
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
+
+        if self.is_batch_running:
+            logging.error(f"Batch processing error on item {self.current_batch_index + 1}: {err}")
+            self.lbl_batch_status.setText(f"Error on item {self.current_batch_index + 1}. Continuing batch...")
+            self.toast.show_toast(f"Batch item {self.current_batch_index + 1} failed, skipping...", "Error", 4000)
+            self.current_batch_index += 1
+            QTimer.singleShot(1000, self._process_next_batch_item)
+            return
+
         log_dir = get_app_dir()
         log_path = log_dir / "focus_debug.log"
         
@@ -1612,22 +1727,23 @@ class FocusApp(QMainWindow):
     def closeEvent(self, event):
         logging.info("Shutting down Focus GUI...")
         self.save_current_settings()
-        if self.gallery_worker and self.gallery_worker.isRunning():
-            self.gallery_worker.cancel()
-            self.gallery_worker.wait(1000)
-        if self.scan_worker and self.scan_worker.isRunning():
-            if hasattr(self.scan_worker, 'cancel'):
-                self.scan_worker.cancel()
-            self.scan_worker.terminate()
-        if self.render_worker and self.render_worker.isRunning():
-            if hasattr(self.render_worker, 'cancel'):
-                self.render_worker.cancel()
-            self.render_worker.terminate()
-        if self.audio_worker and self.audio_worker.isRunning():
-            try:
-                self.audio_worker.terminate()
-            except Exception:
-                pass
+        workers = [
+            getattr(self, 'gallery_worker', None),
+            getattr(self, 'scan_worker', None),
+            getattr(self, 'render_worker', None),
+            getattr(self, 'audio_worker', None),
+            getattr(self, 'master_concat_worker', None)
+        ]
+        for w in workers:
+            if w and w.isRunning():
+                if hasattr(w, 'cancel'):
+                    try:
+                        w.cancel()
+                    except Exception:
+                        pass
+                w.quit()
+                w.wait(1500)
+
         try:
             gen = ScenePackGenerator()
             gen.terminate_all_subprocesses()

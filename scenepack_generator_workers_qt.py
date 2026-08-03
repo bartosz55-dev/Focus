@@ -129,14 +129,17 @@ class ScanWorker(QThread):
             try:
                 if cap.isOpened():
                     for start, end, avg_x in scanned_intervals:
-                        cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
-                        ret, frame = cap.read()
-                        if ret and frame is not None:
-                            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                            img = Image.fromarray(frame_rgb)
-                            img.thumbnail((160, 90), Image.Resampling.LANCZOS)
-                            thumbnails.append(img)
-                        else:
+                        try:
+                            cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
+                            ret, frame = cap.read()
+                            if ret and frame is not None:
+                                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                img = Image.fromarray(frame_rgb)
+                                img.thumbnail((160, 90), Image.Resampling.LANCZOS)
+                                thumbnails.append(img)
+                            else:
+                                thumbnails.append(None)
+                        except Exception:
                             thumbnails.append(None)
                 else:
                     thumbnails = [None] * len(scanned_intervals)
@@ -198,7 +201,7 @@ class RenderWorker(QThread):
                 export_quality=self.export_quality
             )
             self.queue_proxy.put(("progress", 1.0, "Render Complete!"))
-            self.queue_proxy.put(("show_render_success", str(self.output_path)))
+            self.queue_proxy.put(("render_complete", str(self.output_path)))
             self.queue_proxy.put(("reset_btn", None))
         except Exception as e:
             logging.error(f"Error occurred during clip rendering: {str(e)}")
@@ -502,13 +505,29 @@ class MasterConcatWorker(QThread):
             concat_list = tmp_dir / "master_list.txt"
             self.engine_module.write_concat_list(self.valid_paths, concat_list)
             self.sg_engine = self.engine_module.ScenePackGenerator(log_queue=None)
+            
+            # Fast stream copy first
             cmd = [
                 str(self.sg_engine.ffmpeg_path), '-y', '-f', 'concat', '-safe', '0',
                 '-i', str(concat_list), '-c', 'copy', str(self.master_out)
             ]
-            self.sg_engine.run_subprocess(cmd, cwd=tmp_dir)
+            res = self.sg_engine.run_subprocess(cmd, cwd=tmp_dir)
+            
+            # Fallback if fast copy fails or creates empty file
+            if res.returncode != 0 or not self.master_out.exists() or self.master_out.stat().st_size == 0:
+                cmd_fallback = [
+                    str(self.sg_engine.ffmpeg_path), '-y', '-f', 'concat', '-safe', '0',
+                    '-i', str(concat_list), '-c:v', 'libx264', '-preset', 'superfast',
+                    '-crf', '20', '-c:a', 'aac', '-b:a', '192k', str(self.master_out)
+                ]
+                self.sg_engine.run_subprocess(cmd_fallback, cwd=tmp_dir)
+
             shutil.rmtree(tmp_dir, ignore_errors=True)
-            self.queue_proxy.put(("master_concat_complete", str(self.master_out)))
+            if self.master_out.exists() and self.master_out.stat().st_size > 0:
+                self.queue_proxy.put(("master_concat_complete", str(self.master_out)))
+            else:
+                self.queue_proxy.put(("error", "Master concatenation produced empty file."))
+                self.queue_proxy.put(("master_concat_complete", ""))
         except Exception as e:
             self.queue_proxy.put(("error", f"Master concatenation failed: {e}"))
             self.queue_proxy.put(("master_concat_complete", ""))
