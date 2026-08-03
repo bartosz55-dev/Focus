@@ -126,7 +126,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.12"
+APP_VERSION = "v1.3.13"
 
 
 class PlatformManager:
@@ -1693,7 +1693,6 @@ class ScenePackGenerator:
                 is_tuple_input = True
                 norm_ts.append((t[0], t[1] if len(t) > 1 else 0.5))
             else:
-                is_tuple_input = True
                 norm_ts.append((float(t), 0.5))
 
         sorted_ts = sorted([t for t in norm_ts if t[0] >= 0.0], key=lambda x: x[0])
@@ -2177,8 +2176,9 @@ class ScenePackGenerator:
             count_lock = threading.Lock()
 
             def process_segment(index_and_interval):
-                nonlocal completed_count
-                i, (start, end, avg_x) = index_and_interval
+                i, interval = index_and_interval
+                start, end = interval[0], interval[1]
+                avg_x = interval[2] if len(interval) > 2 else 0.5
                 chunk_path = temp_dir / f"chunk_{i:04d}.ts"
                 duration = end - start
 

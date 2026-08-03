@@ -1584,7 +1584,9 @@ class FocusApp(QMainWindow):
         self.table_review.setRowCount(len(intervals))
         self.table_review.setRowHeight(0, 95)
 
-        for idx, (start, end, avg_x) in enumerate(intervals):
+        for idx, item in enumerate(intervals):
+            start, end = item[0], item[1]
+            avg_x = item[2] if len(item) > 2 else 0.5
             self.table_review.setRowHeight(idx, 95)
 
             # Col 0: Checkbox
