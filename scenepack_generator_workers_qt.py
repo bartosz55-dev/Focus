@@ -128,7 +128,8 @@ class ScanWorker(QThread):
             cap = cv2.VideoCapture(self.video_path)
             try:
                 if cap.isOpened():
-                    for start, end, avg_x in scanned_intervals:
+                    for interval in scanned_intervals:
+                        start, end = interval[0], interval[1]
                         try:
                             cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000.0)
                             ret, frame = cap.read()

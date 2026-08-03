@@ -71,6 +71,14 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         result = self.generator.merge_intervals([10.0], padding_before=0.1, padding_after=0.1, duration=100.0, min_scene_duration=1.0)
         self.assertEqual(result, [(9.9, 10.9)])
 
+    def test_merge_intervals_tuple_input(self):
+        # When input is list of tuples (timestamp, rel_x), result must contain (start, end, avg_x)
+        result = self.generator.merge_intervals([(10.0, 0.2), (11.0, 0.4)], padding_before=2.0, padding_after=2.0, duration=100.0)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0][0], 8.0)
+        self.assertEqual(result[0][1], 13.0)
+        self.assertAlmostEqual(result[0][2], 0.3)
+
 
 class TestTranslationFallback(unittest.TestCase):
 
