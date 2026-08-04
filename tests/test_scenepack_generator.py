@@ -101,6 +101,13 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         res = parse_video_paths("/path/to/v1.mp4;/path/to/v2.mp4")
         self.assertEqual(len(res), 2)
 
+    def test_check_lip_movement_defined(self):
+        self.assertTrue(hasattr(self.generator, '_check_lip_movement'))
+        import inspect
+        sig = inspect.signature(self.generator._check_lip_movement)
+        self.assertIn('video_path', sig.parameters)
+        self.assertIn('target_encoding', sig.parameters)
+
 
 class TestTranslationFallback(unittest.TestCase):
 
