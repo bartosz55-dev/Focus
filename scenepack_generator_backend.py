@@ -179,7 +179,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.18"
+APP_VERSION = "v1.3.19"
 
 
 class PlatformManager:
@@ -2315,7 +2315,7 @@ class ScenePackGenerator:
                         '-hide_banner', '-loglevel', 'error',
                         '-ss', str(start),
                         '-accurate_seek',
-                        '-i', str(video_path),
+                        '-i', str(src_video),
                         '-t', str(duration),
                         '-fps_mode', 'cfr'
                     ]
