@@ -179,7 +179,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.17"
+APP_VERSION = "v1.3.18"
 
 
 class PlatformManager:
@@ -1981,6 +1981,7 @@ class ScenePackGenerator:
                 if not face_locations:
                     continue
 
+                encodings = safe_face_encodings(rgb_frame, face_locations)
                 ref_encs = self._extract_encodings_list(target_encoding)
                 for loc, enc in zip(face_locations, encodings):
                     if ref_encs:
