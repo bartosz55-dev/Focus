@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import subprocess
+import platform
 from pathlib import Path
 from typing import List, Tuple, Optional
 
@@ -28,7 +29,7 @@ import gc
 # Import shared backend engine and helpers from scenepack_generator_backend
 import scenepack_generator_backend as sg_engine
 from scenepack_generator_backend import (
-    ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text, get_app_dir
+    ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text, get_app_dir, parse_video_paths
 )
 from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker
@@ -276,8 +277,17 @@ class FocusApp(QMainWindow):
         self.combo_audio_track.clear()
         for stream_idx, label in tracks:
             self.combo_audio_track.addItem(label, stream_idx)
-        if hasattr(self, 'lbl_video_path') and self.video_path_str:
-            self.lbl_video_path.setText(Path(self.video_path_str).name)
+        valid_paths = self.get_input_video_paths()
+        if hasattr(self, 'lbl_video_path') and valid_paths:
+            if len(valid_paths) == 1:
+                self.lbl_video_path.setText(valid_paths[0].name)
+            else:
+                names = [p.name for p in valid_paths]
+                if len(names) <= 2:
+                    display_txt = f"🎬 {len(valid_paths)} Videos Selected ({', '.join(names)})"
+                else:
+                    display_txt = f"🎬 {len(valid_paths)} Videos Selected ({names[0]}, {names[1]}... +{len(names)-2} more)"
+                self.lbl_video_path.setText(display_txt)
 
     def _setup_logging(self):
         handler = QtLogHandler(self.queue_proxy.log_signal)
