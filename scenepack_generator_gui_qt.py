@@ -15,7 +15,7 @@ if sys.platform == "darwin":
 import cv2
 
 from PySide6.QtCore import Qt, QUrl, QTimer, Slot, QRectF, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QSequentialAnimationGroup, QPoint
-from PySide6.QtGui import QFont, QPixmap, QImage, QDesktopServices, QPainter, QColor, QPen
+from PySide6.QtGui import QFont, QPixmap, QImage, QDesktopServices, QPainter, QColor, QPen, QIcon, QLinearGradient
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QCheckBox, QSlider, QProgressBar, QComboBox,
@@ -40,6 +40,46 @@ def fix_qt_ampersand(text: str) -> str:
         return ""
     import re
     return re.sub(r'(?<!&)&(?!&)', '&&', text)
+
+def get_application_icon() -> QIcon:
+    """Load or programmatically render high-resolution Focus window and taskbar icon."""
+    possible_paths = [
+        Path(get_app_dir()) / "icon.png",
+        Path(__file__).parent / "icon.png",
+        Path(__file__).parent / "ikonka.png",
+        Path(__file__).parent / "icon.icns",
+    ]
+    for p in possible_paths:
+        if p.exists() and p.is_file():
+            ic = QIcon(str(p.resolve()))
+            if not ic.isNull():
+                return ic
+
+    # Vector fallback render if no icon image file exists
+    size = 256
+    pix = QPixmap(size, size)
+    pix.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pix)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    
+    grad = QLinearGradient(0, 0, size, size)
+    grad.setColorAt(0.0, QColor("#8B5CF6"))
+    grad.setColorAt(1.0, QColor("#6D28D9"))
+    painter.setBrush(grad)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.drawRoundedRect(0, 0, size, size, 48, 48)
+    
+    pen = QPen(QColor("#FFFFFF"), 24, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+    painter.setPen(pen)
+    painter.drawPolyline([
+        QPoint(76, 64), QPoint(180, 64),
+        QPoint(76, 64), QPoint(76, 192),
+    ])
+    painter.drawPolyline([
+        QPoint(76, 124), QPoint(156, 124)
+    ])
+    painter.end()
+    return QIcon(pix)
 
 class ModernCard(QFrame):
     """Rounded container frame with border styling for grouping UI elements."""
@@ -174,6 +214,7 @@ class FocusApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"Focus - AI Scenepack Generator ({APP_VERSION})")
+        self.setWindowIcon(get_application_icon())
         self.resize(1150, 780)
         self.setMinimumSize(950, 650)
 
@@ -1896,6 +1937,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    app.setWindowIcon(get_application_icon())
     app.setQuitOnLastWindowClosed(False)
 
     # 1. Instant Startup Splash Screen

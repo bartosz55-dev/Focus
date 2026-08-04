@@ -179,7 +179,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.19"
+APP_VERSION = "v1.3.20"
 
 
 class PlatformManager:
@@ -2230,6 +2230,7 @@ class ScenePackGenerator:
             count_lock = threading.Lock()
 
             def process_segment(index_and_interval):
+                nonlocal completed_count
                 i, interval = index_and_interval
                 if len(interval) >= 4 and isinstance(interval[0], (str, Path)):
                     src_video = Path(interval[0])
