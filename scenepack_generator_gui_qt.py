@@ -587,11 +587,14 @@ class FocusApp(QMainWindow):
         files_layout.setSpacing(10)
 
         box_v = QHBoxLayout()
-        self.btn_select_video = QPushButton("Select Input Video")
+        self.btn_select_video = QPushButton("Select Input Video(s)")
         self.btn_select_video.clicked.connect(self.select_video)
+        self.btn_select_folder = QPushButton("📁 Add Folder...")
+        self.btn_select_folder.clicked.connect(self.add_folder_videos)
         self.lbl_video_path = QLabel("No video selected")
         self.lbl_video_path.setObjectName("PathLabel")
         box_v.addWidget(self.btn_select_video)
+        box_v.addWidget(self.btn_select_folder)
         box_v.addWidget(self.lbl_video_path, 1)
         files_layout.addLayout(box_v)
 
@@ -1126,25 +1129,67 @@ class FocusApp(QMainWindow):
             QMessageBox.information(self, "Changelog", get_changelog_text(self.current_lang))
 
 
+    def get_input_video_paths(self) -> List[Path]:
+        return parse_video_paths(self.video_path_str)
+
+    def has_valid_video_input(self) -> bool:
+        paths = self.get_input_video_paths()
+        return len(paths) > 0 and any(p.is_file() for p in paths)
+
+    def set_selected_video_files(self, paths: List[str]):
+        if not paths:
+            return
+        
+        valid_paths = [p for p in paths if p and os.path.isfile(p)]
+        if not valid_paths:
+            QMessageBox.warning(self, "No Valid Videos", "None of the selected video files exist on disk.")
+            return
+
+        self.batch_queue_files.clear()
+        self.list_batch_queue.clear()
+        for p in valid_paths:
+            self.batch_queue_files.append(p)
+            self.list_batch_queue.addItem(Path(p).name)
+
+        if len(valid_paths) == 1:
+            self.video_path_str = valid_paths[0]
+            self.lbl_video_path.setText(Path(valid_paths[0]).name)
+            self.lbl_batch_status.setText("Batch Processing Queue (1 file ready)")
+        else:
+            self.video_path_str = ";".join(valid_paths)
+            names = [Path(p).name for p in valid_paths]
+            if len(names) <= 2:
+                display_txt = f"🎬 {len(valid_paths)} Videos Selected ({', '.join(names)})"
+            else:
+                display_txt = f"🎬 {len(valid_paths)} Videos Selected ({names[0]}, {names[1]}... +{len(names)-2} more)"
+            self.lbl_video_path.setText(display_txt)
+            self.lbl_batch_status.setText(f"Batch Processing Queue ({len(valid_paths)} file(s) ready)")
+
+        self.apply_auto_tune()
+        
+        self.audio_worker = AudioTrackWorker(ScenePackGenerator, valid_paths[0], self.current_mode, self.queue_proxy)
+        self.audio_worker.start()
+
     def select_video(self):
         paths, _ = QFileDialog.getOpenFileNames(self, "Select Input Video(s)", "", "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)")
         if paths:
-            if len(paths) == 1:
-                self.video_path_str = paths[0]
-                self.lbl_video_path.setText(Path(paths[0]).name)
-            else:
-                self.video_path_str = ";".join(paths)
-                names = [Path(p).name for p in paths]
-                if len(names) <= 2:
-                    display_txt = f"🎬 {len(paths)} Videos Selected ({', '.join(names)})"
-                else:
-                    display_txt = f"🎬 {len(paths)} Videos Selected ({names[0]}, {names[1]}...)"
-                self.lbl_video_path.setText(display_txt)
+            self.set_selected_video_files(paths)
 
-            self.apply_auto_tune()
+    def add_folder_videos(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder Containing Video Files")
+        if folder:
+            video_exts = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".m4v", ".ts"}
+            folder_path = Path(folder)
+            found_files = []
+            for file_path in sorted(folder_path.rglob("*")):
+                if file_path.is_file() and file_path.suffix.lower() in video_exts:
+                    found_files.append(str(file_path.resolve()))
             
-            self.audio_worker = AudioTrackWorker(ScenePackGenerator, paths[0], self.current_mode, self.queue_proxy)
-            self.audio_worker.start()
+            if found_files:
+                self.set_selected_video_files(found_files)
+                self.toast.show_toast(f"Added {len(found_files)} video(s) from folder to queue!", "📁", 4000)
+            else:
+                QMessageBox.information(self, "No Videos Found", f"No supported video files were found in:\n{folder}")
 
     def select_image(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Reference Face", "", "Image Files (*.png *.jpg *.jpeg *.webp *.bmp);;All Files (*.*)")
@@ -1164,9 +1209,10 @@ class FocusApp(QMainWindow):
     def apply_auto_tune(self):
         mode = canonicalize_mode(self.current_mode)
         video_fps = 24.0
-        if self.video_path_str and os.path.isfile(self.video_path_str):
+        valid_paths = self.get_input_video_paths()
+        if valid_paths and valid_paths[0].is_file():
             try:
-                cap = cv2.VideoCapture(self.video_path_str)
+                cap = cv2.VideoCapture(str(valid_paths[0]))
                 try:
                     if cap.isOpened():
                         fps_val = cap.get(cv2.CAP_PROP_FPS)
@@ -1218,14 +1264,19 @@ class FocusApp(QMainWindow):
         self.lbl_eta.setText(f"Applied Preset: {preset}")
 
     def start_scan(self):
-        if self.is_batch_running and not self.output_path_str:
-            v_name = Path(self.video_path_str).stem
+        valid_paths = self.get_input_video_paths()
+        if not valid_paths:
+            QMessageBox.warning(self, "Missing Files", "Please select valid Input Video(s).")
+            return
+
+        if (self.is_batch_running or len(valid_paths) > 1) and not self.output_path_str:
+            v_name = valid_paths[0].stem if len(valid_paths) == 1 else "Master_MultiVideo"
             out_dir = Path.home() / "Desktop"
             self.output_path_str = str(out_dir / f"{v_name}_scenepack.mp4")
             self.lbl_output_path.setText(Path(self.output_path_str).name)
 
-        if not self.video_path_str or not self.output_path_str:
-            QMessageBox.warning(self, "Missing Files", "Please select both an Input Video and Save Location.")
+        if not self.has_valid_video_input() or not self.output_path_str:
+            QMessageBox.warning(self, "Missing Files", "Please select both valid Input Video(s) and Save Location.")
             return
         if not self.image_path_str and self.selected_ref_data is None:
             QMessageBox.warning(self, "Missing Reference", "Please select a Reference Face Image or choose a character from the Beta Gallery.")
@@ -1263,8 +1314,8 @@ class FocusApp(QMainWindow):
         self.scan_worker.start()
 
     def start_render(self):
-        if not self.video_path_str or not os.path.exists(self.video_path_str):
-            QMessageBox.warning(self, "No Input Video", "Please select a valid input video file before rendering!")
+        if not self.has_valid_video_input():
+            QMessageBox.warning(self, "No Input Video", "Please select valid input video file(s) before rendering!")
             return
 
         selected_intervals = []
@@ -1319,7 +1370,8 @@ class FocusApp(QMainWindow):
         self.render_worker.start()
 
     def start_gallery_scan(self):
-        if not self.video_path_str or not os.path.isfile(self.video_path_str):
+        valid_paths = self.get_input_video_paths()
+        if not valid_paths or not valid_paths[0].is_file():
             QMessageBox.warning(self, "No Input Video", "Please select a valid input video file in the Generator tab first!")
             return
 
@@ -1338,8 +1390,9 @@ class FocusApp(QMainWindow):
         self.btn_gal_cancel.setEnabled(False)
 
     def play_original(self):
-        if self.video_path_str and os.path.exists(self.video_path_str):
-            QDesktopServices.openUrl(QUrl.fromLocalFile(self.video_path_str))
+        valid_paths = self.get_input_video_paths()
+        if valid_paths and valid_paths[0].is_file():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(valid_paths[0])))
 
     # --- SIGNAL SLOTS ---
     @Slot(str)
@@ -1403,16 +1456,13 @@ class FocusApp(QMainWindow):
             "Video Files (*.mp4 *.mkv *.mov *.avi *.webm *.flv *.m4v *.ts);;All Files (*.*)"
         )
         if paths:
-            for p in paths:
-                if p not in self.batch_queue_files:
-                    self.batch_queue_files.append(p)
-                    self.list_batch_queue.addItem(Path(p).name)
-            self.lbl_batch_status.setText(f"Batch Queue: {len(self.batch_queue_files)} file(s) ready")
-            self.toast.show_toast(f"Added {len(paths)} video(s) to Batch Queue", "📦")
+            self.set_selected_video_files(paths)
 
     def clear_batch_queue(self):
         self.batch_queue_files.clear()
         self.list_batch_queue.clear()
+        self.video_path_str = ""
+        self.lbl_video_path.setText("No video selected")
         self.lbl_batch_status.setText("Batch Queue: Empty")
         self.toast.show_toast("Batch Queue cleared", "🗑️")
 
@@ -1424,6 +1474,11 @@ class FocusApp(QMainWindow):
             QMessageBox.warning(self, "Missing Reference Face", "Please select a reference face image before processing the batch queue.")
             return
         
+        if self.radio_batch_single.isChecked():
+            self.video_path_str = ";".join(self.batch_queue_files)
+            self.start_scan()
+            return
+
         self.btn_run_batch.setEnabled(False)
         self.btn_generate.setEnabled(False)
         self.is_batch_running = True
