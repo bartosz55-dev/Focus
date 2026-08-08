@@ -179,7 +179,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.20"
+APP_VERSION = "v1.3.21"
 
 
 class PlatformManager:
@@ -1806,6 +1806,9 @@ class ScenePackGenerator:
                 new_end = end + needed
                 if duration > 0 and duration != float('inf'):
                     new_end = min(duration, new_end)
+                new_dur = new_end - start
+                if new_dur < min_scene_duration:
+                    start = max(0.0, start - (min_scene_duration - new_dur))
                 final_scenes.append((start, new_end, avg_x))
             else:
                 final_scenes.append((start, end, avg_x))
