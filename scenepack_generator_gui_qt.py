@@ -32,7 +32,7 @@ from scenepack_generator_backend import (
     ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text, get_app_dir, parse_video_paths
 )
 from scenepack_generator_workers_qt import (
-    QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker
+    QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker, MasterConcatWorker
 )
 
 def fix_qt_ampersand(text: str) -> str:

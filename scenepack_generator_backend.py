@@ -179,7 +179,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.21"
+APP_VERSION = "v1.3.22"
 
 
 class PlatformManager:
@@ -1532,13 +1532,15 @@ class ScenePackGenerator:
             return ["-hwaccel", "videotoolbox"]
         return []
 
-    def get_audio_tracks(self, video_path: Path) -> List[Tuple[int, str]]:
+    def get_audio_tracks(self, video_path: Any) -> List[Tuple[int, str]]:
         """
         Probes input video for available audio streams using ffprobe.
         Returns a list of tuples: (audio_stream_index, track_label).
         """
         tracks = []
-        if not video_path or not os.path.exists(video_path) or not self.ffprobe_path.exists():
+        parsed = parse_video_paths(video_path)
+        target_path = parsed[0] if parsed else None
+        if not target_path or not target_path.exists() or not self.ffprobe_path.exists():
             return [(0, "Default Audio Stream (Track 1)")]
 
         try:
@@ -1546,7 +1548,7 @@ class ScenePackGenerator:
                 str(self.ffprobe_path), '-v', 'error',
                 '-select_streams', 'a',
                 '-show_entries', 'stream=index,codec_name:stream_tags=language,title',
-                '-of', 'json', str(video_path)
+                '-of', 'json', str(target_path)
             ]
             res = self.run_subprocess(cmd, capture_output=True, text=True)
             if res.returncode == 0 and res.stdout:
