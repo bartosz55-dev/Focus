@@ -108,6 +108,12 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         self.assertIn('video_path', sig.parameters)
         self.assertIn('target_encoding', sig.parameters)
 
+    def test_get_audio_tracks_multivideo_support(self):
+        tracks = self.generator.get_audio_tracks("/path/nonexistent1.mp4;/path/nonexistent2.mp4")
+        self.assertIsInstance(tracks, list)
+        self.assertEqual(len(tracks), 1)
+        self.assertEqual(tracks[0][0], 0)
+
 
 class TestTranslationFallback(unittest.TestCase):
 

@@ -13,7 +13,8 @@ import face_recognition
 from scenepack_generator_backend import (
     safe_face_locations,
     safe_face_encodings,
-    safe_face_distance
+    safe_face_distance,
+    parse_video_paths
 )
 
 from PySide6.QtCore import QThread, Signal, QObject
@@ -185,8 +186,10 @@ class AudioTrackWorker(QThread):
 
     def run(self):
         try:
+            parsed = parse_video_paths(self.video_path)
+            target = parsed[0] if parsed else Path(self.video_path)
             gen = self.generator_cls(log_queue=self.queue_proxy, mode=self.mode)
-            tracks = gen.get_audio_tracks(Path(self.video_path))
+            tracks = gen.get_audio_tracks(target)
             self.queue_proxy.put(("audio_tracks", tracks))
         except Exception as e:
             logging.error(f"Could not probe audio tracks in background: {e}")
@@ -242,8 +245,8 @@ class GalleryScanWorker(QThread):
 
     def cancel(self):
         self.is_cancelled = True
-        if hasattr(self, 'sg_engine') and self.sg_engine and hasattr(self.sg_engine, 'terminate_all_subprocesses'):
-            self.sg_engine.terminate_all_subprocesses()
+        if hasattr(self, 'engine_module') and self.engine_module and hasattr(self.engine_module, 'terminate_all_subprocesses'):
+            self.engine_module.terminate_all_subprocesses()
 
     def _download_anime_cascade(self):
         if self.anime_cascade_path.exists() and self.anime_cascade_path.stat().st_size > 0:
@@ -263,13 +266,15 @@ class GalleryScanWorker(QThread):
     def run(self):
         mode = self.engine_module.canonicalize_mode(self.mode_raw)
         try:
-            video_path = Path(self.video_path_str)
-            if not video_path.is_file():
+            parsed_paths = parse_video_paths(self.video_path_str)
+            if not parsed_paths or not parsed_paths[0].is_file():
                 err_msg = f"Video file not found: {self.video_path_str}"
                 logging.error(err_msg)
                 self.queue_proxy.put(("log", err_msg))
                 self.queue_proxy.put(("gallery_error", err_msg))
                 return
+
+            video_path = parsed_paths[0]
 
             msg_start = f"Starting background character pre-scan in '{mode}' mode (from '{self.mode_raw}') on '{video_path.name}'..."
             logging.info(msg_start)
