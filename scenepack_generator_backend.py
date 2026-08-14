@@ -179,7 +179,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.22"
+APP_VERSION = "v1.3.23"
 
 
 class PlatformManager:
@@ -1844,6 +1844,7 @@ class ScenePackGenerator:
             d_sec = buffer_ms / 1000.0
             cmd = [
                 str(self.ffmpeg_path),
+                '-vn',
                 '-i', str(video_path),
                 '-af', f'silencedetect=noise=-30dB:d={d_sec}',
                 '-f', 'null', '-'
@@ -2013,7 +2014,7 @@ class ScenePackGenerator:
 
         return False
 
-    def find_scenes(self, video_path: Path, ref_data, padding_before: float, padding_after: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0) -> List[Tuple[float, float, float]]:
+    def find_scenes(self, video_path: Path, ref_data, padding_before: float, padding_after: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, video_index: int = 0, total_videos: int = 1) -> List[Tuple[float, float, float]]:
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
             raise IOError(f"Could not open video file: {video_path}")
@@ -2192,17 +2193,26 @@ class ScenePackGenerator:
                         timestamps.append(res)
 
                 current_frame = batch_frames[-1][0]
-                progress = min(1.0, current_frame / total_frames)
+                episode_progress = min(1.0, current_frame / total_frames)
+                composite_progress = (video_index + episode_progress) / float(total_videos)
                 elapsed = time.time() - start_time
-                eta_seconds = (elapsed / progress) - elapsed if progress > 0 else 0
+                eta_seconds = (elapsed / episode_progress) - elapsed if episode_progress > 0 else 0
 
                 eta_mins = int(eta_seconds // 60)
                 eta_secs = int(eta_seconds % 60)
 
-                self.log_queue.put(("progress", progress, f"ETA: {eta_mins}m {eta_secs}s  ({int(progress*100)}%)"))
+                if total_videos > 1:
+                    status_text = f"Episode [{video_index + 1}/{total_videos}] '{video_path.name}' ({int(episode_progress*100)}%) | Overall: {int(composite_progress*100)}% | ETA: {eta_mins}m {eta_secs}s"
+                    if hasattr(self, "log_queue") and self.log_queue:
+                        self.log_queue.put(("episode_progress", (video_index + 1, total_videos, video_path.name, episode_progress, composite_progress)))
+                else:
+                    status_text = f"ETA: {eta_mins}m {eta_secs}s  ({int(episode_progress*100)}%)"
+
+                if hasattr(self, "log_queue") and self.log_queue:
+                    self.log_queue.put(("progress", composite_progress, status_text))
 
                 if len(timestamps) % (batch_size * 2) < batch_size:
-                    logging.info(f"Scanned {min(current_frame, total_frames)}/{total_frames} frames ({int(progress*100)}%)...")
+                    logging.info(f"[{video_path.name}] Scanned {min(current_frame, total_frames)}/{total_frames} frames ({int(episode_progress*100)}%)...")
                     gc.collect()
 
         finally:
@@ -2338,12 +2348,15 @@ class ScenePackGenerator:
 
                 with count_lock:
                     completed_count += 1
+                    render_prog = completed_count / float(total_segments)
+                    if hasattr(self, "log_queue") and self.log_queue:
+                        self.log_queue.put(("progress", render_prog, f"Rendering clips: {completed_count}/{total_segments} ({int(render_prog*100)}%)"))
                     if completed_count % max(1, total_segments // 10) == 0 or completed_count == total_segments:
                         logging.info(f"Completed {completed_count}/{total_segments} segments...")
 
                 return i, chunk_path
 
-            max_workers = min(3, os.cpu_count() or 3)
+            max_workers = min(6, os.cpu_count() or 4)
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(executor.map(process_segment, enumerate(intervals)))
 
@@ -2383,7 +2396,7 @@ class ScenePackGenerator:
             cmd = [
                 str(self.ffmpeg_path),
                 '-i', str(video_path),
-                '-vf', f"select='gt(scene,{threshold})',showinfo",
+                '-vf', f"scale=320:-1,select='gt(scene,{threshold})',showinfo",
                 '-f', 'null', '-'
             ]
             result = self.run_subprocess(cmd, capture_output=True, text=True)
@@ -2420,7 +2433,10 @@ class ScenePackGenerator:
                     self.log_queue.put(("log", msg))
                     self.log_queue.put(("progress", idx / float(total_videos), msg))
 
-            intervals = self.find_scenes(v_path, ref_data, padding_before, padding_after, max_gap_tolerance, min_scene_duration)
+            intervals = self.find_scenes(
+                v_path, ref_data, padding_before, padding_after, max_gap_tolerance, min_scene_duration,
+                video_index=idx, total_videos=total_videos
+            )
 
             logging.info(f"[{v_path.name}] Detecting shot boundaries for scene snapping...")
             scene_cuts = self._detect_scene_cuts(v_path)
