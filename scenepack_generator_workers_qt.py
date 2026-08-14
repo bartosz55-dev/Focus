@@ -51,6 +51,7 @@ class QtQueueProxy(QObject):
     reset_btn_signal = Signal()
     audio_tracks_signal = Signal(list)
     master_concat_complete_signal = Signal(str)
+    episode_progress_signal = Signal(int, int, str, float, float)
 
     def put(self, item: Tuple[Any, ...]):
         if not isinstance(item, tuple) or len(item) == 0:
@@ -61,6 +62,9 @@ class QtQueueProxy(QObject):
                 self.log_signal.emit(str(item[1]))
             elif tag == "progress" and len(item) >= 3:
                 self.progress_signal.emit(float(item[1]), str(item[2]))
+            elif tag == "episode_progress" and len(item) >= 2:
+                cur_ep, tot_eps, ep_name, ep_prog, tot_prog = item[1]
+                self.episode_progress_signal.emit(cur_ep, tot_eps, str(ep_name), float(ep_prog), float(tot_prog))
             elif tag == "gallery_progress" and len(item) >= 3:
                 self.gallery_progress_signal.emit(float(item[1]), str(item[2]))
             elif tag == "gallery_status" and len(item) >= 2:

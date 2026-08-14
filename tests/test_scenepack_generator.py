@@ -114,6 +114,14 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         self.assertEqual(len(tracks), 1)
         self.assertEqual(tracks[0][0], 0)
 
+    def test_find_scenes_multivideo_signature(self):
+        import inspect
+        sig = inspect.signature(self.generator.find_scenes)
+        self.assertIn('video_index', sig.parameters)
+        self.assertIn('total_videos', sig.parameters)
+        self.assertEqual(sig.parameters['video_index'].default, 0)
+        self.assertEqual(sig.parameters['total_videos'].default, 1)
+
 
 class TestTranslationFallback(unittest.TestCase):
 

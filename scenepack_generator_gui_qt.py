@@ -312,6 +312,7 @@ class FocusApp(QMainWindow):
         self.queue_proxy.reset_btn_signal.connect(self._on_reset_buttons)
         self.queue_proxy.audio_tracks_signal.connect(self._on_audio_tracks_loaded)
         self.queue_proxy.master_concat_complete_signal.connect(self._on_master_concat_complete)
+        self.queue_proxy.episode_progress_signal.connect(self._on_episode_progress)
 
     @Slot(list)
     def _on_audio_tracks_loaded(self, tracks):
@@ -474,87 +475,133 @@ class FocusApp(QMainWindow):
         scroll_gen.setWidget(gen_container)
         gen_layout.addWidget(scroll_gen)
 
-        # 1. Hero Banner Card
-        self.hero_card = ModernCard(self)
-        hero_layout = QVBoxLayout(self.hero_card)
-        self.lbl_hero_title = QLabel("Focus - AI Scenepack Generator")
-        self.lbl_hero_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        self.lbl_hero_sub = QLabel("Automated facial tracking and intelligent clip extraction.")
-        self.lbl_hero_sub.setObjectName("SubText")
-        hero_layout.addWidget(self.lbl_hero_title)
-        hero_layout.addWidget(self.lbl_hero_sub)
-        self.gen_content_layout.addWidget(self.hero_card)
-
-        # 2. Smart Preset Cards
+        # 1. Quick Presets Toolbar
         self.presets_card = ModernCard(self)
-        presets_layout = QVBoxLayout(self.presets_card)
-        lbl_smart_title = QLabel("Smart Presets")
-        lbl_smart_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        presets_layout.addWidget(lbl_smart_title)
+        presets_layout = QHBoxLayout(self.presets_card)
+        presets_layout.setContentsMargins(14, 10, 14, 10)
+        presets_layout.setSpacing(10)
 
-        p_box = QHBoxLayout()
-        p_box.setSpacing(10)
+        lbl_presets_head = QLabel("⚡ Quick Presets:")
+        lbl_presets_head.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        presets_layout.addWidget(lbl_presets_head)
 
-        self.btn_preset_tiktok = QPushButton("TikTok / Shorts\n(9:16 Vertical Auto-Track)")
-        self.btn_preset_tiktok.setObjectName("AccentBtn")
-        self.btn_preset_tiktok.setFixedHeight(48)
-        self.btn_preset_tiktok.clicked.connect(lambda: self._apply_smart_preset("tiktok"))
-
-        self.btn_preset_youtube = QPushButton("YouTube Scenepack\n(16:9 Original Res)")
-        self.btn_preset_youtube.setObjectName("AccentBtn")
-        self.btn_preset_youtube.setFixedHeight(48)
-        self.btn_preset_youtube.clicked.connect(lambda: self._apply_smart_preset("youtube"))
-
-        self.btn_preset_draft = QPushButton("Ultra-Fast Draft Scan\n(Low res fast sampling)")
-        self.btn_preset_draft.setObjectName("AccentBtn")
-        self.btn_preset_draft.setFixedHeight(48)
-        self.btn_preset_draft.clicked.connect(lambda: self._apply_smart_preset("draft"))
-
-        p_box.addWidget(self.btn_preset_tiktok)
-        p_box.addWidget(self.btn_preset_youtube)
-        p_box.addWidget(self.btn_preset_draft)
-        presets_layout.addLayout(p_box)
-        self.gen_content_layout.addWidget(self.presets_card)
-
-        # 3. Settings Card
-        self.settings_card = ModernCard(self)
-        set_layout = QVBoxLayout(self.settings_card)
-        set_layout.setSpacing(12)
-
-        # Top bar: Presets Profile
-        top_set_box = QHBoxLayout()
-        self.lbl_presets_title = QLabel("Preset Profiles:")
-        top_set_box.addWidget(self.lbl_presets_title)
-        self.combo_presets = QComboBox()
-        self.combo_presets.addItems([
-            "Auto-Tune / Zalecane (Automatyczny dobór parametrów)",
-            "Fast / TikTok (Szybki montaż, krótkie klipy, małe bufory)",
-            "Cinematic / Kinowy (Długie sceny, płynne przejścia, duży bufor)",
-            "Ultra-Fast Scan / Szkic (Maksymalne pomijanie klatek, szybki podgląd)"
-        ])
-        self.combo_presets.currentTextChanged.connect(self._on_preset_selected)
-        top_set_box.addWidget(self.combo_presets, 1)
-
-        self.btn_autotune = QPushButton("Auto-Tune")
+        self.btn_autotune = QPushButton("✨ Auto-Tune")
         self.btn_autotune.setObjectName("AccentBtn")
         self.btn_autotune.clicked.connect(self.apply_auto_tune)
-        top_set_box.addWidget(self.btn_autotune)
-        set_layout.addLayout(top_set_box)
+        presets_layout.addWidget(self.btn_autotune)
 
-        # Inputs Grid (2 rows for clean responsive display without horizontal truncation)
+        self.btn_preset_tiktok = QPushButton("📱 TikTok / Shorts (9:16)")
+        self.btn_preset_tiktok.clicked.connect(lambda: self._apply_smart_preset("tiktok"))
+        presets_layout.addWidget(self.btn_preset_tiktok)
+
+        self.btn_preset_youtube = QPushButton("🎬 YouTube (16:9)")
+        self.btn_preset_youtube.clicked.connect(lambda: self._apply_smart_preset("youtube"))
+        presets_layout.addWidget(self.btn_preset_youtube)
+
+        self.btn_preset_draft = QPushButton("🚀 Fast Draft Scan")
+        self.btn_preset_draft.clicked.connect(lambda: self._apply_smart_preset("draft"))
+        presets_layout.addWidget(self.btn_preset_draft)
+
+        presets_layout.addStretch()
+        self.gen_content_layout.addWidget(self.presets_card)
+
+        # 2. Unified Media & Reference Hub
+        self.files_card = ModernCard(self)
+        files_layout = QVBoxLayout(self.files_card)
+        files_layout.setContentsMargins(16, 14, 16, 14)
+        files_layout.setSpacing(10)
+
+        # Row 1: Video selection + Folder + Clear + Master/Separate output mode
+        top_v_row = QHBoxLayout()
+        self.btn_select_video = QPushButton("📁 Select Video(s)...")
+        self.btn_select_video.setObjectName("AccentBtn")
+        self.btn_select_video.clicked.connect(self.select_video)
+        top_v_row.addWidget(self.btn_select_video)
+
+        self.btn_select_folder = QPushButton("📂 Add Folder...")
+        self.btn_select_folder.clicked.connect(self.add_folder_videos)
+        top_v_row.addWidget(self.btn_select_folder)
+
+        self.btn_clear_batch = QPushButton("🗑️ Clear")
+        self.btn_clear_batch.clicked.connect(self.clear_batch_queue)
+        top_v_row.addWidget(self.btn_clear_batch)
+
+        top_v_row.addSpacing(16)
+        lbl_batch_mode = QLabel("Output Mode:")
+        lbl_batch_mode.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        top_v_row.addWidget(lbl_batch_mode)
+
+        self.radio_batch_single = QRadioButton("📦 Master Scenepack (Single Video)")
+        self.radio_batch_separate = QRadioButton("📁 Separate Episode Files")
+        self.radio_batch_single.setChecked(True)
+        top_v_row.addWidget(self.radio_batch_single)
+        top_v_row.addWidget(self.radio_batch_separate)
+        top_v_row.addStretch()
+        files_layout.addLayout(top_v_row)
+
+        # Row 2: Selected Videos Status Badge
+        self.lbl_video_path = QLabel("No video selected")
+        self.lbl_video_path.setObjectName("PathLabel")
+        self.lbl_video_path.setStyleSheet("background-color: #1A1E26; border: 1px solid #2D3545; border-radius: 6px; padding: 6px 12px; font-weight: 500;")
+        files_layout.addWidget(self.lbl_video_path)
+
+        # Row 3: Reference Face & Output Save Location (Clean 2-column)
+        ref_out_grid = QGridLayout()
+        ref_out_grid.setSpacing(10)
+
+        self.btn_select_image = QPushButton("👤 Select Reference Face")
+        self.btn_select_image.clicked.connect(self.select_image)
+        self.lbl_image_path = QLabel("No image selected")
+        self.lbl_image_path.setObjectName("PathLabel")
+        self.lbl_image_path.setStyleSheet("background-color: #1A1E26; border: 1px solid #2D3545; border-radius: 6px; padding: 6px 12px;")
+        ref_out_grid.addWidget(self.btn_select_image, 0, 0)
+        ref_out_grid.addWidget(self.lbl_image_path, 0, 1)
+
+        self.btn_select_output = QPushButton("💾 Select Save Location")
+        self.btn_select_output.clicked.connect(self.select_output)
+        self.lbl_output_path = QLabel("No save location selected")
+        self.lbl_output_path.setObjectName("PathLabel")
+        self.lbl_output_path.setStyleSheet("background-color: #1A1E26; border: 1px solid #2D3545; border-radius: 6px; padding: 6px 12px;")
+        ref_out_grid.addWidget(self.btn_select_output, 1, 0)
+        ref_out_grid.addWidget(self.lbl_output_path, 1, 1)
+
+        ref_out_grid.setColumnStretch(1, 1)
+        files_layout.addLayout(ref_out_grid)
+
+        # Row 4: Audio Track Selector
+        box_a = QHBoxLayout()
+        self.lbl_audio_track = QLabel("🎧 Audio Track:")
+        self.combo_audio_track = QComboBox()
+        self.combo_audio_track.addItem("Default Audio Stream (Track 1)", 0)
+        box_a.addWidget(self.lbl_audio_track)
+        box_a.addWidget(self.combo_audio_track, 1)
+        files_layout.addLayout(box_a)
+
+        self.gen_content_layout.addWidget(self.files_card)
+
+        # 3. Tuning & Speech Protection Card
+        self.settings_card = ModernCard(self)
+        set_layout = QVBoxLayout(self.settings_card)
+        set_layout.setContentsMargins(16, 14, 16, 14)
+        set_layout.setSpacing(12)
+
+        lbl_settings_head = QLabel("⚙️ Scene & Detection Tuning")
+        lbl_settings_head.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        set_layout.addWidget(lbl_settings_head)
+
         inputs_grid = QGridLayout()
-        inputs_grid.setSpacing(12)
+        inputs_grid.setSpacing(10)
 
         self.lbl_pad_before = QLabel("Padding Before (s):")
         self.input_pad_before = QLineEdit(str(self.settings.get("pad_before", 2.0)))
         self.lbl_pad_after = QLabel("Padding After (s):")
         self.input_pad_after = QLineEdit(str(self.settings.get("pad_after", 2.0)))
-        self.lbl_max_gap = QLabel("Max Gap Tolerance (s):")
+        self.lbl_max_gap = QLabel("Max Gap (s):")
         self.input_max_gap = QLineEdit(str(self.settings.get("max_gap_tolerance", 1.5)))
 
-        self.lbl_min_scene = QLabel("Min Scene Length (s):")
+        self.lbl_min_scene = QLabel("Min Scene (s):")
         self.input_min_scene = QLineEdit(str(self.settings.get("min_scene_duration", 1.0)))
-        self.lbl_frame_skip = QLabel("Frame Skip Interval:")
+        self.lbl_frame_skip = QLabel("Frame Skip:")
         self.input_frame_skip = QLineEdit(str(self.settings.get("frame_skip", 15)))
         self.lbl_aspect_title = QLabel("Aspect Ratio:")
         self.combo_aspect = QComboBox()
@@ -567,10 +614,10 @@ class FocusApp(QMainWindow):
         self.combo_export_quality.currentTextChanged.connect(self.save_current_settings)
 
         for edit in (self.input_pad_before, self.input_pad_after, self.input_max_gap, self.input_min_scene, self.input_frame_skip):
-            edit.setFixedWidth(60)
+            edit.setFixedWidth(55)
             edit.editingFinished.connect(self.save_current_settings)
 
-        # Row 0 (3 parameters)
+        # Row 0
         inputs_grid.addWidget(self.lbl_pad_before, 0, 0)
         inputs_grid.addWidget(self.input_pad_before, 0, 1)
         inputs_grid.addWidget(self.lbl_pad_after, 0, 2)
@@ -578,7 +625,7 @@ class FocusApp(QMainWindow):
         inputs_grid.addWidget(self.lbl_max_gap, 0, 4)
         inputs_grid.addWidget(self.input_max_gap, 0, 5)
 
-        # Row 1 (3 parameters including Aspect Ratio)
+        # Row 1
         inputs_grid.addWidget(self.lbl_min_scene, 1, 0)
         inputs_grid.addWidget(self.input_min_scene, 1, 1)
         inputs_grid.addWidget(self.lbl_frame_skip, 1, 2)
@@ -586,43 +633,42 @@ class FocusApp(QMainWindow):
         inputs_grid.addWidget(self.lbl_aspect_title, 1, 4)
         inputs_grid.addWidget(self.combo_aspect, 1, 5)
 
-        # Row 2 (Quality parameter)
+        # Row 2
         inputs_grid.addWidget(self.lbl_quality_title, 2, 0)
         inputs_grid.addWidget(self.combo_export_quality, 2, 1, 1, 5)
 
         set_layout.addLayout(inputs_grid)
 
-        # Row 3: VAD & Lip Sync
+        # VAD & Speaker protection row
         vad_box = QHBoxLayout()
         self.chk_vad = QCheckBox("Smart Sentence Protection (VAD & Lip-Sync)")
         self.chk_vad.setChecked(self.settings.get("vad_enabled", True))
         self.chk_vad.toggled.connect(self.save_current_settings)
         vad_box.addWidget(self.chk_vad)
 
-        self.lbl_vad_buf = QLabel("Silence Snapping Buffer (ms):")
+        self.lbl_vad_buf = QLabel("Silence Buffer (ms):")
         vad_box.addWidget(self.lbl_vad_buf)
         self.input_vad_buffer = QLineEdit(str(self.settings.get("vad_buffer", 300)))
-        self.input_vad_buffer.setFixedWidth(60)
+        self.input_vad_buffer.setFixedWidth(55)
         self.input_vad_buffer.editingFinished.connect(self.save_current_settings)
         vad_box.addWidget(self.input_vad_buffer)
         vad_box.addStretch()
         set_layout.addLayout(vad_box)
 
-        # Row 3: Target Speaker Voice Matching
         speaker_box = QHBoxLayout()
-        self.chk_speaker = QCheckBox("Target Speaker Voice Matching (Filter out background voices)")
+        self.chk_speaker = QCheckBox("Target Speaker Voice Matching")
         self.chk_speaker.setChecked(self.settings.get("vad_speaker_enabled", True))
         self.chk_speaker.toggled.connect(self.save_current_settings)
         speaker_box.addWidget(self.chk_speaker)
 
-        self.lbl_speaker_thresh = QLabel("Voice Similarity Threshold:")
+        self.lbl_speaker_thresh = QLabel("Similarity:")
         speaker_box.addWidget(self.lbl_speaker_thresh)
 
         init_thresh = int(self.settings.get("vad_speaker_threshold", 0.68) * 100)
         self.slider_speaker = QSlider(Qt.Horizontal)
         self.slider_speaker.setRange(10, 99)
         self.slider_speaker.setValue(init_thresh)
-        self.slider_speaker.setFixedWidth(150)
+        self.slider_speaker.setFixedWidth(130)
         self.lbl_speaker_val = QLabel(f"{init_thresh/100:.2f}")
         self.slider_speaker.valueChanged.connect(lambda v: (self.lbl_speaker_val.setText(f"{v/100:.2f}"), self.save_current_settings()))
         speaker_box.addWidget(self.slider_speaker)
@@ -632,100 +678,34 @@ class FocusApp(QMainWindow):
 
         self.gen_content_layout.addWidget(self.settings_card)
 
-        # 3. Files Selection Card
-        self.files_card = ModernCard(self)
-        files_layout = QVBoxLayout(self.files_card)
-        files_layout.setSpacing(10)
-
-        box_v = QHBoxLayout()
-        self.btn_select_video = QPushButton("Select Input Video(s)")
-        self.btn_select_video.clicked.connect(self.select_video)
-        self.btn_select_folder = QPushButton("📁 Add Folder...")
-        self.btn_select_folder.clicked.connect(self.add_folder_videos)
-        self.lbl_video_path = QLabel("No video selected")
-        self.lbl_video_path.setObjectName("PathLabel")
-        box_v.addWidget(self.btn_select_video)
-        box_v.addWidget(self.btn_select_folder)
-        box_v.addWidget(self.lbl_video_path, 1)
-        files_layout.addLayout(box_v)
-
-        box_i = QHBoxLayout()
-        self.btn_select_image = QPushButton("Select Reference Face")
-        self.btn_select_image.clicked.connect(self.select_image)
-        self.lbl_image_path = QLabel("No image selected")
-        self.lbl_image_path.setObjectName("PathLabel")
-        box_i.addWidget(self.btn_select_image)
-        box_i.addWidget(self.lbl_image_path, 1)
-        files_layout.addLayout(box_i)
-
-        box_o = QHBoxLayout()
-        self.btn_select_output = QPushButton("Select Save Location")
-        self.btn_select_output.clicked.connect(self.select_output)
-        self.lbl_output_path = QLabel("No save location selected")
-        self.lbl_output_path.setObjectName("PathLabel")
-        box_o.addWidget(self.btn_select_output)
-        box_o.addWidget(self.lbl_output_path, 1)
-        files_layout.addLayout(box_o)
-
-        box_a = QHBoxLayout()
-        self.lbl_audio_track = QLabel("Audio Track / Ścieżka Audio:")
-        self.combo_audio_track = QComboBox()
-        self.combo_audio_track.addItem("Default Audio Stream (Track 1)", 0)
-        box_a.addWidget(self.lbl_audio_track)
-        box_a.addWidget(self.combo_audio_track, 1)
-        files_layout.addLayout(box_a)
-
-        # Batch Queue Section
-        files_layout.addSpacing(10)
-        self.lbl_batch_title = QLabel("Batch Processing Queue (Multiple Video Files):")
-        self.lbl_batch_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        files_layout.addWidget(self.lbl_batch_title)
-
-        batch_mode_box = QVBoxLayout()
-        batch_mode_box.setSpacing(6)
-        self.radio_batch_separate = QRadioButton("Render as Separate Video Files")
-        self.radio_batch_single = QRadioButton("Concatenate All into Single Master Scenepack")
-        self.radio_batch_separate.setChecked(True)
-        batch_mode_box.addWidget(self.radio_batch_separate)
-        batch_mode_box.addWidget(self.radio_batch_single)
-        files_layout.addLayout(batch_mode_box)
-
-        self.list_batch_queue = QListWidget()
-        self.list_batch_queue.setFixedHeight(80)
-        self.list_batch_queue.setStyleSheet("background-color: #1A1D24; border: 1px solid #2C2F36; border-radius: 6px;")
-        files_layout.addWidget(self.list_batch_queue)
-
-        batch_btn_box = QHBoxLayout()
-        self.btn_add_batch = QPushButton("Add Files to Queue")
-        self.btn_add_batch.clicked.connect(self.add_batch_videos)
-        self.btn_clear_batch = QPushButton("Clear Queue")
-        self.btn_clear_batch.clicked.connect(self.clear_batch_queue)
-        self.btn_run_batch = QPushButton("Run Batch Queue")
-        self.btn_run_batch.setObjectName("AccentBtn")
-        self.btn_run_batch.clicked.connect(self.start_batch_processing)
-
-        batch_btn_box.addWidget(self.btn_add_batch)
-        batch_btn_box.addWidget(self.btn_clear_batch)
-        batch_btn_box.addStretch()
-        batch_btn_box.addWidget(self.btn_run_batch)
-        files_layout.addLayout(batch_btn_box)
-
-        self.lbl_batch_status = QLabel("Batch Queue: Empty")
-        self.lbl_batch_status.setObjectName("SubText")
-        files_layout.addWidget(self.lbl_batch_status)
-
-        self.gen_content_layout.addWidget(self.files_card)
-
-        # 4. Action & Progress Card
+        # 4. Action & Multi-Episode Progress Card
         self.action_card = ModernCard(self)
         action_layout = QVBoxLayout(self.action_card)
+        action_layout.setContentsMargins(16, 14, 16, 14)
+        action_layout.setSpacing(10)
 
-        self.btn_generate = QPushButton("1. Scan & Analyze Video")
+        self.btn_generate = QPushButton("▶ 1. Start Scan & Analyze Video")
         self.btn_generate.setObjectName("PrimaryActionBtn")
         self.btn_generate.setFixedHeight(46)
         self.btn_generate.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         self.btn_generate.clicked.connect(self.start_scan)
         action_layout.addWidget(self.btn_generate)
+
+        # Multi-Episode Badge (Hidden by default, shown during multi-video jobs)
+        self.lbl_episode_badge = QLabel("🎬 Episode [1/1]: Ready")
+        self.lbl_episode_badge.setObjectName("EpisodeBadge")
+        self.lbl_episode_badge.setVisible(False)
+        action_layout.addWidget(self.lbl_episode_badge)
+
+        # Current Episode Progress Bar
+        self.episode_progress_bar = QProgressBar()
+        self.episode_progress_bar.setObjectName("EpisodeProgressBar")
+        self.episode_progress_bar.setRange(0, 1000)
+        self.episode_progress_bar.setValue(0)
+        self.episode_progress_bar.setTextVisible(False)
+        self.episode_progress_bar.setFixedHeight(6)
+        self.episode_progress_bar.setVisible(False)
+        action_layout.addWidget(self.episode_progress_bar)
 
         prog_box = QHBoxLayout()
         self.progress_bar = QProgressBar()
@@ -1017,6 +997,40 @@ class FocusApp(QMainWindow):
         QSlider::handle:horizontal:hover {{
             background: {hover};
         }}
+        QRadioButton {{
+            spacing: 8px;
+            background: transparent;
+            color: #F8FAFC;
+            font-size: 12px;
+        }}
+        QRadioButton::indicator {{
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            border: 1px solid #3B4457;
+            background-color: #1A1E26;
+        }}
+        QRadioButton::indicator:checked {{
+            background-color: {primary};
+            border-color: {hover};
+        }}
+        QLabel#EpisodeBadge {{
+            background-color: rgba(37, 99, 235, 0.15);
+            border: 1px solid {primary};
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: bold;
+            color: #93C5FD;
+        }}
+        QProgressBar#EpisodeProgressBar {{
+            background-color: #1A1E26;
+            border: none;
+            border-radius: 3px;
+        }}
+        QProgressBar#EpisodeProgressBar::chunk {{
+            background-color: {hover};
+            border-radius: 3px;
+        }}
         QTableWidget {{
             background-color: #14161B;
             border: 1px solid #232A36;
@@ -1054,66 +1068,96 @@ class FocusApp(QMainWindow):
         self.btn_tab_gen.setText(fix_qt_ampersand(get_translation(lang_name, "generator_tab")))
         self.btn_tab_gal.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_tab")))
 
-        self.lbl_hero_title.setText(fix_qt_ampersand(get_translation(lang_name, "hero_title")))
-        self.lbl_hero_sub.setText(fix_qt_ampersand(get_translation(lang_name, "hero_subtitle")))
-        self.lbl_presets_title.setText(fix_qt_ampersand(get_translation(lang_name, "preset_label")))
-        self.btn_autotune.setText(fix_qt_ampersand(get_translation(lang_name, "btn_auto_tune")))
-        self.lbl_aspect_title.setText(fix_qt_ampersand(get_translation(lang_name, "aspect_label")))
-        self.lbl_pad_before.setText(fix_qt_ampersand(get_translation(lang_name, "pad_before")))
-        self.lbl_pad_after.setText(fix_qt_ampersand(get_translation(lang_name, "pad_after")))
-        self.lbl_max_gap.setText(fix_qt_ampersand(get_translation(lang_name, "max_gap")))
-        self.lbl_min_scene.setText(fix_qt_ampersand(get_translation(lang_name, "min_scene")))
-        self.lbl_frame_skip.setText(fix_qt_ampersand(get_translation(lang_name, "frame_skip")))
-        self.chk_vad.setText(fix_qt_ampersand(get_translation(lang_name, "vad_enable")))
-        self.lbl_vad_buf.setText(fix_qt_ampersand(get_translation(lang_name, "vad_buffer")))
-        self.chk_speaker.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_enable")))
-        self.lbl_speaker_thresh.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_threshold")))
-        self.btn_select_video.setText(fix_qt_ampersand(get_translation(lang_name, "sel_video")))
-        self.btn_select_image.setText(fix_qt_ampersand(get_translation(lang_name, "sel_ref")))
-        self.btn_select_output.setText(fix_qt_ampersand(get_translation(lang_name, "sel_output")))
-        self.btn_generate.setText(fix_qt_ampersand(get_translation(lang_name, "generate")))
-        self.lbl_review_title.setText(fix_qt_ampersand(get_translation(lang_name, "review_title")))
-        self.btn_render.setText(fix_qt_ampersand(get_translation(lang_name, "btn_render")))
-        self.lbl_log_title.setText(fix_qt_ampersand(get_translation(lang_name, "logs_title")))
-        self.lbl_gal_title.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_title")))
-        self.lbl_gal_sub.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_desc")))
-        self.btn_gal_scan.setText(fix_qt_ampersand(get_translation(lang_name, "scan_chars")))
-        self.btn_gal_cancel.setText(fix_qt_ampersand(get_translation(lang_name, "btn_cancel_gallery")))
+        if hasattr(self, "lbl_hero_title"):
+            self.lbl_hero_title.setText(fix_qt_ampersand(get_translation(lang_name, "hero_title")))
+        if hasattr(self, "lbl_hero_sub"):
+            self.lbl_hero_sub.setText(fix_qt_ampersand(get_translation(lang_name, "hero_subtitle")))
+        if hasattr(self, "lbl_presets_title"):
+            self.lbl_presets_title.setText(fix_qt_ampersand(get_translation(lang_name, "preset_label")))
+        if hasattr(self, "btn_autotune"):
+            self.btn_autotune.setText(fix_qt_ampersand(get_translation(lang_name, "btn_auto_tune")))
+        if hasattr(self, "lbl_aspect_title"):
+            self.lbl_aspect_title.setText(fix_qt_ampersand(get_translation(lang_name, "aspect_label")))
+        if hasattr(self, "lbl_pad_before"):
+            self.lbl_pad_before.setText(fix_qt_ampersand(get_translation(lang_name, "pad_before")))
+        if hasattr(self, "lbl_pad_after"):
+            self.lbl_pad_after.setText(fix_qt_ampersand(get_translation(lang_name, "pad_after")))
+        if hasattr(self, "lbl_max_gap"):
+            self.lbl_max_gap.setText(fix_qt_ampersand(get_translation(lang_name, "max_gap")))
+        if hasattr(self, "lbl_min_scene"):
+            self.lbl_min_scene.setText(fix_qt_ampersand(get_translation(lang_name, "min_scene")))
+        if hasattr(self, "lbl_frame_skip"):
+            self.lbl_frame_skip.setText(fix_qt_ampersand(get_translation(lang_name, "frame_skip")))
+        if hasattr(self, "chk_vad"):
+            self.chk_vad.setText(fix_qt_ampersand(get_translation(lang_name, "vad_enable")))
+        if hasattr(self, "lbl_vad_buf"):
+            self.lbl_vad_buf.setText(fix_qt_ampersand(get_translation(lang_name, "vad_buffer")))
+        if hasattr(self, "chk_speaker"):
+            self.chk_speaker.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_enable")))
+        if hasattr(self, "lbl_speaker_thresh"):
+            self.lbl_speaker_thresh.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_threshold")))
+        if hasattr(self, "btn_select_video"):
+            self.btn_select_video.setText(fix_qt_ampersand(get_translation(lang_name, "sel_video")))
+        if hasattr(self, "btn_select_image"):
+            self.btn_select_image.setText(fix_qt_ampersand(get_translation(lang_name, "sel_ref")))
+        if hasattr(self, "btn_select_output"):
+            self.btn_select_output.setText(fix_qt_ampersand(get_translation(lang_name, "sel_output")))
+        if hasattr(self, "btn_generate"):
+            self.btn_generate.setText(fix_qt_ampersand(get_translation(lang_name, "generate")))
+        if hasattr(self, "lbl_review_title"):
+            self.lbl_review_title.setText(fix_qt_ampersand(get_translation(lang_name, "review_title")))
+        if hasattr(self, "btn_render"):
+            self.btn_render.setText(fix_qt_ampersand(get_translation(lang_name, "btn_render")))
+        if hasattr(self, "lbl_log_title"):
+            self.lbl_log_title.setText(fix_qt_ampersand(get_translation(lang_name, "logs_title")))
+        if hasattr(self, "lbl_gal_title"):
+            self.lbl_gal_title.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_title")))
+        if hasattr(self, "lbl_gal_sub"):
+            self.lbl_gal_sub.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_desc")))
+        if hasattr(self, "btn_gal_scan"):
+            self.btn_gal_scan.setText(fix_qt_ampersand(get_translation(lang_name, "scan_chars")))
+        if hasattr(self, "btn_gal_cancel"):
+            self.btn_gal_cancel.setText(fix_qt_ampersand(get_translation(lang_name, "btn_cancel_gallery")))
 
-        self.btn_play_orig.setText(get_translation(lang_name, "play_orig"))
-        self.btn_play_res.setText(get_translation(lang_name, "play_result"))
-        self.table_review.setHorizontalHeaderLabels([
-            get_translation(lang_name, "th_include"),
-            get_translation(lang_name, "th_thumb"),
-            get_translation(lang_name, "th_start"),
-            get_translation(lang_name, "th_end"),
-            get_translation(lang_name, "th_duration")
-        ])
+        if hasattr(self, "btn_play_orig"):
+            self.btn_play_orig.setText(get_translation(lang_name, "play_orig"))
+        if hasattr(self, "btn_play_res"):
+            self.btn_play_res.setText(get_translation(lang_name, "play_result"))
+        if hasattr(self, "table_review"):
+            self.table_review.setHorizontalHeaderLabels([
+                get_translation(lang_name, "th_include"),
+                get_translation(lang_name, "th_thumb"),
+                get_translation(lang_name, "th_start"),
+                get_translation(lang_name, "th_end"),
+                get_translation(lang_name, "th_duration")
+            ])
 
-        self.combo_presets.blockSignals(True)
-        cur_preset_idx = self.combo_presets.currentIndex()
-        self.combo_presets.clear()
-        self.combo_presets.addItems([
-            get_translation(lang_name, "preset_auto"),
-            get_translation(lang_name, "preset_fast"),
-            get_translation(lang_name, "preset_cinematic"),
-            get_translation(lang_name, "preset_draft")
-        ])
-        if cur_preset_idx >= 0 and cur_preset_idx < self.combo_presets.count():
-            self.combo_presets.setCurrentIndex(cur_preset_idx)
-        self.combo_presets.blockSignals(False)
+        if hasattr(self, "combo_presets"):
+            self.combo_presets.blockSignals(True)
+            cur_preset_idx = self.combo_presets.currentIndex()
+            self.combo_presets.clear()
+            self.combo_presets.addItems([
+                get_translation(lang_name, "preset_auto"),
+                get_translation(lang_name, "preset_fast"),
+                get_translation(lang_name, "preset_cinematic"),
+                get_translation(lang_name, "preset_draft")
+            ])
+            if cur_preset_idx >= 0 and cur_preset_idx < self.combo_presets.count():
+                self.combo_presets.setCurrentIndex(cur_preset_idx)
+            self.combo_presets.blockSignals(False)
 
-        self.combo_aspect.blockSignals(True)
-        cur_aspect_idx = self.combo_aspect.currentIndex()
-        self.combo_aspect.clear()
-        self.combo_aspect.addItems([
-            get_translation(lang_name, "aspect_16_9"),
-            get_translation(lang_name, "aspect_9_16_vert"),
-            get_translation(lang_name, "aspect_9_16_blur")
-        ])
-        if cur_aspect_idx >= 0 and cur_aspect_idx < self.combo_aspect.count():
-            self.combo_aspect.setCurrentIndex(cur_aspect_idx)
-        self.combo_aspect.blockSignals(False)
+        if hasattr(self, "combo_aspect"):
+            self.combo_aspect.blockSignals(True)
+            cur_aspect_idx = self.combo_aspect.currentIndex()
+            self.combo_aspect.clear()
+            self.combo_aspect.addItems([
+                get_translation(lang_name, "aspect_16_9"),
+                get_translation(lang_name, "aspect_9_16_vert"),
+                get_translation(lang_name, "aspect_9_16_blur")
+            ])
+            if cur_aspect_idx >= 0 and cur_aspect_idx < self.combo_aspect.count():
+                self.combo_aspect.setCurrentIndex(cur_aspect_idx)
+            self.combo_aspect.blockSignals(False)
 
         self.save_current_settings()
 
@@ -1197,15 +1241,18 @@ class FocusApp(QMainWindow):
             return
 
         self.batch_queue_files.clear()
-        self.list_batch_queue.clear()
+        if hasattr(self, 'list_batch_queue'):
+            self.list_batch_queue.clear()
         for p in valid_paths:
             self.batch_queue_files.append(p)
-            self.list_batch_queue.addItem(Path(p).name)
+            if hasattr(self, 'list_batch_queue'):
+                self.list_batch_queue.addItem(Path(p).name)
 
         if len(valid_paths) == 1:
             self.video_path_str = valid_paths[0]
-            self.lbl_video_path.setText(Path(valid_paths[0]).name)
-            self.lbl_batch_status.setText("Batch Processing Queue (1 file ready)")
+            self.lbl_video_path.setText(f"🎬 {Path(valid_paths[0]).name}")
+            if hasattr(self, 'lbl_batch_status'):
+                self.lbl_batch_status.setText("Batch Processing Queue (1 file ready)")
         else:
             self.video_path_str = ";".join(valid_paths)
             names = [Path(p).name for p in valid_paths]
@@ -1214,7 +1261,8 @@ class FocusApp(QMainWindow):
             else:
                 display_txt = f"🎬 {len(valid_paths)} Videos Selected ({names[0]}, {names[1]}... +{len(names)-2} more)"
             self.lbl_video_path.setText(display_txt)
-            self.lbl_batch_status.setText(f"Batch Processing Queue ({len(valid_paths)} file(s) ready)")
+            if hasattr(self, 'lbl_batch_status'):
+                self.lbl_batch_status.setText(f"Batch Processing Queue ({len(valid_paths)} file(s) ready)")
 
         self.apply_auto_tune()
         
@@ -1459,6 +1507,17 @@ class FocusApp(QMainWindow):
         self._animate_progress(self.progress_bar, target)
         self.lbl_eta.setText(status)
 
+    @Slot(int, int, str, float, float)
+    def _on_episode_progress(self, cur_ep: int, tot_eps: int, ep_name: str, ep_prog: float, tot_prog: float):
+        if hasattr(self, 'lbl_episode_badge'):
+            self.lbl_episode_badge.setVisible(True)
+            self.lbl_episode_badge.setText(f"🎬 Episode [{cur_ep}/{tot_eps}]: {ep_name} ({int(ep_prog*100)}%)")
+        if hasattr(self, 'episode_progress_bar'):
+            self.episode_progress_bar.setVisible(True)
+            self._animate_progress(self.episode_progress_bar, int(ep_prog * 1000))
+        target_tot = int(tot_prog * 1000)
+        self._animate_progress(self.progress_bar, target_tot)
+
     @Slot(float, str)
     def _on_gallery_progress(self, val: float, status: str):
         target = int(val * 1000)
@@ -1511,11 +1570,19 @@ class FocusApp(QMainWindow):
 
     def clear_batch_queue(self):
         self.batch_queue_files.clear()
-        self.list_batch_queue.clear()
+        if hasattr(self, 'list_batch_queue'):
+            self.list_batch_queue.clear()
         self.video_path_str = ""
         self.lbl_video_path.setText("No video selected")
-        self.lbl_batch_status.setText("Batch Queue: Empty")
-        self.toast.show_toast("Batch Queue cleared", "🗑️")
+        if hasattr(self, 'lbl_batch_status'):
+            self.lbl_batch_status.setText("Batch Queue: Empty")
+        if hasattr(self, 'lbl_episode_badge'):
+            self.lbl_episode_badge.setVisible(False)
+        if hasattr(self, 'episode_progress_bar'):
+            self.episode_progress_bar.setVisible(False)
+        self.combo_audio_track.clear()
+        self.combo_audio_track.addItem("Default Audio Stream (Track 1)", 0)
+        self.toast.show_toast("Video selection cleared", "🗑️")
 
     def start_batch_processing(self):
         if not self.batch_queue_files:
@@ -1695,6 +1762,11 @@ class FocusApp(QMainWindow):
 
     @Slot(list, list)
     def _on_show_review_checklist(self, intervals: list, thumbnails: list):
+        if hasattr(self, 'lbl_episode_badge'):
+            self.lbl_episode_badge.setVisible(False)
+        if hasattr(self, 'episode_progress_bar'):
+            self.episode_progress_bar.setVisible(False)
+
         self.scanned_intervals = intervals
         self.review_checkboxes = []
         self.table_review.setRowCount(len(intervals))
