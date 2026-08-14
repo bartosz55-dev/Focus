@@ -122,6 +122,27 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         self.assertEqual(sig.parameters['video_index'].default, 0)
         self.assertEqual(sig.parameters['total_videos'].default, 1)
 
+    def test_anime_feature_extraction_and_matching(self):
+        from scenepack_generator_backend import extract_anime_face_features, is_anime_feature_match
+        import numpy as np
+        # Create identical mock crops
+        crop1 = np.full((64, 64, 3), (120, 180, 240), dtype=np.uint8)
+        crop2 = np.full((64, 64, 3), (120, 180, 240), dtype=np.uint8)
+        # Create different color mock crop
+        crop3 = np.full((64, 64, 3), (255, 30, 30), dtype=np.uint8)
+
+        feat1 = extract_anime_face_features(crop1)
+        feat2 = extract_anime_face_features(crop2)
+        feat3 = extract_anime_face_features(crop3)
+
+        self.assertTrue(is_anime_feature_match(feat1, feat2))
+        self.assertFalse(is_anime_feature_match(feat1, feat3))
+
+        # Test extractor helper
+        feats_list = self.generator._extract_anime_features_list({'anime_feature': feat1})
+        self.assertEqual(len(feats_list), 1)
+        self.assertTrue(is_anime_feature_match(feats_list[0], feat2))
+
 
 class TestTranslationFallback(unittest.TestCase):
 
