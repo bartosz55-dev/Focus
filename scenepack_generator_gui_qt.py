@@ -81,6 +81,11 @@ def get_application_icon() -> QIcon:
     painter.end()
     return QIcon(pix)
 
+def get_system_font(size: int = 10, weight: QFont.Weight = QFont.Weight.Normal) -> QFont:
+    """Returns native system font (San Francisco on macOS, Segoe UI on Windows)."""
+    family = ".AppleSystemUIFont" if sys.platform == "darwin" else "Segoe UI"
+    return QFont(family, size, weight)
+
 class ModernCard(QFrame):
     """Rounded container frame with border styling for grouping UI elements."""
     def __init__(self, parent=None):
@@ -103,11 +108,11 @@ class ToastNotification(QFrame):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 8, 14, 8)
         self.lbl_icon = QLabel("✨")
-        self.lbl_icon.setFont(QFont("Segoe UI", 12))
+        self.lbl_icon.setFont(get_system_font(12))
         layout.addWidget(self.lbl_icon)
         
         self.lbl_msg = QLabel("")
-        self.lbl_msg.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        self.lbl_msg.setFont(get_system_font(10, QFont.Weight.Bold))
         self.lbl_msg.setStyleSheet("color: #FFFFFF;")
         layout.addWidget(self.lbl_msg)
         
@@ -352,9 +357,9 @@ class FocusApp(QMainWindow):
         sidebar_layout.setContentsMargins(18, 24, 18, 20)
         sidebar_layout.setSpacing(14)
 
-        self.lbl_logo = QLabel("Focus")
-        self.lbl_logo.setObjectName("LogoLabel")
-        self.lbl_logo.setFont(QFont("Segoe UI", 22, QFont.Weight.Bold))
+        self.lbl_logo = QLabel("🎯 FOCUS")
+        self.lbl_logo.setObjectName("LogoText")
+        self.lbl_logo.setFont(get_system_font(22, QFont.Weight.Bold))
         sidebar_layout.addWidget(self.lbl_logo)
 
         self.lbl_wf = QLabel("WORKFLOW")
@@ -410,7 +415,7 @@ class FocusApp(QMainWindow):
         # Header bar (Dashboard + Mode Switch + Tab Switcher)
         header_layout = QHBoxLayout()
         self.lbl_dashboard = QLabel("Dashboard")
-        self.lbl_dashboard.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
+        self.lbl_dashboard.setFont(get_system_font(20, QFont.Weight.Bold))
         header_layout.addWidget(self.lbl_dashboard)
         header_layout.addStretch(1)
 
@@ -482,7 +487,7 @@ class FocusApp(QMainWindow):
         presets_layout.setSpacing(10)
 
         lbl_presets_head = QLabel("⚡ Quick Presets:")
-        lbl_presets_head.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        lbl_presets_head.setFont(get_system_font(11, QFont.Weight.Bold))
         presets_layout.addWidget(lbl_presets_head)
 
         self.btn_autotune = QPushButton("✨ Auto-Tune")
@@ -528,7 +533,7 @@ class FocusApp(QMainWindow):
 
         top_v_row.addSpacing(16)
         lbl_batch_mode = QLabel("Output Mode:")
-        lbl_batch_mode.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        lbl_batch_mode.setFont(get_system_font(10, QFont.Weight.Bold))
         top_v_row.addWidget(lbl_batch_mode)
 
         self.radio_batch_single = QRadioButton("📦 Master Scenepack (Single Video)")
@@ -586,7 +591,7 @@ class FocusApp(QMainWindow):
         set_layout.setSpacing(12)
 
         lbl_settings_head = QLabel("⚙️ Scene & Detection Tuning")
-        lbl_settings_head.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        lbl_settings_head.setFont(get_system_font(11, QFont.Weight.Bold))
         set_layout.addWidget(lbl_settings_head)
 
         inputs_grid = QGridLayout()
@@ -687,7 +692,7 @@ class FocusApp(QMainWindow):
         self.btn_generate = QPushButton("▶ 1. Start Scan & Analyze Video")
         self.btn_generate.setObjectName("PrimaryActionBtn")
         self.btn_generate.setFixedHeight(46)
-        self.btn_generate.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+        self.btn_generate.setFont(get_system_font(13, QFont.Weight.Bold))
         self.btn_generate.clicked.connect(self.start_scan)
         action_layout.addWidget(self.btn_generate)
 
@@ -726,8 +731,8 @@ class FocusApp(QMainWindow):
         self.review_card = ModernCard(self)
         self.review_card.setVisible(False)
         rev_layout = QVBoxLayout(self.review_card)
-        self.lbl_review_title = QLabel("Step 2: Review & Render Selected Clips")
-        self.lbl_review_title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        self.lbl_review_title = QLabel("2. Review Detected Clips")
+        self.lbl_review_title.setFont(get_system_font(14, QFont.Weight.Bold))
         rev_layout.addWidget(self.lbl_review_title)
 
         self.table_review = QTableWidget(0, 6)
@@ -767,8 +772,8 @@ class FocusApp(QMainWindow):
         log_layout = QVBoxLayout(self.log_card)
         
         log_header = QHBoxLayout()
-        self.lbl_log_title = QLabel("Execution Logs & Diagnostics:")
-        self.lbl_log_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        self.lbl_log_title = QLabel("Processing Logs")
+        self.lbl_log_title.setFont(get_system_font(11, QFont.Weight.Bold))
         log_header.addWidget(self.lbl_log_title)
         log_header.addStretch()
         
@@ -799,8 +804,8 @@ class FocusApp(QMainWindow):
 
         self.gal_top_card = ModernCard(self)
         gt_layout = QVBoxLayout(self.gal_top_card)
-        self.lbl_gal_title = QLabel("Beta: Automated Character Discovery Gallery")
-        self.lbl_gal_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        self.lbl_gal_title = QLabel("Face & Character Detection Gallery")
+        self.lbl_gal_title.setFont(get_system_font(16, QFont.Weight.Bold))
         self.lbl_gal_sub = QLabel("Scan your video to automatically discover all unique characters. Click any face card to select it as the Reference Face!")
         self.lbl_gal_sub.setObjectName("SubText")
         gt_layout.addWidget(self.lbl_gal_title)
@@ -1198,14 +1203,13 @@ class FocusApp(QMainWindow):
             dlg.setStyleSheet("background-color: #14161B; color: #FFFFFF;")
             layout = QVBoxLayout(dlg)
 
-            title_lbl = QLabel(f"Focus {APP_VERSION} Release Notes")
-            title_lbl.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-            title_lbl.setStyleSheet("color: #FFFFFF; margin-bottom: 10px;")
+            title_lbl = QLabel(f"Focus - Changelog ({get_translation(self.current_lang, 'changelog_title')})")
+            title_lbl.setFont(get_system_font(16, QFont.Weight.Bold))
             layout.addWidget(title_lbl)
 
             txt = QTextEdit()
             txt.setReadOnly(True)
-            txt.setFont(QFont("Segoe UI", 10))
+            txt.setFont(get_system_font(10))
             txt.setStyleSheet("background-color: #1A1D24; color: #E0E0E0; border: 1px solid #2D3139; border-radius: 8px; padding: 10px;")
 
             msg = get_changelog_text(self.current_lang)
@@ -1733,8 +1737,10 @@ class FocusApp(QMainWindow):
                 img_label.setText("No Image")
             c_layout.addWidget(img_label)
 
-            lbl_name = QLabel(f"Character #{cluster['id']}")
-            lbl_name.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+            name_str = f"Character #{cluster['id']}"
+            cnt_str = f"{cluster['count']} detection(s)"
+            lbl_name = QLabel(f"<b>{name_str}</b> ({cnt_str})")
+            lbl_name.setFont(get_system_font(11, QFont.Weight.Bold))
             lbl_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
             c_layout.addWidget(lbl_name)
 
@@ -1969,12 +1975,12 @@ class FocusSplashScreen(QSplashScreen):
         painter.setBrush(QColor("#14161B"))
         painter.drawRoundedRect(rect.adjusted(1, 1, -1, -1), 16, 16)
 
-        font_title = QFont("Segoe UI", 32, QFont.Weight.Bold)
+        font_title = get_system_font(32, QFont.Weight.Bold)
         painter.setFont(font_title)
         painter.setPen(QColor("#FFFFFF"))
-        painter.drawText(QRectF(35, 45, 450, 55), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, "Focus")
+        painter.drawText(QRectF(0, 70, pixmap_size[0], 50), Qt.AlignmentFlag.AlignCenter, "FOCUS")
 
-        font_sub = QFont("Segoe UI", 12)
+        font_sub = get_system_font(12)
         painter.setFont(font_sub)
         painter.setPen(QColor("#8A8F9E"))
         painter.drawText(QRectF(35, 105, 450, 25), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, f"AI Scenepack Generator ({APP_VERSION})")
