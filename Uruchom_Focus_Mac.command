@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$DIR" || exit 1
 # Automatically remove macOS Gatekeeper quarantine flags
 xattr -cr "$DIR" 2>/dev/null || true
 xattr -dr com.apple.quarantine "$DIR" 2>/dev/null || true
