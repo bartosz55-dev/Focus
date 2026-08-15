@@ -29,7 +29,7 @@ import gc
 # Import shared backend engine and helpers from scenepack_generator_backend
 import scenepack_generator_backend as sg_engine
 from scenepack_generator_backend import (
-    ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text, get_app_dir, parse_video_paths
+    ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION, get_changelog_text, get_app_dir, parse_video_paths, natural_sort_key
 )
 from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker, MasterConcatWorker
@@ -1244,6 +1244,8 @@ class FocusApp(QMainWindow):
             QMessageBox.warning(self, "No Valid Videos", "None of the selected video files exist on disk.")
             return
 
+        valid_paths = sorted(list(dict.fromkeys(valid_paths)), key=natural_sort_key)
+
         self.batch_queue_files.clear()
         if hasattr(self, 'list_batch_queue'):
             self.list_batch_queue.clear()
@@ -1266,7 +1268,7 @@ class FocusApp(QMainWindow):
                 display_txt = f"🎬 {len(valid_paths)} Videos Selected ({names[0]}, {names[1]}... +{len(names)-2} more)"
             self.lbl_video_path.setText(display_txt)
             if hasattr(self, 'lbl_batch_status'):
-                self.lbl_batch_status.setText(f"Batch Processing Queue ({len(valid_paths)} file(s) ready)")
+                self.lbl_batch_status.setText(f"Batch Processing Queue ({len(valid_paths)} file(s) ready in order S01->S02)")
 
         self.apply_auto_tune()
         
@@ -1284,13 +1286,14 @@ class FocusApp(QMainWindow):
             video_exts = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".m4v", ".ts"}
             folder_path = Path(folder)
             found_files = []
-            for file_path in sorted(folder_path.rglob("*")):
+            for file_path in folder_path.rglob("*"):
                 if file_path.is_file() and file_path.suffix.lower() in video_exts:
                     found_files.append(str(file_path.resolve()))
             
             if found_files:
+                found_files = sorted(list(dict.fromkeys(found_files)), key=natural_sort_key)
                 self.set_selected_video_files(found_files)
-                self.toast.show_toast(f"Added {len(found_files)} video(s) from folder to queue!", "📁", 4000)
+                self.toast.show_toast(f"Added {len(found_files)} video(s) from folder to queue (sorted S01->S02)!", "📁", 4000)
             else:
                 QMessageBox.information(self, "No Videos Found", f"No supported video files were found in:\n{folder}")
 

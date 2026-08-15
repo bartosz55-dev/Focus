@@ -79,29 +79,39 @@ def get_cascade_classifier(cascade_path: Optional[str]):
     return None
 
 
+def natural_sort_key(path_obj: Any) -> list:
+    """
+    Returns a natural alphanumeric sort key for human/episode ordering (e.g. S01E01 -> S01E02 -> S01E10).
+    """
+    p = Path(path_obj) if not isinstance(path_obj, Path) else path_obj
+    name = p.name if hasattr(p, 'name') else str(p)
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', name)]
+
+
 def parse_video_paths(video_input: Any) -> List[Path]:
     """
-    Normalizes a single path string, a list of strings/Paths, or a semicolon/comma-separated string into a list of resolved Path objects.
+    Normalizes a single path string, a list of strings/Paths, or a semicolon/comma-separated string into a naturally sorted list of resolved Path objects.
     """
     if not video_input:
         return []
+    paths: List[Path] = []
     if isinstance(video_input, (list, tuple)):
-        res = []
         for item in video_input:
             if item:
-                res.append(Path(item).resolve())
-        return res
+                paths.append(Path(item).resolve())
     elif isinstance(video_input, (str, Path)):
         str_val = str(video_input).strip()
         if ";" in str_val:
             parts = [p.strip() for p in str_val.split(";") if p.strip()]
-            return [Path(p).resolve() for p in parts]
+            paths = [Path(p).resolve() for p in parts]
         elif "," in str_val and not os.path.exists(str_val):
             parts = [p.strip() for p in str_val.split(",") if p.strip()]
-            return [Path(p).resolve() for p in parts]
+            paths = [Path(p).resolve() for p in parts]
         else:
-            return [Path(str_val).resolve()]
-    return []
+            paths = [Path(str_val).resolve()]
+    
+    unique_paths = list(dict.fromkeys(paths))
+    return sorted(unique_paths, key=natural_sort_key)
 
 
 
@@ -179,7 +189,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.25"
+APP_VERSION = "v1.3.26"
 
 
 class PlatformManager:
@@ -808,6 +818,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.26 (Natural Chronological Episode Sorting & Strict Scene Cut Boundary Protection):\n"
+            "  - Wprowadzono naturalne sortowanie odcinków (Human/Episode Natural Order S01E01 -> S01E02 -> ... -> S01E24) przy wyborze wielu plików i całych folderów.\n"
+            "  - Zabezpieczono granice scen przed wyciekaniem do innych postaci: rozszerzanie VAD zostało ściśle ograniczone do maksymalnie 2.5s oraz zablokowane na najbliższych cięciach montażowych kamery (Scene Cuts).\n"
+            "  - Wyeliminowano niekontrolowane kilkuminutowe wydłużanie klipów podczas ciągłych dialogów innych postaci lub muzyki w tle.\n\n"
             "• v1.3.25 (Zero-Lock Anime Recognition & Ultra-Fast FFmpeg Demuxing):\n"
             "  - Wyeliminowano wąskie gardło dlib CNN w trybie Anime: detekcja postaci anime odbywa się teraz w pełni równolegle przez czysty NumPy i kaskady OpenCV (ponad 4000x szybsza analiza klatek anime).\n"
             "  - Dodano precyzyjne dopasowanie cech anime (`is_anime_feature_match`) powiązane z suwakiem czułości Tolerance.\n"
@@ -1056,6 +1070,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.26 (Natural Chronological Episode Sorting & Strict Scene Cut Boundary Protection):\n"
+            "  - Implemented human-intuitive natural episode sorting (S01E01 -> S01E02 -> ... -> S01E24) across multi-file and folder imports.\n"
+            "  - Protected scene boundaries against character leakage: VAD sentence extension is strictly capped to 2.5s and bounded by nearest shot cuts.\n"
+            "  - Prevented clips from bloating into multi-minute sequences during long dialogue of other characters or continuous background music.\n\n"
             "• v1.3.25 (Zero-Lock Anime Recognition & Ultra-Fast FFmpeg Demuxing):\n"
             "  - Eliminated dlib CNN lock bottleneck in Anime mode: character recognition now runs completely in parallel via pure NumPy histograms and OpenCV cascades (over 4,000x faster frame scan).\n"
             "  - Integrated dynamic anime feature sensitivity (`is_anime_feature_match`) controlled by the Tolerance slider.\n"
@@ -2573,21 +2591,39 @@ class ScenePackGenerator:
                         avg_x = item[2] if len(item) > 2 else 0.5
                         new_start, new_end = start, end
 
+                        # Forward boundary: Max extension capped at 2.5s and strictly bounded by the nearest scene cut
+                        subsequent_cuts = [c for c in scene_cuts if c > end]
+                        nearest_cut_end = subsequent_cuts[0] if subsequent_cuts else (end + 2.5)
+                        max_allowed_end = min(end + 2.5, nearest_cut_end)
+
                         if not any(s <= end <= e for s, e in silences):
                             next_silences = [s for s, e in silences if s >= end]
                             if next_silences:
-                                is_speaking = self._check_lip_movement(v_path, end - 0.2, ref_data)
-                                if is_speaking:
-                                    logging.info(f"Lip-Sync: Extending {end:.2f}s to {next_silences[0]:.2f}s.")
-                                    new_end = next_silences[0]
+                                candidate_end = next_silences[0]
+                                if candidate_end <= max_allowed_end:
+                                    is_speaking = self._check_lip_movement(v_path, end - 0.2, ref_data)
+                                    if is_speaking:
+                                        logging.info(f"Lip-Sync: Extending {end:.2f}s to {candidate_end:.2f}s.")
+                                        new_end = candidate_end
+                                elif subsequent_cuts and abs(subsequent_cuts[0] - end) <= 0.8:
+                                    new_end = subsequent_cuts[0]
+
+                        # Backward boundary: Max pullback capped at 2.5s and strictly bounded by the prior scene cut
+                        prior_cuts = [c for c in scene_cuts if c < start]
+                        nearest_cut_start = prior_cuts[-1] if prior_cuts else 0.0
+                        min_allowed_start = max(0.0, start - 2.5, nearest_cut_start)
 
                         if not any(s <= start <= e for s, e in silences):
                             prev_silences = [e for s, e in silences if e <= start]
                             if prev_silences:
-                                is_speaking_start = self._check_lip_movement(v_path, start, ref_data)
-                                if is_speaking_start:
-                                    logging.info(f"Lip-Sync: Pulling {start:.2f}s back to {prev_silences[-1]:.2f}s.")
-                                    new_start = prev_silences[-1]
+                                candidate_start = prev_silences[-1]
+                                if candidate_start >= min_allowed_start:
+                                    is_speaking_start = self._check_lip_movement(v_path, start, ref_data)
+                                    if is_speaking_start:
+                                        logging.info(f"Lip-Sync: Pulling {start:.2f}s back to {candidate_start:.2f}s.")
+                                        new_start = candidate_start
+                                elif prior_cuts and abs(start - prior_cuts[-1]) <= 0.8:
+                                    new_start = prior_cuts[-1]
 
                         refined_intervals.append((max(0.0, new_start), new_end, avg_x))
 
@@ -2641,15 +2677,16 @@ class ScenePackGenerator:
                 start, end = item[0], item[1]
                 avg_x = item[2] if len(item) > 2 else 0.5
                 new_start, new_end = start, end
-                nearest_start_cut = next((c for c in scene_cuts if abs(c - start) <= 1.0), None)
+                nearest_start_cut = next((c for c in scene_cuts if abs(c - start) <= 0.8), None)
                 if nearest_start_cut is not None:
                     new_start = nearest_start_cut
 
-                nearest_end_cut = next((c for c in scene_cuts if abs(c - end) <= 1.0), None)
+                nearest_end_cut = next((c for c in scene_cuts if abs(c - end) <= 0.8), None)
                 if nearest_end_cut is not None:
                     new_end = nearest_end_cut
 
-                snapped_intervals.append((new_start, new_end, avg_x))
+                if new_end > new_start + 0.1:
+                    snapped_intervals.append((new_start, new_end, avg_x))
             intervals = snapped_intervals
 
             for item in intervals:

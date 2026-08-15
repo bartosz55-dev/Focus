@@ -143,6 +143,36 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
         self.assertEqual(len(feats_list), 1)
         self.assertTrue(is_anime_feature_match(feats_list[0], feat2))
 
+    def test_natural_sort_key_episodes(self):
+        from scenepack_generator_backend import natural_sort_key
+        raw_names = [
+            "Episode 10.mkv",
+            "Episode 2.mkv",
+            "Episode 1.mkv",
+            "Episode 20.mkv",
+            "Episode 3.mkv"
+        ]
+        sorted_names = sorted(raw_names, key=natural_sort_key)
+        self.assertEqual(sorted_names, [
+            "Episode 1.mkv",
+            "Episode 2.mkv",
+            "Episode 3.mkv",
+            "Episode 10.mkv",
+            "Episode 20.mkv"
+        ])
+
+    def test_parse_video_paths_natural_sorting(self):
+        from scenepack_generator_backend import parse_video_paths
+        raw_paths = "Show - S01E12.mkv;Show - S01E02.mkv;Show - S01E01.mkv;Show - S02E01.mkv"
+        parsed = parse_video_paths(raw_paths)
+        parsed_names = [p.name for p in parsed]
+        self.assertEqual(parsed_names, [
+            "Show - S01E01.mkv",
+            "Show - S01E02.mkv",
+            "Show - S01E12.mkv",
+            "Show - S02E01.mkv"
+        ])
+
 
 class TestTranslationFallback(unittest.TestCase):
 
