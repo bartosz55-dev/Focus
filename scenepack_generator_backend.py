@@ -189,7 +189,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.26"
+APP_VERSION = "v1.3.27"
 
 
 class PlatformManager:
@@ -818,6 +818,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.27 (Hair/Palette Multi-Region Anime Recognition & Avatar Reference Fallback):\n"
+            "  - Całkowicie przebudowano wektor cech anime: dodano analizę górnego obszaru fryzury/włosów (45% wysokości) oraz pełnej palety kolorystycznej głowy, eliminując gubienie postaci przez wycinanie wyłącznie wewnętrznego owalu skóry.\n"
+            "  - Zwiększono rozdzielczość skanowania klatek do 640px w trybie Anime oraz zoptymalizowano czułość detekcji kaskadowej (scaleFactor=1.06, minNeighbors=3, minSize=16px), wyłapując ujęcia średnie i z profilu.\n"
+            "  - Dodano automatyczny fallback przy ładowaniu obrazu referencyjnego (avatary/ikony), eliminując fałszywe błędy braku detekcji twarzy w obrazie wejściowym.\n\n"
             "• v1.3.26 (Natural Chronological Episode Sorting & Strict Scene Cut Boundary Protection):\n"
             "  - Wprowadzono naturalne sortowanie odcinków (Human/Episode Natural Order S01E01 -> S01E02 -> ... -> S01E24) przy wyborze wielu plików i całych folderów.\n"
             "  - Zabezpieczono granice scen przed wyciekaniem do innych postaci: rozszerzanie VAD zostało ściśle ograniczone do maksymalnie 2.5s oraz zablokowane na najbliższych cięciach montażowych kamery (Scene Cuts).\n"
@@ -1070,6 +1074,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.27 (Hair/Palette Multi-Region Anime Recognition & Avatar Reference Fallback):\n"
+            "  - Completely re-engineered anime character feature vectors: added upper hair/bangs region (45% height) and full head palette analysis, preventing character drop caused by discarding hair colors.\n"
+            "  - Scaled frame scan resolution to 640px in Anime mode and optimized cascade sensitivity (scaleFactor=1.06, minNeighbors=3, minSize=16px) to capture medium and profile shots.\n"
+            "  - Implemented automatic fallback when loading reference images (avatars/icons), eliminating false 'target face not found' errors.\n\n"
             "• v1.3.26 (Natural Chronological Episode Sorting & Strict Scene Cut Boundary Protection):\n"
             "  - Implemented human-intuitive natural episode sorting (S01E01 -> S01E02 -> ... -> S01E24) across multi-file and folder imports.\n"
             "  - Protected scene boundaries against character leakage: VAD sentence extension is strictly capped to 2.5s and bounded by nearest shot cuts.\n"
@@ -1357,48 +1365,53 @@ def make_square_crop(frame, top, right, bottom, left, pad_ratio=0.30):
 
 def extract_anime_face_features(crop_bgr):
     """
-    Extracts a 1D Hue histogram, 2D HS histogram, and a 256-bit perceptual dHash feature vector from an anime face crop.
+    Extracts a 2D HS hair histogram, 2D HS full-head histogram, and 256-bit perceptual dHash feature vector from an anime face crop.
     """
+    if crop_bgr is None or crop_bgr.size == 0:
+        return None
     h, w = crop_bgr.shape[:2]
-    mask = np.zeros((h, w), dtype=np.uint8)
-    cv2.ellipse(mask, (w // 2, h // 2), (max(1, int(w * 0.38)), max(1, int(h * 0.42))), 0, 0, 360, 255, -1)
 
-    hsv = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2HSV)
-    hue_hist = cv2.calcHist([hsv], [0], mask, [18], [0, 180])
-    cv2.normalize(hue_hist, hue_hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+    # 1. Hair / Top region (top 45% of crop)
+    hair_crop = crop_bgr[0:max(1, int(h * 0.45)), :]
+    hsv_hair = cv2.cvtColor(hair_crop, cv2.COLOR_BGR2HSV)
+    hair_hs_hist = cv2.calcHist([hsv_hair], [0, 1], None, [16, 16], [0, 180, 0, 256])
+    cv2.normalize(hair_hs_hist, hair_hs_hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
 
-    hs_hist = cv2.calcHist([hsv], [0, 1], mask, [16, 16], [0, 180, 0, 256])
-    cv2.normalize(hs_hist, hs_hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+    # 2. Full head crop (overall character palette)
+    hsv_full = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2HSV)
+    full_hs_hist = cv2.calcHist([hsv_full], [0, 1], None, [16, 16], [0, 180, 0, 256])
+    cv2.normalize(full_hs_hist, full_hs_hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
 
+    # 3. Structure dHash
     gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
     resized = cv2.resize(gray, (17, 16))
     dhash = (resized[:, 1:] > resized[:, :-1]).flatten()
 
-    return hue_hist, hs_hist, dhash
+    return hair_hs_hist, full_hs_hist, dhash
 
 
 def is_anime_feature_match(feat1, feat2, tolerance: float = 0.6) -> bool:
     if feat1 is None or feat2 is None:
         return False
     try:
-        hue_hist1, hs_hist1, dhash1 = feat1
-        hue_hist2, hs_hist2, dhash2 = feat2
+        hair1, full1, dhash1 = feat1
+        hair2, full2, dhash2 = feat2
 
-        hue_corr = float(cv2.compareHist(hue_hist1, hue_hist2, cv2.HISTCMP_CORREL))
-        hs_corr = float(cv2.compareHist(hs_hist1, hs_hist2, cv2.HISTCMP_CORREL))
+        hair_corr = max(0.0, float(cv2.compareHist(hair1, hair2, cv2.HISTCMP_CORREL)))
+        full_corr = max(0.0, float(cv2.compareHist(full1, full2, cv2.HISTCMP_CORREL)))
         dhash_dist = float(np.count_nonzero(dhash1 != dhash2)) / float(len(dhash1))
+        dhash_sim = max(0.0, 1.0 - dhash_dist)
 
-        # Dynamic sensitivity scaling based on tolerance (default tolerance = 0.6)
+        sim = 0.45 * hair_corr + 0.35 * full_corr + 0.20 * dhash_sim
+
         strictness = float(tolerance) / 0.6
-        hue_thresh = 0.40 / max(0.4, strictness)
-        hs_thresh = 0.35 / max(0.4, strictness)
-        dhash_thresh = 0.36 * min(1.6, strictness)
+        thresh = 0.48 / max(0.3, strictness)
 
-        if hue_corr > hue_thresh:
+        if hair_corr >= (0.75 / max(0.4, strictness)):
             return True
-        if hs_corr > hs_thresh:
+        if full_corr >= (0.80 / max(0.4, strictness)):
             return True
-        if hue_corr > (hue_thresh * 0.5) and dhash_dist <= dhash_thresh:
+        if sim >= thresh:
             return True
         return False
     except Exception:
@@ -1828,15 +1841,15 @@ class ScenePackGenerator:
             
             faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
             if len(faces) == 0:
-                err_tmpl = get_translation(self.current_lang, "err_no_human_face")
-                if "{name}" in err_tmpl:
-                    err_msg = err_tmpl.format(name=getattr(path_obj, 'name', str(path_obj)))
-                else:
-                    err_msg = err_tmpl
-                raise ValueError(f"{err_msg} (Anime)")
-            
-            x, y, w, h = faces[0]
-            crop_bgr = image_bgr[y:y+h, x:x+w]
+                faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.03, minNeighbors=1, minSize=(20, 20))
+
+            if len(faces) > 0:
+                x, y, w, h = faces[0]
+                crop_bgr = image_bgr[y:y+h, x:x+w]
+            else:
+                # Fall back to using the reference image itself (e.g. when user provides a pre-cropped avatar)
+                crop_bgr = image_bgr
+
             features = extract_anime_face_features(crop_bgr)
             return features
 
@@ -2188,10 +2201,11 @@ class ScenePackGenerator:
                     return None
 
                 h, w = frame.shape[:2]
-                if w > 480:
-                    ratio = 480.0 / w
+                target_w = 640 if self.mode == "Anime" else 480
+                if w > target_w:
+                    ratio = float(target_w) / float(w)
                     new_h = int(h * ratio)
-                    small_frame = cv2.resize(frame, (480, new_h))
+                    small_frame = cv2.resize(frame, (target_w, new_h))
                 else:
                     small_frame = frame
 
@@ -2249,9 +2263,9 @@ class ScenePackGenerator:
                     
                     if local_anime_cascade is not None and hasattr(local_anime_cascade, 'empty') and not local_anime_cascade.empty():
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                        faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=5, minSize=(24, 24))
+                        faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.06, minNeighbors=3, minSize=(16, 16))
                         if len(faces) == 0:
-                            faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(24, 24))
+                            faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.04, minNeighbors=2, minSize=(14, 14))
 
                         if len(faces) > 0:
                             if ref_anime_feats:
