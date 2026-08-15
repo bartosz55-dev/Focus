@@ -125,18 +125,27 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
     def test_anime_feature_extraction_and_matching(self):
         from scenepack_generator_backend import extract_anime_face_features, is_anime_feature_match
         import numpy as np
-        # Create identical mock crops
-        crop1 = np.full((64, 64, 3), (120, 180, 240), dtype=np.uint8)
-        crop2 = np.full((64, 64, 3), (120, 180, 240), dtype=np.uint8)
-        # Create different color mock crop
-        crop3 = np.full((64, 64, 3), (255, 30, 30), dtype=np.uint8)
+        # Create character 1 (blond hair, blue eyes)
+        face1 = np.full((64, 64, 3), (180, 200, 240), dtype=np.uint8)
+        face1[0:28, :] = (30, 180, 240) # Blond/orange hair
+        face1[28:38, 15:25] = (200, 80, 40) # Blue eyes
+        face1[28:38, 39:49] = (200, 80, 40)
 
-        feat1 = extract_anime_face_features(crop1)
-        feat2 = extract_anime_face_features(crop2)
-        feat3 = extract_anime_face_features(crop3)
+        # Same character with slight noise and lighting change
+        face2 = np.clip(face1.astype(np.int16) + np.random.randint(-15, 16, face1.shape), 0, 255).astype(np.uint8)
 
-        self.assertTrue(is_anime_feature_match(feat1, feat2))
-        self.assertFalse(is_anime_feature_match(feat1, feat3))
+        # Different character (black hair, green eyes)
+        face3 = np.full((64, 64, 3), (180, 200, 240), dtype=np.uint8)
+        face3[0:28, :] = (20, 20, 20) # Black hair
+        face3[28:38, 15:25] = (40, 180, 40) # Green eyes
+
+        feat1 = extract_anime_face_features(face1)
+        feat2 = extract_anime_face_features(face2)
+        feat3 = extract_anime_face_features(face3)
+
+        self.assertTrue(is_anime_feature_match(feat1, feat2, tolerance=0.6))
+        self.assertFalse(is_anime_feature_match(feat1, face3, tolerance=0.6))
+        self.assertFalse(is_anime_feature_match(feat1, feat3, tolerance=0.6))
 
         # Test extractor helper
         feats_list = self.generator._extract_anime_features_list({'anime_feature': feat1})

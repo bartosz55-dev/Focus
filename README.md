@@ -1,6 +1,6 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.26)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.27)
 
-[![Version](https://img.shields.io/badge/version-v1.3.26-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.27-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -16,7 +16,7 @@ By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Pe
 
 ---
 
-## ⚡ Key Features (v1.3.26)
+## ⚡ Key Features (v1.3.27)
 
 * **🚀 PySide6 / Qt 6 Modern Dark Studio:** Built with a responsive, high-DPI dark studio layout with fluid animations, native system typography (`.AppleSystemUIFont` on macOS, `Segoe UI` on Windows), and zero visual lag.
 * **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, NumPy HSV color histograms, and perceptual dHash correlation. Scans crowd scenes in milliseconds without locking CPU threads.
