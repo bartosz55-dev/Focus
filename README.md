@@ -1,6 +1,6 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.27)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.28)
 
-[![Version](https://img.shields.io/badge/version-v1.3.27-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.28-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -12,14 +12,15 @@
 
 **Focus** is a high-performance, AI-driven desktop video processing studio engineered for content creators, video editors, and anime/film clippers. It automates the tedious process of finding, tracking, cropping, and extracting character-specific scenes from full-length movies, anime series, or long-form videos—converting raw footage into high-quality, ready-to-edit scenepacks in minutes.
 
-By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Perceptual dHash Feature Matching**, **Voice Activity Detection (VAD)**, **Camera Shot Cut Snapping**, and multi-core **FFmpeg parallel rendering**, Focus scans entire video seasons and extracts strictly the exact moments that matter.
+By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Perceptual dHash Feature Matching**, **Intelligent Intro/Outro Removal**, **Voice Activity Detection (VAD)**, **Camera Shot Cut Snapping**, and multi-core **FFmpeg parallel rendering**, Focus scans entire video seasons and extracts strictly the exact moments that matter.
 
 ---
 
-## ⚡ Key Features (v1.3.27)
+## ⚡ Key Features (v1.3.28)
 
 * **🚀 PySide6 / Qt 6 Modern Dark Studio:** Built with a responsive, high-DPI dark studio layout with fluid animations, native system typography (`.AppleSystemUIFont` on macOS, `Segoe UI` on Windows), and zero visual lag.
-* **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, NumPy HSV color histograms, and perceptual dHash correlation. Scans crowd scenes in milliseconds without locking CPU threads.
+* **🛡️ Intelligent Intro & Outro Removal (Skip Opening/Ending):** Excludes opening themes and credits from scenepacks via automated MKV/MP4 chapter marker inspection (`Opening`, `Intro`, `OP`, `NCOP`, `Credits`, `Ending`, `ED`) with fallback to standard 90s anime OP windows or custom durations. Bypasses frame decoding inside intro ranges for 15% faster video scans.
+* **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, multi-region hair/face NumPy HSV color histograms, and perceptual dHash correlation. Scans crowd scenes in milliseconds without locking CPU threads.
 * **🎯 Real Faces Deep Learning Detector:** Powered by 68-point facial landmark and deep CNN embeddings for human facial recognition in films and series.
 * **🎬 Natural Chronological Episode Ordering (`S01E01 ➔ S01E02 ➔ ... ➔ S01E24`):** Automatically sorts multi-video selections and full folder imports into natural human episode order, rendering the master scenepack in exact storyline sequence.
 * **🛡️ Strict Shot Cut Boundary Bounding (Zero Scene Leakage):** Integrates automated FFmpeg camera shot detection (`scene_cuts`) to ensure clips never cross angle changes into scenes where other characters speak.

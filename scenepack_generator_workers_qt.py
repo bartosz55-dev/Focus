@@ -97,7 +97,9 @@ class ScanWorker(QThread):
                  pad_before: float, pad_after: float, max_gap: float, min_scene: float,
                  skip: int, vad_enabled: bool, vad_buffer: int,
                  vad_speaker_enabled: bool, vad_speaker_threshold: float,
-                 mode: str, queue_proxy: QtQueueProxy):
+                 mode: str, queue_proxy: QtQueueProxy,
+                 skip_intro: bool = False, skip_outro: bool = False,
+                 intro_mode: str = "Auto Chapters", intro_duration: float = 90.0):
         super().__init__()
         self.generator_cls = generator_cls
         self.video_path = video_path
@@ -113,6 +115,10 @@ class ScanWorker(QThread):
         self.vad_speaker_threshold = vad_speaker_threshold
         self.mode = mode
         self.queue_proxy = queue_proxy
+        self.skip_intro = skip_intro
+        self.skip_outro = skip_outro
+        self.intro_mode = intro_mode
+        self.intro_duration = intro_duration
         self.generator_instance = None
         self.is_cancelled = False
 
@@ -131,7 +137,8 @@ class ScanWorker(QThread):
                 self.video_path, ref_arg,
                 self.pad_before, self.pad_after, self.max_gap, self.min_scene,
                 self.vad_enabled, self.vad_buffer,
-                self.vad_speaker_enabled, self.vad_speaker_threshold
+                self.vad_speaker_enabled, self.vad_speaker_threshold,
+                self.skip_intro, self.skip_outro, self.intro_mode, self.intro_duration
             )
             logging.info(f"Finished Scanning! Found {len(scanned_intervals)} clips. Generating thumbnails...")
 
