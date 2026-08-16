@@ -551,8 +551,8 @@ class MasterConcatWorker(QThread):
             if res.returncode != 0 or not self.master_out.exists() or self.master_out.stat().st_size == 0:
                 cmd_fallback = [
                     str(self.sg_engine.ffmpeg_path), '-y', '-f', 'concat', '-safe', '0',
-                    '-i', str(concat_list), '-c:v', 'libx264', '-preset', 'superfast',
-                    '-crf', '20', '-c:a', 'aac', '-b:a', '192k', str(self.master_out)
+                    '-i', str(concat_list), '-c:v', 'libx264', '-preset', 'fast',
+                    '-crf', '16', '-c:a', 'aac', '-b:a', '256k', str(self.master_out)
                 ]
                 self.sg_engine.run_subprocess(cmd_fallback, cwd=tmp_dir)
 
