@@ -182,6 +182,63 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
             "Show - S02E01.mkv"
         ])
 
+    def test_filter_excluded_intervals(self):
+        # Intro range from 208s to 298s (90s anime OP)
+        ex = [(208.0, 298.0, "Opening")]
+
+        # 1. Inside intro -> should be dropped completely
+        int_inside = [(215.0, 230.0, 0.5)]
+        self.assertEqual(self.generator.filter_excluded_intervals(int_inside, ex), [])
+
+        # 2. Before intro -> should remain untouched
+        int_before = [(10.0, 50.0, 0.5)]
+        self.assertEqual(self.generator.filter_excluded_intervals(int_before, ex), [(10.0, 50.0, 0.5)])
+
+        # 3. Straddling intro start (200s to 220s) -> trimmed to (200s to 208s)
+        int_start = [(200.0, 220.0, 0.5)]
+        self.assertEqual(self.generator.filter_excluded_intervals(int_start, ex), [(200.0, 208.0, 0.5)])
+
+        # 4. Straddling intro end (290s to 310s) -> trimmed to (298s to 310s)
+        int_end = [(290.0, 310.0, 0.5)]
+        self.assertEqual(self.generator.filter_excluded_intervals(int_end, ex), [(298.0, 310.0, 0.5)])
+
+    def test_detect_intro_outro_ranges_fallback_and_custom(self):
+        from unittest.mock import patch
+        with patch.object(self.generator, 'get_video_chapters', return_value=[]), \
+             patch.object(self.generator, '_get_video_duration', return_value=1420.0):
+            # Fallback 90s intro
+            res = self.generator.detect_intro_outro_ranges("dummy.mp4", skip_intro=True, skip_outro=False, intro_mode="Auto Chapters", intro_duration=90.0)
+            self.assertEqual(len(res), 1)
+            self.assertEqual(res[0][0], 0.0)
+            self.assertEqual(res[0][1], 90.0)
+
+            # Custom 45s intro + outro
+            res_both = self.generator.detect_intro_outro_ranges("dummy.mp4", skip_intro=True, skip_outro=True, intro_mode="Custom Duration", intro_duration=45.0)
+            self.assertEqual(len(res_both), 2)
+            self.assertEqual(res_both[0][0], 0.0)
+            self.assertEqual(res_both[0][1], 45.0)
+            self.assertEqual(res_both[1][0], 1420.0 - 45.0)
+            self.assertEqual(res_both[1][1], 1420.0)
+
+    def test_detect_intro_outro_ranges_with_chapters(self):
+        from unittest.mock import patch
+        mock_chapters = [
+            {"title": "Prologue", "start": 0.0, "end": 208.0},
+            {"title": "Opening", "start": 208.0, "end": 298.0},
+            {"title": "Episode", "start": 298.0, "end": 1325.0},
+            {"title": "Credits", "start": 1325.0, "end": 1415.0},
+        ]
+        with patch.object(self.generator, 'get_video_chapters', return_value=mock_chapters), \
+             patch.object(self.generator, '_get_video_duration', return_value=1415.0):
+            res = self.generator.detect_intro_outro_ranges("dummy.mkv", skip_intro=True, skip_outro=True, intro_mode="Auto Chapters (MKV/MP4)")
+            self.assertEqual(len(res), 2)
+            self.assertEqual(res[0][0], 208.0)
+            self.assertEqual(res[0][1], 298.0)
+            self.assertIn("Opening", res[0][2])
+            self.assertEqual(res[1][0], 1325.0)
+            self.assertEqual(res[1][1], 1415.0)
+            self.assertIn("Credits", res[1][2])
+
 
 class TestTranslationFallback(unittest.TestCase):
 

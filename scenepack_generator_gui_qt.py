@@ -264,6 +264,8 @@ class FocusApp(QMainWindow):
             "pad_before": 2.0, "pad_after": 2.0, "max_gap_tolerance": 1.5,
             "min_scene_duration": 1.0, "frame_skip": 15, "vad_enabled": True,
             "vad_buffer": 300, "vad_speaker_enabled": True, "vad_speaker_threshold": 0.68,
+            "skip_intro": True, "skip_outro": False, "intro_mode": "Auto Chapters (MKV/MP4)",
+            "intro_duration": 90,
             "play_sound": True, "appearance_mode": "Dark", "theme": "blue",
             "language": "English", "default_mode": "Real Faces"
         }
@@ -292,6 +294,10 @@ class FocusApp(QMainWindow):
                 "vad_buffer": int(self.input_vad_buffer.text() or 300),
                 "vad_speaker_enabled": self.chk_speaker.isChecked(),
                 "vad_speaker_threshold": float(self.slider_speaker.value()) / 100.0,
+                "skip_intro": getattr(self, 'chk_skip_intro', None) and self.chk_skip_intro.isChecked(),
+                "skip_outro": getattr(self, 'chk_skip_outro', None) and self.chk_skip_outro.isChecked(),
+                "intro_mode": getattr(self, 'combo_intro_mode', None) and self.combo_intro_mode.currentText(),
+                "intro_duration": float(getattr(self, 'input_intro_duration', None) and self.input_intro_duration.text() or 90),
                 "play_sound": self.chk_sound.isChecked(),
                 "theme": self.combo_theme.currentText(),
                 "language": self.combo_lang.currentText(),
@@ -680,6 +686,48 @@ class FocusApp(QMainWindow):
         speaker_box.addWidget(self.lbl_speaker_val)
         speaker_box.addStretch()
         set_layout.addLayout(speaker_box)
+
+        # Intro & Outro Removal row
+        intro_box = QHBoxLayout()
+        self.chk_skip_intro = QCheckBox("Skip Intro / Opening (OP)")
+        self.chk_skip_intro.setChecked(self.settings.get("skip_intro", True))
+        self.chk_skip_intro.toggled.connect(self.save_current_settings)
+        intro_box.addWidget(self.chk_skip_intro)
+
+        self.chk_skip_outro = QCheckBox("Skip Outro / Ending (ED)")
+        self.chk_skip_outro.setChecked(self.settings.get("skip_outro", False))
+        self.chk_skip_outro.toggled.connect(self.save_current_settings)
+        intro_box.addWidget(self.chk_skip_outro)
+
+        self.lbl_intro_mode = QLabel("Detection:")
+        intro_box.addWidget(self.lbl_intro_mode)
+
+        self.combo_intro_mode = QComboBox()
+        self.combo_intro_mode.addItems([
+            "Auto Chapters (MKV/MP4)",
+            "First 90s (Standard OP)",
+            "Custom Duration"
+        ])
+        saved_intro_mode = self.settings.get("intro_mode", "Auto Chapters (MKV/MP4)")
+        idx = self.combo_intro_mode.findText(saved_intro_mode)
+        if idx >= 0:
+            self.combo_intro_mode.setCurrentIndex(idx)
+        self.combo_intro_mode.currentIndexChanged.connect(self._on_intro_mode_changed)
+        intro_box.addWidget(self.combo_intro_mode)
+
+        self.lbl_intro_dur = QLabel("Duration (s):")
+        intro_box.addWidget(self.lbl_intro_dur)
+        self.input_intro_duration = QLineEdit(str(self.settings.get("intro_duration", 90)))
+        self.input_intro_duration.setFixedWidth(50)
+        self.input_intro_duration.editingFinished.connect(self.save_current_settings)
+        intro_box.addWidget(self.input_intro_duration)
+        intro_box.addStretch()
+        set_layout.addLayout(intro_box)
+
+        # Sync initial visibility of custom duration
+        is_custom = "custom" in self.combo_intro_mode.currentText().lower() or "własny" in self.combo_intro_mode.currentText().lower()
+        self.lbl_intro_dur.setVisible(is_custom)
+        self.input_intro_duration.setVisible(is_custom)
 
         self.gen_content_layout.addWidget(self.settings_card)
 
@@ -1101,6 +1149,14 @@ class FocusApp(QMainWindow):
             self.chk_speaker.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_enable")))
         if hasattr(self, "lbl_speaker_thresh"):
             self.lbl_speaker_thresh.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_threshold")))
+        if hasattr(self, "chk_skip_intro"):
+            self.chk_skip_intro.setText(fix_qt_ampersand(get_translation(lang_name, "skip_intro_enable")))
+        if hasattr(self, "chk_skip_outro"):
+            self.chk_skip_outro.setText(fix_qt_ampersand(get_translation(lang_name, "skip_outro_enable")))
+        if hasattr(self, "lbl_intro_mode"):
+            self.lbl_intro_mode.setText(fix_qt_ampersand(get_translation(lang_name, "intro_mode_title")))
+        if hasattr(self, "lbl_intro_dur"):
+            self.lbl_intro_dur.setText(fix_qt_ampersand(get_translation(lang_name, "intro_duration_lbl")))
         if hasattr(self, "btn_select_video"):
             self.btn_select_video.setText(fix_qt_ampersand(get_translation(lang_name, "sel_video")))
         if hasattr(self, "btn_select_image"):
@@ -1171,6 +1227,14 @@ class FocusApp(QMainWindow):
 
     def change_language_event(self, new_lang: str):
         self._apply_language(new_lang)
+
+    def _on_intro_mode_changed(self, *_):
+        if hasattr(self, "combo_intro_mode") and hasattr(self, "lbl_intro_dur") and hasattr(self, "input_intro_duration"):
+            text = self.combo_intro_mode.currentText().lower()
+            is_custom = "custom" in text or "własny" in text
+            self.lbl_intro_dur.setVisible(is_custom)
+            self.input_intro_duration.setVisible(is_custom)
+            self.save_current_settings()
 
     def _on_mode_switched(self, selected_mode: str):
         self.current_mode = selected_mode
@@ -1398,6 +1462,10 @@ class FocusApp(QMainWindow):
             vad_buffer = max(50, int(self.input_vad_buffer.text() or 300))
             vad_speaker_enabled = self.chk_speaker.isChecked()
             vad_speaker_threshold = float(self.slider_speaker.value()) / 100.0
+            skip_intro = getattr(self, 'chk_skip_intro', None) and self.chk_skip_intro.isChecked()
+            skip_outro = getattr(self, 'chk_skip_outro', None) and self.chk_skip_outro.isChecked()
+            intro_mode = getattr(self, 'combo_intro_mode', None) and self.combo_intro_mode.currentText()
+            intro_duration = float(getattr(self, 'input_intro_duration', None) and self.input_intro_duration.text() or 90.0)
         except ValueError:
             QMessageBox.critical(self, "Invalid Input", "Numeric parameters must be valid numbers.")
             return
@@ -1415,7 +1483,8 @@ class FocusApp(QMainWindow):
             ScenePackGenerator, self.video_path_str, ref_image_to_pass,
             pad_before, pad_after, max_gap, min_scene, skip,
             vad_enabled, vad_buffer, vad_speaker_enabled, vad_speaker_threshold,
-            self.current_mode, self.queue_proxy
+            self.current_mode, self.queue_proxy,
+            skip_intro, skip_outro, intro_mode, intro_duration
         )
         self.scan_worker.start()
 
