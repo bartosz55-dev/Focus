@@ -239,6 +239,16 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
             self.assertEqual(res[1][1], 1415.0)
             self.assertIn("Credits", res[1][2])
 
+    def test_get_video_bitrate_probing(self):
+        from unittest.mock import patch, MagicMock
+        mock_res = MagicMock()
+        mock_res.returncode = 0
+        mock_res.stdout = '{"streams": [{"bit_rate": "2500000"}], "format": {"bit_rate": "2600000"}}'
+        with patch.object(self.generator, 'run_subprocess', return_value=mock_res), \
+             patch('pathlib.Path.exists', return_value=True):
+            bps = self.generator.get_video_bitrate("dummy.mkv")
+            self.assertEqual(bps, 2500000)
+
 
 class TestTranslationFallback(unittest.TestCase):
 

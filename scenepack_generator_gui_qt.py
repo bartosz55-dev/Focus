@@ -265,7 +265,7 @@ class FocusApp(QMainWindow):
             "min_scene_duration": 1.0, "frame_skip": 15, "vad_enabled": True,
             "vad_buffer": 300, "vad_speaker_enabled": True, "vad_speaker_threshold": 0.68,
             "skip_intro": True, "skip_outro": False, "intro_mode": "Auto Chapters (MKV/MP4)",
-            "intro_duration": 90, "export_quality": "High (Crystal Clear / CRF 17)",
+            "intro_duration": 90, "export_quality": "Auto (Match Source Bitrate)",
             "play_sound": True, "appearance_mode": "Dark", "theme": "blue",
             "language": "English", "default_mode": "Real Faces"
         }
@@ -621,19 +621,23 @@ class FocusApp(QMainWindow):
         self.lbl_quality_title = QLabel("Export Quality:")
         self.combo_export_quality = QComboBox()
         self.combo_export_quality.addItems([
+            "Auto (Match Source Bitrate)",
             "Maximum (Master / CRF 14 / 35 Mbps)",
-            "High (Crystal Clear / CRF 17 / 25 Mbps)",
-            "Medium (Standard / CRF 20 / 16 Mbps)",
-            "Draft / Fast (CRF 24 / 8 Mbps)"
+            "High (Crystal Clear / CRF 17 / 20 Mbps)",
+            "Medium (Standard / CRF 20 / 10 Mbps)",
+            "Draft / Fast (CRF 24 / 4 Mbps)"
         ])
-        saved_quality = self.settings.get("export_quality", "High (Crystal Clear / CRF 17 / 25 Mbps)")
+        saved_quality = self.settings.get("export_quality", "Auto (Match Source Bitrate)")
         idx = self.combo_export_quality.findText(saved_quality)
         if idx >= 0:
             self.combo_export_quality.setCurrentIndex(idx)
         else:
             # Match by substring
             for i in range(self.combo_export_quality.count()):
-                if "high" in saved_quality.lower() and "high" in self.combo_export_quality.itemText(i).lower():
+                if "auto" in saved_quality.lower() and "auto" in self.combo_export_quality.itemText(i).lower():
+                    self.combo_export_quality.setCurrentIndex(i)
+                    break
+                elif "high" in saved_quality.lower() and "high" in self.combo_export_quality.itemText(i).lower():
                     self.combo_export_quality.setCurrentIndex(i)
                     break
                 elif "max" in saved_quality.lower() and "max" in self.combo_export_quality.itemText(i).lower():
@@ -643,7 +647,7 @@ class FocusApp(QMainWindow):
                     self.combo_export_quality.setCurrentIndex(i)
                     break
             else:
-                self.combo_export_quality.setCurrentIndex(1) # Default High
+                self.combo_export_quality.setCurrentIndex(0) # Default Auto (Match Source)
 
         self.combo_export_quality.currentTextChanged.connect(self.save_current_settings)
 
