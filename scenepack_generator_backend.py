@@ -79,13 +79,55 @@ def get_cascade_classifier(cascade_path: Optional[str]):
     return None
 
 
-def natural_sort_key(path_obj: Any) -> list:
+def extract_season_episode(path_obj: Any) -> Tuple[int, int, bool]:
     """
-    Returns a natural alphanumeric sort key for human/episode ordering (e.g. S01E01 -> S01E02 -> S01E10).
+    Extracts (season, episode, has_explicit_tag) from filename or folder path.
+    Supports formats: S01E02, Season 1 Episode 2, s1e02, 1x02, [Judas] Show - S02E01v2.mkv, etc.
+    """
+    p = Path(path_obj) if not isinstance(path_obj, Path) else path_obj
+    full_str = f"{p.parent.name} {p.stem}".lower()
+
+    # 1. Match S01E02, Season 1 Episode 2, S1-E02, S02.E01, S02E01v2
+    m = re.search(r'(?:s|season\s*)[._\-\s]*(\d+)[._\-\s]*(?:e|ep|episode\s*)[._\-\s]*(\d+)', full_str)
+    if m:
+        return (int(m.group(1)), int(m.group(2)), True)
+
+    # 2. Match 1x02, 02x05
+    m = re.search(r'(\d+)x(\d+)', full_str)
+    if m:
+        return (int(m.group(1)), int(m.group(2)), True)
+
+    # 3. Look for S01 / Season 1 separately
+    m_s = re.search(r'(?:s|season\s*)[._\-\s]*(\d+)', full_str)
+    season = int(m_s.group(1)) if m_s else 1
+    has_season = bool(m_s)
+
+    # Look for E01 / Episode 1 separately
+    m_e = re.search(r'(?:e|ep|episode\s*)[._\-\s]*(\d+)', full_str)
+    if m_e:
+        return (season, int(m_e.group(1)), True)
+
+    # 4. Fallback: find trailing episode number in stem
+    nums = re.findall(r'\d+', p.stem)
+    if nums:
+        return (season, int(nums[-1]), has_season)
+
+    return (season, 0, False)
+
+
+def natural_sort_key(path_obj: Any) -> tuple:
+    """
+    Returns a natural alphanumeric sort key prioritizing Season (S01 -> S02 -> S03)
+    and Episode (E01 -> E02 -> E10) before falling back to natural alphanumeric name.
     """
     p = Path(path_obj) if not isinstance(path_obj, Path) else path_obj
     name = p.name if hasattr(p, 'name') else str(p)
-    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', name)]
+    season, episode, has_tag = extract_season_episode(p)
+    alpha_key = [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', name)]
+    if has_tag:
+        return (0, season, episode, alpha_key)
+    else:
+        return (1, 0, 0, alpha_key)
 
 
 def parse_video_paths(video_input: Any) -> List[Path]:
@@ -189,7 +231,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.30"
+APP_VERSION = "v1.3.31"
 
 
 class PlatformManager:
@@ -832,6 +874,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.31 (Multi-Season & Multi-Title Chronological Media Sorting):\n"
+            "  - Wprowadzono hierarchiczny analizator nazw i sezonów (`extract_season_episode`): pliki są teraz w pierwszej kolejności precyzyjnie grupowane według Sezonów (S01 -> S02 -> S03 -> ...), a wewnątrz sezonów według numerów odcinków (E01 -> E02 -> ... -> E24).\n"
+            "  - Prawidłowo sortuje odcinki nawet przy różnych tytułach w obrębie serii (np. 'Sono Bisque Doll wa Koi wo Suru S01' przed 'KiseKoi S02').\n\n"
             "• v1.3.30 (Intelligent Auto-Matching Source Bitrate & Proportional File Sizes):\n"
             "  - Dodano inteligentny tryb 'Auto (Dopasuj do źródła / Match Source Bitrate)' – automatycznie bada strumień wideo (ffprobe) i dopasowuje docelowy bitrate do pliku wejściowego z bezpiecznym zapasem 15%.\n"
             "  - Wyeliminowano niepotrzebne puchnięcie plików (zamiast 500 MB ze skompresowanego odcinka 300 MB, scenepack zajmuje teraz proporcjonalne ~60-80 MB przy zachowaniu idealnej ostrości źródła).\n"
@@ -1101,6 +1146,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.31 (Multi-Season & Multi-Title Chronological Media Sorting):\n"
+            "  - Implemented hierarchical season/episode metadata parser (`extract_season_episode`): video files are strictly ordered by Season (S01 -> S02 -> S03 -> ...) and then Episode (E01 -> E02 -> ... -> E24).\n"
+            "  - Accurately sorts multi-season releases even with differing title conventions across seasons (e.g. 'Sono Bisque Doll wa Koi wo Suru S01' before 'KiseKoi S02').\n\n"
             "• v1.3.30 (Intelligent Auto-Matching Source Bitrate & Proportional File Sizes):\n"
             "  - Added intelligent 'Auto (Match Source Bitrate)' mode: dynamically probes input stream bitrate via ffprobe and mirrors it with a +15% safety headroom.\n"
             "  - Completely eliminated bloated file sizes (scenepacks from 300MB episodes now weigh ~60-80MB while perfectly preserving source quality).\n"

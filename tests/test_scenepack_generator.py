@@ -182,6 +182,26 @@ class TestScenePackGeneratorLogic(unittest.TestCase):
             "Show - S02E01.mkv"
         ])
 
+    def test_natural_sort_key_multi_season_different_names(self):
+        from scenepack_generator_backend import natural_sort_key
+        raw_names = [
+            "[Judas] KiseKoi - S02E01v2.mkv",
+            "[Judas] KiseKoi - S02E10v2.mkv",
+            "[Judas] Sono Bisque Doll wa Koi wo Suru - S01E01.mkv",
+            "[Judas] Sono Bisque Doll wa Koi wo Suru - S01E12.mkv",
+            "[Judas] KiseKoi - S02E02v2.mkv",
+            "[Judas] Sono Bisque Doll wa Koi wo Suru - S01E02.mkv",
+        ]
+        sorted_names = sorted(raw_names, key=natural_sort_key)
+        self.assertEqual(sorted_names, [
+            "[Judas] Sono Bisque Doll wa Koi wo Suru - S01E01.mkv",
+            "[Judas] Sono Bisque Doll wa Koi wo Suru - S01E02.mkv",
+            "[Judas] Sono Bisque Doll wa Koi wo Suru - S01E12.mkv",
+            "[Judas] KiseKoi - S02E01v2.mkv",
+            "[Judas] KiseKoi - S02E02v2.mkv",
+            "[Judas] KiseKoi - S02E10v2.mkv",
+        ])
+
     def test_filter_excluded_intervals(self):
         # Intro range from 208s to 298s (90s anime OP)
         ex = [(208.0, 298.0, "Opening")]
