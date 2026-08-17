@@ -1,6 +1,6 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.31)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.32)
 
-[![Version](https://img.shields.io/badge/version-v1.3.31-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.32-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -16,12 +16,14 @@ By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Pe
 
 ---
 
-## ⚡ Key Features (v1.3.31)
+## ⚡ Key Features (v1.3.32)
 
+* **⚙️ Dedicated Modern Preferences & Settings Window:** Uncluttered studio sidebar with a dedicated Preferences modal for Appearance Mode (Dark, Light, System Auto), 8 circular accent color swatches, dynamic language selection, and audio notification controls.
+* **☀️ Full Light & Dark Mode Engine:** Complete high-contrast design system with crisp typography, elevated cards, and responsive palette switching across all dialogs and cards.
 * **🎬 Multi-Season & Multi-Title Chronological Media Ordering (`S01E01 ➔ S01E12 ➔ S02E01 ➔ S02E12`):** Hierarchical metadata parser accurately detects and sorts files by Season and Episode first, even when seasons have different title conventions (e.g. *Sono Bisque Doll S01* before *KiseKoi S02*).
 * **✨ Intelligent Auto-Matching Source Bitrate:** Automatically inspects input stream bitrates using `ffprobe` to match source quality (+15% headroom). Keeps scenepack file sizes perfectly proportional without quality loss or file bloating.
 * **💎 Crystal Clear / Master Quality Video Rendering Engine:** Hardware-accelerated Apple Silicon VideoToolbox, NVENC, and QSV encoders configured with adaptive quality factors (`-q:v 72-85` / `CRF 14-17`) and high bitrate headroom (20M-35M). Eliminates all macroblocking and pixelation.
-* **🚀 PySide6 / Qt 6 Modern Dark Studio:** Built with a responsive, high-DPI dark studio layout with fluid animations, native system typography (`.AppleSystemUIFont` on macOS, `Segoe UI` on Windows), and zero visual lag.
+* **🚀 PySide6 / Qt 6 Modern Studio Interface:** Built with a responsive, high-DPI studio layout with fluid animations, native system typography (`.AppleSystemUIFont` on macOS, `Segoe UI` on Windows), and zero visual lag.
 * **🛡️ Intelligent Intro & Outro Removal (Skip Opening/Ending):** Excludes opening themes and credits from scenepacks via automated MKV/MP4 chapter marker inspection (`Opening`, `Intro`, `OP`, `NCOP`, `Credits`, `Ending`, `ED`) with fallback to standard 90s anime OP windows or custom durations. Bypasses frame decoding inside intro ranges for 15% faster video scans.
 * **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, multi-region hair/face NumPy HSV color histograms, and perceptual dHash correlation. Scans crowd scenes in milliseconds without locking CPU threads.
 * **🎯 Real Faces Deep Learning Detector:** Powered by 68-point facial landmark and deep CNN embeddings for human facial recognition in films and series.
@@ -33,7 +35,7 @@ By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Pe
 * **🗂️ Unified Media & Reference Hub:** Drag & drop single files, multi-select episodes, or import entire directories of video files in one click.
 * **✨ Character Discovery Gallery:** Automatically pre-scans and clusters unique characters across video files. Click any card to track that character.
 * **🎧 Multi-Audio Stream Selector:** Easily switch between audio tracks (e.g., English Dub, Japanese Original, Commentary) in MKV/MP4 files.
-* **🎨 8 Studio Themes & 8 Languages:** Fully localized in **English, Polski, Deutsch, Русский, Українська, Español, Français, 日本語** with 8 customizable accent themes (*Blue, Emerald, Amber, Crimson, Indigo, Violet, Rose, Sunset*).
+* **🎨 8 Studio Accent Themes & 8 Languages:** Fully localized in **Polski, English, Deutsch, Español, Français, Русский, Українська, 日本語** with 8 customizable accent themes (*Violet, Blue, Emerald, Indigo, Rose, Orange, Crimson, Amber*).
 
 ---
 

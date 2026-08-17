@@ -285,6 +285,45 @@ class TestTranslationFallback(unittest.TestCase):
         result = get_translation("Polski", "completely_unknown_xyz_key")
         self.assertEqual(result, "completely_unknown_xyz_key")
 
+    def test_translations_core_settings_keys_present(self):
+        core_keys = [
+            "settings_title", "settings_appearance", "settings_accent",
+            "settings_lang", "settings_sound", "settings_done",
+            "mode_dark", "mode_light", "mode_system"
+        ]
+        for lang in ["Polski", "English", "Deutsch", "Español", "Français", "Русский", "Українська", "日本語"]:
+            for key in core_keys:
+                val = get_translation(lang, key)
+                self.assertTrue(bool(val), f"Missing translation for key '{key}' in language '{lang}'")
+
+
+class TestGUIPreferencesAndTheming(unittest.TestCase):
+
+    def test_gui_theme_and_mode_switching(self):
+        from PySide6.QtWidgets import QApplication
+        from scenepack_generator_gui_qt import FocusApp, PreferencesDialog
+        app = QApplication.instance() or QApplication([])
+
+        window = FocusApp()
+        window._apply_language("Polski")
+        self.assertEqual(window.current_lang, "Polski")
+
+        # Test Dark mode apply
+        window._apply_theme("violet", "Dark")
+        self.assertIn("#0B0E14", window.styleSheet())
+
+        # Test Light mode apply
+        window._apply_theme("blue", "Light")
+        self.assertIn("#F1F5F9", window.styleSheet())
+
+        # Test Preferences Dialog initialization
+        pref_dlg = PreferencesDialog(window)
+        self.assertIsNotNone(pref_dlg)
+        pref_dlg.retranslate_dialog()
+        self.assertEqual(pref_dlg.lbl_title.text(), get_translation(window.current_lang, "settings_title"))
+
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -211,6 +211,217 @@ class MiniPreviewDialog(QDialog):
         if self.video_path and os.path.exists(self.video_path):
             QDesktopServices.openUrl(QUrl.fromLocalFile(self.video_path))
 
+class PreferencesDialog(QDialog):
+    """
+    Modern Apple/macOS-styled Preferences & Settings Dialog.
+    Allows changing Appearance (Dark/Light/System), 8 Accent Colors, Language, Audio Feedback, and Default Modes.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.main_app = parent
+        self.setModal(True)
+        self.setFixedSize(540, 560)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self._init_ui()
+        self.retranslate_dialog()
+
+    def _init_ui(self):
+        self.setObjectName("PreferencesDialog")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(14)
+
+        # Header
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(4)
+        self.lbl_title = QLabel("Focus Preferences")
+        self.lbl_title.setFont(get_system_font(18, QFont.Weight.Bold))
+        header_layout.addWidget(self.lbl_title)
+        
+        self.lbl_sub = QLabel("Customize appearance, accent theme, language, and behavior")
+        self.lbl_sub.setObjectName("SubText")
+        self.lbl_sub.setFont(get_system_font(10))
+        header_layout.addWidget(self.lbl_sub)
+        layout.addLayout(header_layout)
+
+        # Scrollable Settings Container
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_widget = QWidget()
+        self.settings_layout = QVBoxLayout(scroll_widget)
+        self.settings_layout.setContentsMargins(0, 0, 8, 0)
+        self.settings_layout.setSpacing(12)
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        # --- Card 1: Appearance Mode (Dark / Light / System) ---
+        card_app = ModernCard(self)
+        app_layout = QVBoxLayout(card_app)
+        app_layout.setContentsMargins(16, 14, 16, 14)
+        app_layout.setSpacing(10)
+
+        self.lbl_card_app = QLabel("Appearance Mode")
+        self.lbl_card_app.setFont(get_system_font(11, QFont.Weight.Bold))
+        app_layout.addWidget(self.lbl_card_app)
+
+        self.btn_group_mode = QButtonGroup(self)
+        mode_btn_box = QHBoxLayout()
+        mode_btn_box.setSpacing(8)
+
+        self.btn_dark = QPushButton("🌙 Dark")
+        self.btn_light = QPushButton("☀️ Light")
+        self.btn_system = QPushButton("🖥️ System")
+
+        cur_mode = self.main_app.settings.get("appearance_mode", "Dark")
+        for btn, name in [(self.btn_dark, "Dark"), (self.btn_light, "Light"), (self.btn_system, "System")]:
+            btn.setCheckable(True)
+            btn.setObjectName("ModeBtn")
+            self.btn_group_mode.addButton(btn)
+            mode_btn_box.addWidget(btn)
+            if cur_mode == name:
+                btn.setChecked(True)
+            btn.clicked.connect(lambda _, m=name: self._on_appearance_changed(m))
+
+        app_layout.addLayout(mode_btn_box)
+        self.settings_layout.addWidget(card_app)
+
+        # --- Card 2: Accent Color Palette ---
+        card_color = ModernCard(self)
+        color_layout = QVBoxLayout(card_color)
+        color_layout.setContentsMargins(16, 14, 16, 14)
+        color_layout.setSpacing(10)
+
+        self.lbl_card_color = QLabel("Accent Color")
+        self.lbl_card_color.setFont(get_system_font(11, QFont.Weight.Bold))
+        color_layout.addWidget(self.lbl_card_color)
+
+        self.swatch_box = QHBoxLayout()
+        self.swatch_box.setSpacing(10)
+
+        self.color_swatches = {
+            "violet": ("#8B5CF6", "Violet"),
+            "blue": ("#2563EB", "Blue"),
+            "green": ("#10B981", "Emerald"),
+            "indigo": ("#6366F1", "Indigo"),
+            "pink": ("#EC4899", "Rose"),
+            "orange": ("#F97316", "Orange"),
+            "red": ("#EF4444", "Crimson"),
+            "yellow": ("#F59E0B", "Amber")
+        }
+
+        self.swatch_buttons = {}
+        cur_theme = self.main_app.current_theme
+        for key, (hex_val, name) in self.color_swatches.items():
+            btn = QPushButton()
+            btn.setFixedSize(36, 36)
+            btn.setToolTip(name)
+            btn.setCursor(Qt.PointingHandCursor)
+            is_selected = (key == cur_theme)
+            self._style_swatch_button(btn, hex_val, is_selected)
+            btn.clicked.connect(lambda _, k=key: self._on_theme_color_changed(k))
+            self.swatch_box.addWidget(btn)
+            self.swatch_buttons[key] = (btn, hex_val)
+
+        color_layout.addLayout(self.swatch_box)
+        self.settings_layout.addWidget(card_color)
+
+        # --- Card 3: Language ---
+        card_lang = ModernCard(self)
+        lang_layout = QVBoxLayout(card_lang)
+        lang_layout.setContentsMargins(16, 14, 16, 14)
+        lang_layout.setSpacing(10)
+
+        self.lbl_card_lang = QLabel("Interface Language")
+        self.lbl_card_lang.setFont(get_system_font(11, QFont.Weight.Bold))
+        lang_layout.addWidget(self.lbl_card_lang)
+
+        self.combo_lang = QComboBox()
+        self.combo_lang.addItems(["Polski", "English", "Deutsch", "Español", "Français", "Русский", "Українська", "日本語"])
+        self.combo_lang.setCurrentText(self.main_app.current_lang)
+        self.combo_lang.currentTextChanged.connect(self._on_language_changed)
+        lang_layout.addWidget(self.combo_lang)
+        self.settings_layout.addWidget(card_lang)
+
+        # --- Card 4: Audio Feedback ---
+        card_audio = ModernCard(self)
+        audio_layout = QVBoxLayout(card_audio)
+        audio_layout.setContentsMargins(16, 14, 16, 14)
+        audio_layout.setSpacing(10)
+
+        self.lbl_card_behavior = QLabel("Audio & Behavior")
+        self.lbl_card_behavior.setFont(get_system_font(11, QFont.Weight.Bold))
+        audio_layout.addWidget(self.lbl_card_behavior)
+
+        self.chk_sound = QCheckBox("Play sound notification when rendering finishes")
+        self.chk_sound.setChecked(self.main_app.settings.get("play_sound", True))
+        self.chk_sound.toggled.connect(self._on_sound_toggled)
+        audio_layout.addWidget(self.chk_sound)
+
+        self.settings_layout.addWidget(card_audio)
+
+        # Bottom Done Button
+        btn_box = QHBoxLayout()
+        btn_box.addStretch()
+        self.btn_done = QPushButton("Done")
+        self.btn_done.setObjectName("PrimaryActionBtn")
+        self.btn_done.setMinimumWidth(110)
+        self.btn_done.clicked.connect(self.accept)
+        btn_box.addWidget(self.btn_done)
+        layout.addLayout(btn_box)
+
+    def _style_swatch_button(self, btn: QPushButton, hex_val: str, selected: bool):
+        border = "3px solid #FFFFFF" if selected else "1px solid rgba(255,255,255,0.25)"
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {hex_val};
+                border: {border};
+                border-radius: 18px;
+            }}
+            QPushButton:hover {{
+                border: 2px solid #FFFFFF;
+            }}
+        """)
+
+    def _on_appearance_changed(self, mode: str):
+        self.main_app.settings["appearance_mode"] = mode
+        self.main_app._apply_theme(self.main_app.current_theme, mode)
+        self.main_app.save_current_settings()
+
+    def _on_theme_color_changed(self, theme_key: str):
+        self.main_app.current_theme = theme_key
+        self.main_app.settings["theme"] = theme_key
+        for k, (btn, hex_v) in self.swatch_buttons.items():
+            self._style_swatch_button(btn, hex_v, (k == theme_key))
+        self.main_app._apply_theme(theme_key)
+        self.main_app.save_current_settings()
+
+    def _on_language_changed(self, lang_name: str):
+        self.main_app.current_lang = lang_name
+        self.main_app.settings["language"] = lang_name
+        self.main_app._apply_language(lang_name)
+        self.retranslate_dialog()
+        self.main_app.save_current_settings()
+
+    def _on_sound_toggled(self, checked: bool):
+        self.main_app.settings["play_sound"] = checked
+        self.main_app.save_current_settings()
+
+    def retranslate_dialog(self):
+        lang = self.main_app.current_lang
+        self.setWindowTitle(get_translation(lang, "settings_title"))
+        self.lbl_title.setText(get_translation(lang, "settings_title"))
+        self.lbl_card_app.setText(get_translation(lang, "settings_appearance"))
+        self.lbl_card_color.setText(get_translation(lang, "settings_accent"))
+        self.lbl_card_lang.setText(get_translation(lang, "settings_lang"))
+        self.chk_sound.setText(get_translation(lang, "settings_sound"))
+        self.btn_done.setText(get_translation(lang, "settings_done"))
+        self.btn_dark.setText(f"🌙 {get_translation(lang, 'mode_dark')}")
+        self.btn_light.setText(f"☀️ {get_translation(lang, 'mode_light')}")
+        self.btn_system.setText(f"🖥️ {get_translation(lang, 'mode_system')}")
+
+
 class FocusApp(QMainWindow):
     """
     Main Application Window in PySide6 (Qt 6).
@@ -225,8 +436,8 @@ class FocusApp(QMainWindow):
 
         # State and settings
         self.settings = self.load_settings()
-        self.current_theme = self.settings.get("theme", "blue")
-        self.current_lang = self.settings.get("language", "English")
+        self.current_theme = self.settings.get("theme", "violet")
+        self.current_lang = self.settings.get("language", "Polski")
         self.current_mode = self.settings.get("default_mode", "Real Faces")
 
         # Selected data
@@ -266,8 +477,8 @@ class FocusApp(QMainWindow):
             "vad_buffer": 300, "vad_speaker_enabled": True, "vad_speaker_threshold": 0.68,
             "skip_intro": True, "skip_outro": False, "intro_mode": "Auto Chapters (MKV/MP4)",
             "intro_duration": 90, "export_quality": "Auto (Match Source Bitrate)",
-            "play_sound": True, "appearance_mode": "Dark", "theme": "blue",
-            "language": "English", "default_mode": "Real Faces"
+            "play_sound": True, "appearance_mode": "Dark", "theme": "violet",
+            "language": "Polski", "default_mode": "Real Faces"
         }
         settings_path = Path.home() / ".focus_settings.json"
         if not settings_path.exists():
@@ -298,9 +509,10 @@ class FocusApp(QMainWindow):
                 "skip_outro": getattr(self, 'chk_skip_outro', None) and self.chk_skip_outro.isChecked(),
                 "intro_mode": getattr(self, 'combo_intro_mode', None) and self.combo_intro_mode.currentText(),
                 "intro_duration": float(getattr(self, 'input_intro_duration', None) and self.input_intro_duration.text() or 90),
-                "play_sound": self.chk_sound.isChecked(),
-                "theme": self.combo_theme.currentText(),
-                "language": self.combo_lang.currentText(),
+                "play_sound": self.settings.get("play_sound", True),
+                "appearance_mode": self.settings.get("appearance_mode", "Dark"),
+                "theme": self.current_theme,
+                "language": self.current_lang,
                 "default_mode": self.current_mode
             })
             settings_path = Path.home() / ".focus_settings.json"
@@ -308,6 +520,10 @@ class FocusApp(QMainWindow):
                 json.dump(self.settings, f, indent=4)
         except Exception as e:
             logging.debug(f"Note: Could not save settings: {e}")
+
+    def open_preferences(self):
+        dlg = PreferencesDialog(self)
+        dlg.exec()
 
     def _setup_proxy_connections(self):
         self.queue_proxy.log_signal.connect(self._on_log_msg)
@@ -358,56 +574,67 @@ class FocusApp(QMainWindow):
         # --- SIDEBAR NAV ---
         self.sidebar = QFrame()
         self.sidebar.setObjectName("SidebarNav")
-        self.sidebar.setFixedWidth(230)
+        self.sidebar.setFixedWidth(220)
         sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(18, 24, 18, 20)
-        sidebar_layout.setSpacing(14)
+        sidebar_layout.setContentsMargins(16, 20, 16, 18)
+        sidebar_layout.setSpacing(8)
 
-        self.lbl_logo = QLabel("🎯 FOCUS")
+        # Logo & App Title
+        logo_box = QHBoxLayout()
+        logo_box.setSpacing(8)
+        self.lbl_logo_icon = QLabel("🎯")
+        self.lbl_logo_icon.setFont(get_system_font(18))
+        self.lbl_logo = QLabel("FOCUS")
         self.lbl_logo.setObjectName("LogoText")
-        self.lbl_logo.setFont(get_system_font(22, QFont.Weight.Bold))
-        sidebar_layout.addWidget(self.lbl_logo)
+        self.lbl_logo.setFont(get_system_font(20, QFont.Weight.Bold))
+        logo_box.addWidget(self.lbl_logo_icon)
+        logo_box.addWidget(self.lbl_logo)
+        logo_box.addStretch()
+        sidebar_layout.addLayout(logo_box)
+        sidebar_layout.addSpacing(14)
 
+        # Section: Navigation
         self.lbl_wf = QLabel("WORKFLOW")
         self.lbl_wf.setObjectName("SectionHeader")
         sidebar_layout.addWidget(self.lbl_wf)
 
-        self.btn_tutorial = QPushButton("How to Use")
+        self.btn_sidebar_gen = QPushButton("🎬 Generator")
+        self.btn_sidebar_gen.setObjectName("SidebarNavBtn")
+        self.btn_sidebar_gen.setCheckable(True)
+        self.btn_sidebar_gen.setChecked(True)
+        self.btn_sidebar_gen.clicked.connect(lambda: self._switch_main_view(0))
+        sidebar_layout.addWidget(self.btn_sidebar_gen)
+
+        self.btn_sidebar_gal = QPushButton("✨ Character Gallery")
+        self.btn_sidebar_gal.setObjectName("SidebarNavBtn")
+        self.btn_sidebar_gal.setCheckable(True)
+        self.btn_sidebar_gal.clicked.connect(lambda: self._switch_main_view(1))
+        sidebar_layout.addWidget(self.btn_sidebar_gal)
+
+        sidebar_layout.addSpacing(12)
+
+        # Section: Resources
+        self.lbl_res = QLabel("RESOURCES")
+        self.lbl_res.setObjectName("SectionHeader")
+        sidebar_layout.addWidget(self.lbl_res)
+
+        self.btn_tutorial = QPushButton("📖 How to Use")
         self.btn_tutorial.setObjectName("SidebarBtn")
         self.btn_tutorial.clicked.connect(self.open_tutorial)
         sidebar_layout.addWidget(self.btn_tutorial)
 
-        self.btn_changelog = QPushButton("Changelog")
+        self.btn_changelog = QPushButton("📜 Changelog")
         self.btn_changelog.setObjectName("SidebarBtn")
         self.btn_changelog.clicked.connect(self.open_changelog)
         sidebar_layout.addWidget(self.btn_changelog)
 
-        sidebar_layout.addSpacing(10)
-        self.lbl_sys = QLabel("SYSTEM")
-        self.lbl_sys.setObjectName("SectionHeader")
-        sidebar_layout.addWidget(self.lbl_sys)
-
-        self.lbl_theme_title = QLabel("Color Theme:")
-        sidebar_layout.addWidget(self.lbl_theme_title)
-        self.combo_theme = QComboBox()
-        self.combo_theme.addItems(["blue", "green", "orange", "red", "indigo", "violet", "pink", "yellow"])
-        self.combo_theme.setCurrentText(self.current_theme)
-        self.combo_theme.currentTextChanged.connect(self.change_theme_event)
-        sidebar_layout.addWidget(self.combo_theme)
-
-        self.lbl_lang_title = QLabel("Language:")
-        sidebar_layout.addWidget(self.lbl_lang_title)
-        self.combo_lang = QComboBox()
-        self.combo_lang.addItems(["Polski", "English", "Deutsch", "Русский", "Українська", "Español", "Français", "日本語"])
-        self.combo_lang.setCurrentText(self.current_lang)
-        self.combo_lang.currentTextChanged.connect(self.change_language_event)
-        sidebar_layout.addWidget(self.combo_lang)
-
         sidebar_layout.addStretch()
-        self.chk_sound = QCheckBox("Play sound on complete")
-        self.chk_sound.setChecked(self.settings.get("play_sound", True))
-        self.chk_sound.toggled.connect(self.save_current_settings)
-        sidebar_layout.addWidget(self.chk_sound)
+
+        # Section: Preferences / Settings Button at Bottom
+        self.btn_settings = QPushButton("⚙️ Settings")
+        self.btn_settings.setObjectName("SidebarSettingsBtn")
+        self.btn_settings.clicked.connect(self.open_preferences)
+        sidebar_layout.addWidget(self.btn_settings)
 
         main_layout.addWidget(self.sidebar)
 
@@ -925,83 +1152,155 @@ class FocusApp(QMainWindow):
         self.scroll_gal.setWidget(self.gal_grid_container)
         gal_layout.addWidget(self.scroll_gal)
 
-    def _apply_theme(self, theme_name: str):
-        self.current_theme = theme_name
+    def _apply_theme(self, theme_name: str = None, appearance_mode: str = None):
+        if theme_name:
+            self.current_theme = theme_name
+        if appearance_mode:
+            self.settings["appearance_mode"] = appearance_mode
+
+        mode = self.settings.get("appearance_mode", "Dark")
+        if mode == "System":
+            try:
+                import darkdetect
+                is_dark = darkdetect.isDark() if hasattr(darkdetect, 'isDark') else True
+            except Exception:
+                is_dark = True
+        else:
+            is_dark = (mode != "Light")
+
         colors = {
-            "blue": ("#2563EB", "#3B82F6", "#1E40AF"),
-            "green": ("#10B981", "#34D399", "#047857"),
-            "orange": ("#F97316", "#FB923C", "#C2410C"),
-            "red": ("#EF4444", "#F87171", "#B91C1C"),
-            "indigo": ("#6366F1", "#818CF8", "#4338CA"),
-            "violet": ("#8B5CF6", "#A78BFA", "#6D28D9"),
-            "pink": ("#EC4899", "#F472B6", "#BE185D"),
-            "yellow": ("#F59E0B", "#FBBF24", "#B45309")
+            "violet": ("#8B5CF6", "#A78BFA", "#6D28D9", "#C4B5FD"),
+            "blue": ("#2563EB", "#3B82F6", "#1D4ED8", "#93C5FD"),
+            "green": ("#059669", "#10B981", "#047857", "#6EE7B7"),
+            "indigo": ("#4F46E5", "#6366F1", "#3730A3", "#A5B4FC"),
+            "pink": ("#DB2777", "#EC4899", "#9D174D", "#F9A8D4"),
+            "orange": ("#EA580C", "#F97316", "#C2410C", "#FDBA74"),
+            "red": ("#DC2626", "#EF4444", "#B91C1C", "#FCA5A5"),
+            "yellow": ("#D97706", "#F59E0B", "#B45309", "#FCD34D")
         }
-        primary, hover, border_glow = colors.get(theme_name, colors["blue"])
+        primary, hover, active, light_tint = colors.get(self.current_theme, colors["violet"])
+
+        if is_dark:
+            bg_main = "#0B0E14"
+            bg_sidebar = "#0E1117"
+            border_sidebar = "#1C2029"
+            bg_card = "#14171F"
+            border_card = "#222733"
+            bg_input = "#181C25"
+            border_input = "#2D3545"
+            text_main = "#F8FAFC"
+            text_sub = "#94A3B8"
+            text_muted = "#64748B"
+            btn_bg = "#1B202B"
+            btn_hover = "#252B3A"
+            btn_border = "#2E3748"
+            btn_pressed = "#131720"
+            table_bg = "#14171F"
+            table_alt = "#181C25"
+            log_bg = "#0B0E14"
+            log_text = "#38BDF8"
+            dialog_bg = "#11141C"
+        else:
+            bg_main = "#F1F5F9"
+            bg_sidebar = "#FFFFFF"
+            border_sidebar = "#E2E8F0"
+            bg_card = "#FFFFFF"
+            border_card = "#E2E8F0"
+            bg_input = "#F8FAFC"
+            border_input = "#CBD5E1"
+            text_main = "#0F172A"
+            text_sub = "#475569"
+            text_muted = "#94A3B8"
+            btn_bg = "#FFFFFF"
+            btn_hover = "#F8FAFC"
+            btn_border = "#CBD5E1"
+            btn_pressed = "#E2E8F0"
+            table_bg = "#FFFFFF"
+            table_alt = "#F8FAFC"
+            log_bg = "#1E293B"
+            log_text = "#38BDF8"
+            dialog_bg = "#FFFFFF"
 
         qss = f"""
         QMainWindow, QWidget {{
-            background-color: #0B0E14;
-            color: #F8FAFC;
-            font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background-color: {bg_main};
+            color: {text_main};
+            font-family: 'Segoe UI', '.AppleSystemUIFont', 'Helvetica Neue', sans-serif;
         }}
         QFrame#SidebarNav {{
-            background-color: #0E1117;
-            border-right: 1px solid #1C1F26;
+            background-color: {bg_sidebar};
+            border-right: 1px solid {border_sidebar};
         }}
         QFrame#ModernCard {{
-            background-color: #14161B;
-            border: 1px solid #232A36;
+            background-color: {bg_card};
+            border: 1px solid {border_card};
             border-radius: 12px;
         }}
+        QDialog, QFrame#PreferencesDialog {{
+            background-color: {dialog_bg};
+            color: {text_main};
+        }}
         QLabel {{
-            color: #F8FAFC;
+            color: {text_main};
             background: transparent;
         }}
         QLabel#SubText, QLabel#PathLabel, QLabel#EtaLabel {{
-            color: #94A3B8;
+            color: {text_sub};
         }}
         QLabel#SectionHeader {{
-            color: #64748B;
+            color: {text_muted};
             font-size: 11px;
             font-weight: bold;
+            letter-spacing: 0.5px;
         }}
-        QLabel#LogoLabel {{
+        QLabel#LogoText {{
             color: {primary};
+            font-weight: bold;
         }}
         QPushButton {{
-            background-color: #1E232E;
-            border: 1px solid #2D3545;
+            background-color: {btn_bg};
+            border: 1px solid {btn_border};
             border-radius: 8px;
-            color: #F8FAFC;
+            color: {text_main};
             padding: 8px 14px;
             font-size: 13px;
+            font-weight: 500;
         }}
         QPushButton:hover {{
-            background-color: #272E3B;
-            border-color: #3B4457;
+            background-color: {btn_hover};
+            border-color: {primary};
         }}
         QPushButton:pressed {{
-            background-color: #171B24;
+            background-color: {btn_pressed};
         }}
         QPushButton:disabled {{
-            background-color: #13171F;
-            color: #475569;
-            border-color: #1E232E;
+            background-color: {btn_bg};
+            color: {text_muted};
+            border-color: {btn_border};
+            opacity: 0.6;
         }}
-        QPushButton#SidebarBtn {{
+        QPushButton#SidebarBtn, QPushButton#SidebarNavBtn, QPushButton#SidebarSettingsBtn {{
             background: transparent;
-            border: none;
+            border: 1px solid transparent;
             text-align: left;
             padding: 10px 14px;
-        }}
-        QPushButton#SidebarBtn:hover {{
-            background-color: #1C2029;
             border-radius: 8px;
+            color: {text_main};
+            font-weight: 500;
+        }}
+        QPushButton#SidebarBtn:hover, QPushButton#SidebarNavBtn:hover, QPushButton#SidebarSettingsBtn:hover {{
+            background-color: {btn_hover};
+            border-color: {border_card};
+        }}
+        QPushButton#SidebarNavBtn:checked {{
+            background-color: {primary};
+            color: #FFFFFF;
+            border-color: {hover};
+            font-weight: bold;
         }}
         QPushButton#PrimaryActionBtn, QPushButton#AccentBtn {{
             background-color: {primary};
-            border: 1px solid {border_glow};
+            border: 1px solid {hover};
             color: #FFFFFF;
             font-weight: bold;
         }}
@@ -1009,10 +1308,14 @@ class FocusApp(QMainWindow):
             background-color: {hover};
         }}
         QPushButton#ModeBtn, QPushButton#TabBtn {{
-            background-color: #14161B;
-            border: 1px solid #232A36;
+            background-color: {btn_bg};
+            border: 1px solid {btn_border};
             border-radius: 6px;
-            padding: 6px 16px;
+            padding: 6px 14px;
+            color: {text_main};
+        }}
+        QPushButton#ModeBtn:hover, QPushButton#TabBtn:hover {{
+            border-color: {primary};
         }}
         QPushButton#ModeBtn:checked, QPushButton#TabBtn:checked {{
             background-color: {primary};
@@ -1021,10 +1324,10 @@ class FocusApp(QMainWindow):
             font-weight: bold;
         }}
         QLineEdit, QComboBox {{
-            background-color: #1A1E26;
-            border: 1px solid #2D3545;
+            background-color: {bg_input};
+            border: 1px solid {border_input};
             border-radius: 6px;
-            color: #F8FAFC;
+            color: {text_main};
             padding: 6px 10px;
             selection-background-color: {primary};
         }}
@@ -1033,29 +1336,50 @@ class FocusApp(QMainWindow):
         }}
         QComboBox::drop-down {{
             border: none;
+            padding-right: 6px;
         }}
         QComboBox QAbstractItemView {{
-            background-color: #14161B;
-            border: 1px solid #232A36;
+            background-color: {bg_card};
+            border: 1px solid {border_card};
             selection-background-color: {primary};
+            selection-color: #FFFFFF;
+            color: {text_main};
         }}
         QCheckBox {{
             spacing: 8px;
             background: transparent;
+            color: {text_main};
         }}
         QCheckBox::indicator {{
             width: 18px;
             height: 18px;
             border-radius: 4px;
-            border: 1px solid #3B4457;
-            background-color: #1A1E26;
+            border: 1px solid {border_input};
+            background-color: {bg_input};
         }}
         QCheckBox::indicator:checked {{
             background-color: {primary};
             border-color: {hover};
         }}
+        QRadioButton {{
+            spacing: 8px;
+            background: transparent;
+            color: {text_main};
+            font-size: 12px;
+        }}
+        QRadioButton::indicator {{
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            border: 1px solid {border_input};
+            background-color: {bg_input};
+        }}
+        QRadioButton::indicator:checked {{
+            background-color: {primary};
+            border-color: {hover};
+        }}
         QProgressBar {{
-            background-color: #1E232E;
+            background-color: {btn_bg};
             border: none;
             border-radius: 4px;
         }}
@@ -1065,7 +1389,7 @@ class FocusApp(QMainWindow):
         }}
         QSlider::groove:horizontal {{
             height: 6px;
-            background: #1E232E;
+            background: {btn_bg};
             border-radius: 3px;
         }}
         QSlider::handle:horizontal {{
@@ -1077,33 +1401,16 @@ class FocusApp(QMainWindow):
         QSlider::handle:horizontal:hover {{
             background: {hover};
         }}
-        QRadioButton {{
-            spacing: 8px;
-            background: transparent;
-            color: #F8FAFC;
-            font-size: 12px;
-        }}
-        QRadioButton::indicator {{
-            width: 16px;
-            height: 16px;
-            border-radius: 8px;
-            border: 1px solid #3B4457;
-            background-color: #1A1E26;
-        }}
-        QRadioButton::indicator:checked {{
-            background-color: {primary};
-            border-color: {hover};
-        }}
         QLabel#EpisodeBadge {{
-            background-color: rgba(37, 99, 235, 0.15);
+            background-color: rgba(37, 99, 235, 0.12);
             border: 1px solid {primary};
             border-radius: 6px;
             padding: 6px 12px;
             font-weight: bold;
-            color: #93C5FD;
+            color: {primary};
         }}
         QProgressBar#EpisodeProgressBar {{
-            background-color: #1A1E26;
+            background-color: {btn_bg};
             border: none;
             border-radius: 3px;
         }}
@@ -1112,100 +1419,131 @@ class FocusApp(QMainWindow):
             border-radius: 3px;
         }}
         QTableWidget {{
-            background-color: #14161B;
-            border: 1px solid #232A36;
+            background-color: {table_bg};
+            border: 1px solid {border_card};
             border-radius: 8px;
-            gridline-color: #232A36;
+            gridline-color: {border_card};
+            color: {text_main};
         }}
         QHeaderView::section {{
-            background-color: #1A1E26;
-            color: #94A3B8;
+            background-color: {bg_input};
+            color: {text_sub};
             padding: 6px;
             border: none;
-            border-bottom: 1px solid #232A36;
+            border-bottom: 1px solid {border_card};
             font-weight: bold;
         }}
         QTextEdit#LogConsole {{
-            background-color: #0E1117;
-            border: 1px solid #1C1F26;
+            background-color: {log_bg};
+            border: 1px solid {border_sidebar};
             border-radius: 8px;
-            color: #38BDF8;
+            color: {log_text};
         }}
         """
         self.setStyleSheet(qss)
+
+        path_style = f"background-color: {bg_input}; border: 1px solid {border_input}; border-radius: 6px; padding: 6px 12px; color: {text_main};"
+        if hasattr(self, "lbl_video_path"):
+            self.lbl_video_path.setStyleSheet(path_style)
+        if hasattr(self, "lbl_image_path"):
+            self.lbl_image_path.setStyleSheet(path_style)
+        if hasattr(self, "lbl_output_path"):
+            self.lbl_output_path.setStyleSheet(path_style)
+
         self.save_current_settings()
 
     def _apply_language(self, lang_name: str):
-        self.btn_changelog.setText(fix_qt_ampersand(get_translation(lang_name, "changelog")))
-        if hasattr(self, "lbl_sys"):
-            self.lbl_sys.setText(fix_qt_ampersand(get_translation(lang_name, "sec_system")))
-        self.lbl_theme_title.setText(fix_qt_ampersand(get_translation(lang_name, "theme")))
-        self.lbl_lang_title.setText(fix_qt_ampersand(get_translation(lang_name, "language")))
-        self.chk_sound.setText(fix_qt_ampersand(get_translation(lang_name, "play_sound")))
+        self.current_lang = lang_name
+        self.lbl_dashboard.setText(get_translation(lang_name, "dashboard"))
+        if hasattr(self, "lbl_wf"):
+            self.lbl_wf.setText(get_translation(lang_name, "sec_workflow") or "WORKFLOW")
+        if hasattr(self, "btn_sidebar_gen"):
+            self.btn_sidebar_gen.setText(f"🎬 {get_translation(lang_name, 'generator_tab')}")
+        if hasattr(self, "btn_sidebar_gal"):
+            self.btn_sidebar_gal.setText(f"✨ {get_translation(lang_name, 'gallery_tab')}")
+        if hasattr(self, "btn_tutorial"):
+            self.btn_tutorial.setText(f"📖 {get_translation(lang_name, 'how_to_use')}")
+        if hasattr(self, "btn_changelog"):
+            self.btn_changelog.setText(f"📜 {get_translation(lang_name, 'changelog')}")
+        if hasattr(self, "btn_settings"):
+            self.btn_settings.setText(f"⚙️ {get_translation(lang_name, 'settings_btn')}")
 
-        self.btn_mode_real.setText(fix_qt_ampersand(get_translation(lang_name, "real_faces")))
-        self.btn_mode_anime.setText(fix_qt_ampersand(get_translation(lang_name, "anime")))
-        self.btn_tab_gen.setText(fix_qt_ampersand(get_translation(lang_name, "generator_tab")))
-        self.btn_tab_gal.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_tab")))
+        self.btn_mode_real.setText(get_translation(lang_name, "real_faces"))
+        self.btn_mode_anime.setText(get_translation(lang_name, "anime"))
+        self.btn_tab_gen.setText(get_translation(lang_name, "generator_tab"))
+        self.btn_tab_gal.setText(get_translation(lang_name, "gallery_tab"))
 
-        if hasattr(self, "lbl_hero_title"):
-            self.lbl_hero_title.setText(fix_qt_ampersand(get_translation(lang_name, "hero_title")))
-        if hasattr(self, "lbl_hero_sub"):
-            self.lbl_hero_sub.setText(fix_qt_ampersand(get_translation(lang_name, "hero_subtitle")))
-        if hasattr(self, "lbl_presets_title"):
-            self.lbl_presets_title.setText(fix_qt_ampersand(get_translation(lang_name, "preset_label")))
         if hasattr(self, "btn_autotune"):
-            self.btn_autotune.setText(fix_qt_ampersand(get_translation(lang_name, "btn_auto_tune")))
-        if hasattr(self, "lbl_aspect_title"):
-            self.lbl_aspect_title.setText(fix_qt_ampersand(get_translation(lang_name, "aspect_label")))
-        if hasattr(self, "lbl_pad_before"):
-            self.lbl_pad_before.setText(fix_qt_ampersand(get_translation(lang_name, "pad_before")))
-        if hasattr(self, "lbl_pad_after"):
-            self.lbl_pad_after.setText(fix_qt_ampersand(get_translation(lang_name, "pad_after")))
-        if hasattr(self, "lbl_max_gap"):
-            self.lbl_max_gap.setText(fix_qt_ampersand(get_translation(lang_name, "max_gap")))
-        if hasattr(self, "lbl_min_scene"):
-            self.lbl_min_scene.setText(fix_qt_ampersand(get_translation(lang_name, "min_scene")))
-        if hasattr(self, "lbl_frame_skip"):
-            self.lbl_frame_skip.setText(fix_qt_ampersand(get_translation(lang_name, "frame_skip")))
-        if hasattr(self, "chk_vad"):
-            self.chk_vad.setText(fix_qt_ampersand(get_translation(lang_name, "vad_enable")))
-        if hasattr(self, "lbl_vad_buf"):
-            self.lbl_vad_buf.setText(fix_qt_ampersand(get_translation(lang_name, "vad_buffer")))
-        if hasattr(self, "chk_speaker"):
-            self.chk_speaker.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_enable")))
-        if hasattr(self, "lbl_speaker_thresh"):
-            self.lbl_speaker_thresh.setText(fix_qt_ampersand(get_translation(lang_name, "vad_speaker_threshold")))
-        if hasattr(self, "chk_skip_intro"):
-            self.chk_skip_intro.setText(fix_qt_ampersand(get_translation(lang_name, "skip_intro_enable")))
-        if hasattr(self, "chk_skip_outro"):
-            self.chk_skip_outro.setText(fix_qt_ampersand(get_translation(lang_name, "skip_outro_enable")))
-        if hasattr(self, "lbl_intro_mode"):
-            self.lbl_intro_mode.setText(fix_qt_ampersand(get_translation(lang_name, "intro_mode_title")))
-        if hasattr(self, "lbl_intro_dur"):
-            self.lbl_intro_dur.setText(fix_qt_ampersand(get_translation(lang_name, "intro_duration_lbl")))
+            self.btn_autotune.setText(get_translation(lang_name, "preset_auto"))
+        if hasattr(self, "btn_preset_tiktok"):
+            self.btn_preset_tiktok.setText(get_translation(lang_name, "preset_tiktok"))
+        if hasattr(self, "btn_preset_youtube"):
+            self.btn_preset_youtube.setText(get_translation(lang_name, "preset_youtube"))
+        if hasattr(self, "btn_preset_draft"):
+            self.btn_preset_draft.setText(get_translation(lang_name, "preset_draft"))
+
         if hasattr(self, "btn_select_video"):
-            self.btn_select_video.setText(fix_qt_ampersand(get_translation(lang_name, "sel_video")))
+            self.btn_select_video.setText(get_translation(lang_name, "sel_video"))
+        if hasattr(self, "btn_select_folder"):
+            self.btn_select_folder.setText(get_translation(lang_name, "sel_folder"))
+        if hasattr(self, "btn_clear_batch"):
+            self.btn_clear_batch.setText(get_translation(lang_name, "clear"))
         if hasattr(self, "btn_select_image"):
-            self.btn_select_image.setText(fix_qt_ampersand(get_translation(lang_name, "sel_ref")))
+            self.btn_select_image.setText(get_translation(lang_name, "sel_ref"))
         if hasattr(self, "btn_select_output"):
-            self.btn_select_output.setText(fix_qt_ampersand(get_translation(lang_name, "sel_output")))
+            self.btn_select_output.setText(get_translation(lang_name, "sel_output"))
+        if hasattr(self, "lbl_audio_track"):
+            self.lbl_audio_track.setText(f"🎧 {get_translation(lang_name, 'audio_track')}")
+
+        if hasattr(self, "lbl_pad_before"):
+            self.lbl_pad_before.setText(get_translation(lang_name, "pad_before"))
+        if hasattr(self, "lbl_pad_after"):
+            self.lbl_pad_after.setText(get_translation(lang_name, "pad_after"))
+        if hasattr(self, "lbl_max_gap"):
+            self.lbl_max_gap.setText(get_translation(lang_name, "max_gap"))
+        if hasattr(self, "lbl_min_scene"):
+            self.lbl_min_scene.setText(get_translation(lang_name, "min_scene"))
+        if hasattr(self, "lbl_frame_skip"):
+            self.lbl_frame_skip.setText(get_translation(lang_name, "frame_skip"))
+        if hasattr(self, "lbl_aspect_title"):
+            self.lbl_aspect_title.setText(get_translation(lang_name, "aspect_label"))
+        if hasattr(self, "lbl_quality_title"):
+            self.lbl_quality_title.setText(get_translation(lang_name, "export_quality"))
+
+        if hasattr(self, "chk_vad"):
+            self.chk_vad.setText(get_translation(lang_name, "vad_enable"))
+        if hasattr(self, "lbl_vad_buf"):
+            self.lbl_vad_buf.setText(get_translation(lang_name, "vad_buffer"))
+        if hasattr(self, "chk_speaker"):
+            self.chk_speaker.setText(get_translation(lang_name, "vad_speaker_enable"))
+        if hasattr(self, "lbl_speaker_thresh"):
+            self.lbl_speaker_thresh.setText(get_translation(lang_name, "vad_speaker_threshold"))
+        if hasattr(self, "chk_skip_intro"):
+            self.chk_skip_intro.setText(get_translation(lang_name, "skip_intro_enable"))
+        if hasattr(self, "chk_skip_outro"):
+            self.chk_skip_outro.setText(get_translation(lang_name, "skip_outro_enable"))
+        if hasattr(self, "lbl_intro_mode"):
+            self.lbl_intro_mode.setText(get_translation(lang_name, "intro_mode_title"))
+        if hasattr(self, "lbl_intro_dur"):
+            self.lbl_intro_dur.setText(get_translation(lang_name, "intro_duration_lbl"))
+
         if hasattr(self, "btn_generate"):
-            self.btn_generate.setText(fix_qt_ampersand(get_translation(lang_name, "generate")))
+            self.btn_generate.setText(get_translation(lang_name, "generate"))
         if hasattr(self, "lbl_review_title"):
-            self.lbl_review_title.setText(fix_qt_ampersand(get_translation(lang_name, "review_title")))
+            self.lbl_review_title.setText(get_translation(lang_name, "review_title"))
         if hasattr(self, "btn_render"):
-            self.btn_render.setText(fix_qt_ampersand(get_translation(lang_name, "btn_render")))
+            self.btn_render.setText(get_translation(lang_name, "btn_render"))
         if hasattr(self, "lbl_log_title"):
-            self.lbl_log_title.setText(fix_qt_ampersand(get_translation(lang_name, "logs_title")))
+            self.lbl_log_title.setText(get_translation(lang_name, "logs_title"))
+
         if hasattr(self, "lbl_gal_title"):
-            self.lbl_gal_title.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_title")))
+            self.lbl_gal_title.setText(get_translation(lang_name, "gallery_title"))
         if hasattr(self, "lbl_gal_sub"):
-            self.lbl_gal_sub.setText(fix_qt_ampersand(get_translation(lang_name, "gallery_desc")))
+            self.lbl_gal_sub.setText(get_translation(lang_name, "gallery_desc"))
         if hasattr(self, "btn_gal_scan"):
-            self.btn_gal_scan.setText(fix_qt_ampersand(get_translation(lang_name, "scan_chars")))
+            self.btn_gal_scan.setText(get_translation(lang_name, "scan_chars"))
         if hasattr(self, "btn_gal_cancel"):
-            self.btn_gal_cancel.setText(fix_qt_ampersand(get_translation(lang_name, "btn_cancel_gallery")))
+            self.btn_gal_cancel.setText(get_translation(lang_name, "btn_cancel_gallery"))
 
         if hasattr(self, "btn_play_orig"):
             self.btn_play_orig.setText(get_translation(lang_name, "play_orig"))
@@ -1220,20 +1558,6 @@ class FocusApp(QMainWindow):
                 get_translation(lang_name, "th_duration")
             ])
 
-        if hasattr(self, "combo_presets"):
-            self.combo_presets.blockSignals(True)
-            cur_preset_idx = self.combo_presets.currentIndex()
-            self.combo_presets.clear()
-            self.combo_presets.addItems([
-                get_translation(lang_name, "preset_auto"),
-                get_translation(lang_name, "preset_fast"),
-                get_translation(lang_name, "preset_cinematic"),
-                get_translation(lang_name, "preset_draft")
-            ])
-            if cur_preset_idx >= 0 and cur_preset_idx < self.combo_presets.count():
-                self.combo_presets.setCurrentIndex(cur_preset_idx)
-            self.combo_presets.blockSignals(False)
-
         if hasattr(self, "combo_aspect"):
             self.combo_aspect.blockSignals(True)
             cur_aspect_idx = self.combo_aspect.currentIndex()
@@ -1243,9 +1567,14 @@ class FocusApp(QMainWindow):
                 get_translation(lang_name, "aspect_9_16_vert"),
                 get_translation(lang_name, "aspect_9_16_blur")
             ])
-            if cur_aspect_idx >= 0 and cur_aspect_idx < self.combo_aspect.count():
+            if 0 <= cur_aspect_idx < self.combo_aspect.count():
                 self.combo_aspect.setCurrentIndex(cur_aspect_idx)
             self.combo_aspect.blockSignals(False)
+
+        if hasattr(self, "radio_batch_single"):
+            self.radio_batch_single.setText(f"📦 {get_translation(lang_name, 'master_scenepack')}")
+        if hasattr(self, "radio_batch_separate"):
+            self.radio_batch_separate.setText(f"📁 {get_translation(lang_name, 'separate_episodes')}")
 
         self.save_current_settings()
 
@@ -1279,20 +1608,58 @@ class FocusApp(QMainWindow):
         if index == 0:
             self.btn_tab_gen.setChecked(True)
             self.btn_tab_gal.setChecked(False)
+            if hasattr(self, 'btn_sidebar_gen'):
+                self.btn_sidebar_gen.setChecked(True)
+            if hasattr(self, 'btn_sidebar_gal'):
+                self.btn_sidebar_gal.setChecked(False)
         else:
             self.btn_tab_gen.setChecked(False)
             self.btn_tab_gal.setChecked(True)
+            if hasattr(self, 'btn_sidebar_gen'):
+                self.btn_sidebar_gen.setChecked(False)
+            if hasattr(self, 'btn_sidebar_gal'):
+                self.btn_sidebar_gal.setChecked(True)
 
     def open_tutorial(self):
-        QMessageBox.information(self, get_translation(self.current_lang, "tutorial_title"), get_translation(self.current_lang, "tutorial_body"))
+        try:
+            dlg = QDialog(self)
+            dlg.setWindowTitle(get_translation(self.current_lang, "tutorial_title"))
+            dlg.setModal(True)
+            dlg.resize(680, 520)
+            layout = QVBoxLayout(dlg)
+            layout.setContentsMargins(20, 20, 20, 20)
+            layout.setSpacing(14)
+
+            title_lbl = QLabel(get_translation(self.current_lang, "tutorial_title"))
+            title_lbl.setFont(get_system_font(16, QFont.Weight.Bold))
+            layout.addWidget(title_lbl)
+
+            txt = QTextEdit()
+            txt.setReadOnly(True)
+            txt.setFont(get_system_font(11))
+            txt.setPlainText(get_translation(self.current_lang, "tutorial_body"))
+            layout.addWidget(txt)
+
+            btn_close = QPushButton("OK")
+            btn_close.setObjectName("PrimaryActionBtn")
+            btn_close.setMinimumWidth(100)
+            btn_close.clicked.connect(dlg.accept)
+            layout.addWidget(btn_close, 0, Qt.AlignmentFlag.AlignCenter)
+
+            dlg.exec()
+        except Exception as e:
+            logging.error(f"Failed to open Tutorial dialog: {e}")
+            QMessageBox.information(self, get_translation(self.current_lang, "tutorial_title"), get_translation(self.current_lang, "tutorial_body"))
 
     def open_changelog(self):
         try:
             dlg = QDialog(self)
             dlg.setWindowTitle(f"{get_translation(self.current_lang, 'changelog_title')} ({APP_VERSION})")
+            dlg.setModal(True)
             dlg.resize(750, 550)
-            dlg.setStyleSheet("background-color: #14161B; color: #FFFFFF;")
             layout = QVBoxLayout(dlg)
+            layout.setContentsMargins(20, 20, 20, 20)
+            layout.setSpacing(14)
 
             title_lbl = QLabel(f"Focus - Changelog ({get_translation(self.current_lang, 'changelog_title')})")
             title_lbl.setFont(get_system_font(16, QFont.Weight.Bold))
@@ -1301,15 +1668,14 @@ class FocusApp(QMainWindow):
             txt = QTextEdit()
             txt.setReadOnly(True)
             txt.setFont(get_system_font(10))
-            txt.setStyleSheet("background-color: #1A1D24; color: #E0E0E0; border: 1px solid #2D3139; border-radius: 8px; padding: 10px;")
-
             msg = get_changelog_text(self.current_lang)
-            txt.setText(msg)
+            txt.setPlainText(msg)
             layout.addWidget(txt)
 
             close_label = get_translation(self.current_lang, "changelog_close")
             btn_close = QPushButton(close_label if close_label else "Close")
-            btn_close.setStyleSheet("background-color: #2D3139; color: #FFFFFF; padding: 8px 16px; border-radius: 6px; font-weight: bold;")
+            btn_close.setObjectName("PrimaryActionBtn")
+            btn_close.setMinimumWidth(100)
             btn_close.clicked.connect(dlg.accept)
             layout.addWidget(btn_close, 0, Qt.AlignmentFlag.AlignCenter)
 
@@ -1983,7 +2349,7 @@ class FocusApp(QMainWindow):
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
         self.progress_bar.setValue(1000)
         self.lbl_eta.setText(f"Rendering complete! Saved to: {Path(out_path).name}")
-        if self.chk_sound.isChecked():
+        if self.settings.get("play_sound", True):
             QApplication.beep()
         if not self.is_batch_running:
             QMessageBox.information(self, "Success", f"Scenepack successfully rendered and saved to:\n{out_path}")
