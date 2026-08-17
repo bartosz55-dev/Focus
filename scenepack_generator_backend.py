@@ -231,7 +231,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.31"
+APP_VERSION = "v1.3.32"
 
 
 class PlatformManager:
@@ -277,35 +277,52 @@ TRANSLATIONS = {
         "dashboard": "Dashboard",
         "generator_tab": "Generator",
         "gallery_tab": "Beta / Character Gallery",
-        "gallery_title": "Interactive Character Auto-Gallery (Beta)",
+        "gallery_title": "Interactive Character Auto-Gallery (AI Detection)",
         "gallery_desc": "Pre-scan video to discover unique character faces. Click any card to select as target reference face!",
         "scan_chars": "Scan Video for Characters",
-        "appearance": "Appearance Mode:",
-        "theme": "Color Theme:",
-        "language": "Language:",
-        "play_sound": "Play sound on complete",
+        "btn_cancel_gallery": "Cancel Scan",
         "how_to_use": "How to Use",
         "changelog": "Changelog",
+        "settings_btn": "Settings",
+        "settings_title": "Focus Preferences",
+        "settings_appearance": "Appearance & Theme",
+        "settings_accent": "Accent Color",
+        "settings_lang": "Interface Language",
+        "settings_sound": "Play sound notification when rendering finishes",
+        "settings_default_mode": "Default Detection Mode:",
+        "settings_done": "Done",
+        "mode_dark": "Dark",
+        "mode_light": "Light",
+        "mode_system": "System (Auto)",
         "char_label": "Character",
         "detections_label": "detection(s)",
         "detections_badge": "{count} scene(s)",
-        "preset_label": "Preset Profiles:",
-        "preset_auto": "✨ Auto-Tune (Recommended)",
-        "preset_fast": "⚡ Fast / Short Edits (TikTok/Reels)",
-        "preset_cinematic": "🎬 Cinematic / Long Scenes",
-        "preset_draft": "🚀 Ultra-Fast Scan (Draft)",
+        "preset_label": "Quick Presets:",
+        "preset_auto": "✨ Auto-Tune",
+        "preset_tiktok": "📱 TikTok / Shorts (9:16)",
+        "preset_youtube": "🎬 YouTube (16:9)",
+        "preset_draft": "🚀 Fast Draft Scan",
         "btn_auto_tune": "✨ Auto-Tune",
-        "sel_video": "Select Input Video",
-        "sel_ref": "Select Reference Face",
-        "sel_output": "Select Save Location",
-        "pad_before": "Padding Before (s):",
-        "pad_after": "Padding After (s):",
-        "max_gap": "Max Gap Tolerance (s):",
+        "sel_video": "Select Input Video(s)...",
+        "sel_folder": "Add Folder...",
+        "clear": "Clear",
+        "sel_ref": "Select Reference Face Image...",
+        "sel_output": "Select Save Location & Output File...",
+        "output_mode": "Output Mode:",
+        "master_scenepack": "Master Scenepack (Single Video)",
+        "separate_episodes": "Separate Episode Files",
+        "audio_track": "Audio Track:",
+        "sec_tuning": "Scene & Detection Tuning",
+        "pad_before": "Padding Before Scene (s):",
+        "pad_after": "Padding After Scene (s):",
+        "max_gap": "Max Gap / Blink Tolerance (s):",
         "min_scene": "Min Scene Length (s):",
         "frame_skip": "Frame Skip Interval:",
-        "vad_enable": "Smart Sentence Protection (VAD & Lip-Sync):",
+        "aspect_label": "Aspect Ratio & Framing:",
+        "export_quality": "Export Quality:",
+        "vad_enable": "Smart Dialogue Protection (VAD & Lip-Sync)",
         "vad_buffer": "Silence Snapping Buffer (ms):",
-        "vad_speaker_enable": "Target Speaker Voice Matching:",
+        "vad_speaker_enable": "Target Speaker Voice Matching (Filter Background/Narrator)",
         "vad_speaker_threshold": "Voice Similarity Threshold:",
         "skip_intro_enable": "Skip Intro / Opening (OP)",
         "skip_outro_enable": "Skip Outro / Ending (ED)",
@@ -314,96 +331,19 @@ TRANSLATIONS = {
         "intro_mode_90s": "First 90s (Standard OP)",
         "intro_mode_custom": "Custom Duration",
         "intro_duration_lbl": "Duration (s):",
-        "generate": "Generate",
-        "review": "Review Results:",
+        "generate": "Step 1: Start Scan & Analyze Video",
+        "review_title": "Step 2: Review & Select Detected Scenes",
+        "btn_render": "Step 2: Render & Export Selected Clips",
+        "logs_title": "Real-Time Execution Logs & Diagnostics:",
         "play_orig": "Play Original Video",
         "play_result": "Play Result",
         "no_video": "No video selected",
         "no_image": "No image selected",
         "no_output": "No save location selected",
-        "err_no_human_face": "No human face found in reference image '{name}'. If you selected a 2D Anime character (e.g. Marin Kitagawa), please switch detection mode to 'Anime'!",
+        "err_no_human_face": "No human face found in reference image '{name}'. If you selected a 2D Anime character, please switch detection mode to 'Anime'!",
         "ready": "Ready to generate",
-        "real_faces": "Real Faces",
-        "anime": "Anime",
-        "light": "Light",
-        "dark": "Dark",
-        "system": "System",
-        "colors": ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "pink"],
-        "tt_pad_before": "Adds extra seconds before the detected face to prevent cutting off dialogue.",
-        "tt_pad_after": "Adds extra seconds after a detected face, preventing dialogue cut-offs.",
-        "tt_max_gap": "Bridges short gaps (like head turns or blinks), preventing premature scene cuts.",
-        "tt_min_scene": "Ensures scenes are at least this long, filtering out micro-cuts.",
-        "tt_frame_skip": "Higher = Faster processing, but might miss very brief shots.",
-        "tt_vad_enable": "Uses Voice Activity Detection to extend clips to the nearest silence/pause, preventing mid-word or mid-sentence cut-offs.",
-        "tt_vad_buffer": "The length of silence required to be considered a sentence/word break.",
-        "tt_vad_speaker_enable": "Extracts the target character's voice from verified face frames and filters out background noise/narrators.",
-        "tt_vad_speaker_threshold": "Cosine similarity threshold to verify speaker identity.",
-        "tt_real_faces": "Uses deep learning facial landmarks. Best for real people or 3D characters.",
-        "tt_anime": "Uses 2D cascade classifiers. Best for drawn/illustrated animation.",
-        "tutorial_title": "How to Use Focus",
-        "tutorial_close": "Got it!",
-        "tutorial_body": (
-            "• Supported Formats:\n"
-            "  • Video: MP4, MKV, MOV, AVI, WEBM, FLV, M4V, TS, WMV\n"
-            "  • Images: PNG, JPG, JPEG, WEBP, BMP, TIFF\n\n"
-            "• Method 1 (Auto-Gallery Beta):\n"
-            "  1. Open the 'Beta / Character Gallery' tab.\n"
-            "  2. Click 'Scan Video for Characters' to auto-discover unique faces.\n"
-            "  3. Click any character card to set it as your target reference face!\n\n"
-            "• Method 2 (Manual Selection):\n"
-            "  1. Select your input video file.\n"
-            "  2. Choose a clear reference face image.\n"
-            "  3. Choose the output directory for your scenepack.\n\n"
-            "• Render Output Formats (16:9 vs 9:16):\n"
-            "  • 16:9 Original: Extracts the clip exactly as it appears in the source video.\n"
-            "  • 9:16 Vertical (Auto-Track): Auto-crops a vertical segment tracking the character's face.\n"
-            "  • 9:16 Blurred Background: Places the 16:9 video over a blurred vertical background.\n\n"
-            "• Settings & Options:\n"
-            "  • Audio Track: Select different audio streams (e.g. Dubbed or Original language).\n"
-            "  • Export Quality: Choose High, Medium, or Low to optimize rendering quality and size.\n"
-            "  • Real Faces vs Anime: Select 'Real Faces' for live-action or 'Anime' for 2D animation.\n"
-            "  • Padding & Gap Tolerance: Add padding before/after clips and merge short blinks.\n"
-            "  • Min. Scene Length: Prevents micro-cuts by enforcing a minimum duration (default 1.0s).\n"
-            "  • Batch Processing: Add multiple files via the Batch Mode button.\n\n"
-            "• Generation: Click 'Generate Scenepack' and enjoy smooth, stutter-free clips!"
-        ),
-        "changelog_title": "Project History & Changelog",
-        "changelog_close": "Close",
-        "hero_title": "Focus — AI Scenepack Generator",
-        "hero_subtitle": "Automated face tracking, VAD voice verification, and precision video scene cutting.",
-        "sec_workflow": "WORKFLOW",
-        "sec_system": "SYSTEM",
-        "preset_label": "⚡ Preset Profiles:",
-        "aspect_label": "📐 Aspect Ratio & Framing:",
-        "pad_before": "⏳ Padding Before Scene (s):",
-        "pad_after": "⏳ Padding After Scene (s):",
-        "max_gap": "🔄 Max Gap / Blink Tolerance (s):",
-        "min_scene": "⏱️ Min Scene Length (s):",
-        "frame_skip": "⏭️ Frame Skip Interval:",
-        "vad_enable": "🛡️ Smart Dialogue Protection (VAD & Lip-Sync)",
-        "vad_buffer": "🎚️ Silence Snapping Buffer (ms):",
-        "vad_speaker_enable": "🎙️ Target Speaker Voice Matching (Filter Background/Narrator)",
-        "vad_speaker_threshold": "🎯 Voice Similarity Threshold:",
-        "sel_video": "📂 Select Input Video...",
-        "sel_ref": "🖼️ Select Reference Face Image...",
-        "sel_output": "💾 Select Save Location & Output File...",
-        "generate": "🚀 Step 1: Start Scan & Analyze Video",
-        "review_title": "🎬 Step 2: Review & Select Detected Scenes",
-        "btn_render": "✂️ Step 2: Render & Export Selected Clips",
-        "logs_title": "📋 Real-Time Execution Logs & Diagnostics:",
-        "gallery_title": "✨ Interactive Character Auto-Gallery (AI Detection)",
-        "gallery_desc": "Pre-scan video to discover unique character faces. Click any card to select as target reference face!",
-        "scan_chars": "🔍 Scan Video for Characters",
-        "btn_cancel_gallery": "⏹️ Cancel Scan",
-        "how_to_use": "📖 How to Use Focus",
-        "changelog": "📜 Project Changelog",
-        "theme": "🎨 Color Theme:",
-        "language": "🌐 Language / Język:",
-        "play_sound": "🔊 Play sound when finished",
-        "real_faces": "👤 Real Faces (Live-Action / 3D)",
-        "anime": "🎨 2D Animation / Anime",
-        "play_orig": "▶️ Play Original Video",
-        "play_result": "▶️ Play Last Result",
+        "real_faces": "Real Faces (Live-Action / 3D)",
+        "anime": "2D Animation / Anime",
         "aspect_16_9": "16:9 Original (Widescreen)",
         "aspect_9_16_vert": "9:16 Vertical (Auto-Track Subject)",
         "aspect_9_16_blur": "9:16 Vertical (Blurred Background)",
@@ -411,402 +351,221 @@ TRANSLATIONS = {
         "th_thumb": "Thumbnail",
         "th_start": "Start Time",
         "th_end": "End Time",
-        "th_duration": "Duration (s)"
+        "th_duration": "Duration (s)",
+        "tutorial_title": "How to Use Focus",
+        "tutorial_close": "Got it!",
+        "tutorial_body": (
+            "• Supported Formats:\n"
+            "  • Video: MP4, MKV, MOV, AVI, WEBM, FLV, M4V, TS, WMV\n"
+            "  • Images: PNG, JPG, JPEG, WEBP, BMP, TIFF\n\n"
+            "• Workflow 1 (Auto-Gallery Beta):\n"
+            "  1. Open the 'Beta / Character Gallery' tab.\n"
+            "  2. Click 'Scan Video for Characters' to auto-discover unique faces.\n"
+            "  3. Click any character card to set it as your target reference face!\n\n"
+            "• Workflow 2 (Manual Selection):\n"
+            "  1. Select your input video file(s) or folder.\n"
+            "  2. Choose a clear reference face image.\n"
+            "  3. Choose the output save location.\n"
+            "  4. Click 'Step 1: Start Scan & Analyze Video'.\n"
+            "  5. Review detected clips in Step 2 and click 'Render & Export'!\n\n"
+            "• Framing Formats:\n"
+            "  • 16:9 Original: Preserves original widescreen source.\n"
+            "  • 9:16 Vertical (Auto-Track): Auto-centers and tracks face for TikTok/Shorts.\n"
+            "  • 9:16 Blurred Background: Overlays 16:9 video onto blurred vertical canvas."
+        ),
+        "changelog_title": "Project History & Changelog",
+        "changelog_close": "Close"
     },
     "Polski": {
         "dashboard": "Panel Główny",
-        "generator_tab": "Generator",
+        "generator_tab": "Generator Scen",
         "gallery_tab": "Galeria Postaci (Beta)",
-        "gallery_title": "Interaktywna Galeria Postaci (Beta)",
-        "gallery_desc": "Przeskanuj wideo, aby automatycznie wykryć unikalne postacie. Kliknij kartę, aby wybrać cel!",
+        "gallery_title": "Interaktywna Galeria Postaci (Wykrywanie AI)",
+        "gallery_desc": "Przeskanuj plik wideo, aby automatycznie wykryć unikalne twarze postaci. Kliknij dowolną kartę, aby wybrać cel!",
         "scan_chars": "Skanuj Wideo w Poszukiwaniu Postaci",
-        "appearance": "Tryb Wyglądu:",
-        "theme": "Motyw Kolorystyczny:",
-        "language": "Język / Language:",
-        "play_sound": "Odtwórz dźwięk po zakończeniu",
-        "how_to_use": "Jak Używać",
-        "changelog": "Lista Zmian",
+        "btn_cancel_gallery": "Anuluj Skanowanie",
+        "how_to_use": "Instrukcja Obsługi",
+        "changelog": "Historia Zmian",
+        "settings_btn": "Ustawienia",
+        "settings_title": "Ustawienia Focus",
+        "settings_appearance": "Wygląd i Motyw",
+        "settings_accent": "Kolor Wiodący",
+        "settings_lang": "Język Interfejsu",
+        "settings_sound": "Odtwórz dźwięk po zakończeniu renderowania",
+        "settings_default_mode": "Domyślny Tryb Detekcji:",
+        "settings_done": "Gotowe",
+        "mode_dark": "Ciemny (Dark)",
+        "mode_light": "Jasny (Light)",
+        "mode_system": "Systemowy (Auto)",
         "char_label": "Postać",
         "detections_label": "wykryć",
         "detections_badge": "{count} ujęć",
-        "preset_label": "Szybki Profil:",
-        "preset_auto": "✨ Auto-Tune (Zalecane)",
-        "preset_fast": "⚡ Szybkie Montaże (TikTok/Reels)",
-        "preset_cinematic": "🎬 Kinowe / Długie Sceny",
-        "preset_draft": "🚀 Bardzo Szybki Skan (Szkic)",
+        "preset_label": "Szybkie Profile:",
+        "preset_auto": "✨ Auto-Tune",
+        "preset_tiktok": "📱 TikTok / Rolki (9:16)",
+        "preset_youtube": "🎬 YouTube (16:9)",
+        "preset_draft": "🚀 Szybki Szkic (Draft)",
         "btn_auto_tune": "✨ Auto-Tune",
-        "sel_video": "Wybierz Wideo Wejściowe",
-        "sel_ref": "Wybierz Twarz Wzorcową",
-        "sel_output": "Wybierz Miejsce Zapisu",
-        "pad_before": "Margines Przed (s):",
-        "pad_after": "Margines Po (s):",
-        "max_gap": "Tolerancja Przerwy (s):",
+        "sel_video": "Wybierz Plik(i) Wideo...",
+        "sel_folder": "Dodaj Folder...",
+        "clear": "Wyczyść",
+        "sel_ref": "Wybierz Twarz Referencyjną...",
+        "sel_output": "Wybierz Miejsce Zapisu...",
+        "output_mode": "Tryb Wyjściowy:",
+        "master_scenepack": "Pojedynczy Master Scenepack",
+        "separate_episodes": "Osobne Pliki dla Odcinków",
+        "audio_track": "Ścieżka Dźwiękowa:",
+        "sec_tuning": "Dostrajanie Scen i Detekcji",
+        "pad_before": "Margines Przed Sceną (s):",
+        "pad_after": "Margines Po Scenie (s):",
+        "max_gap": "Tolerancja Przerw / Mrugnięć (s):",
         "min_scene": "Min. Długość Sceny (s):",
-        "frame_skip": "Interwał Klatek:",
-        "vad_enable": "Inteligentna Ochrona Zdań (VAD & Lip-Sync):",
-        "vad_buffer": "Bufor Wyrównywania do Ciszy (ms):",
-        "vad_speaker_enable": "Dopasowanie Głosu Celu:",
+        "frame_skip": "Krok Analizy Klatek:",
+        "aspect_label": "Format i Kadrowanie:",
+        "export_quality": "Jakość Renderowania:",
+        "vad_enable": "Inteligentna Ochrona Zdań (VAD & Lip-Sync)",
+        "vad_buffer": "Bufor Ciszy (ms):",
+        "vad_speaker_enable": "Dopasowanie Głosu Postaci (Filtr Tła)",
         "vad_speaker_threshold": "Próg Podobieństwa Głosu:",
-        "generate": "Generuj Scenepack",
-        "review": "Wynik:",
+        "skip_intro_enable": "Pomiń Intro / Czołówkę (OP)",
+        "skip_outro_enable": "Pomiń Outro / Napisy Końcowe (ED)",
+        "intro_mode_title": "Wykrywanie:",
+        "intro_mode_auto": "Automatycznie z Rozdziałów (MKV/MP4)",
+        "intro_mode_90s": "Pierwsze 90s (Standard Anime OP)",
+        "intro_mode_custom": "Własny Czas Trwania",
+        "intro_duration_lbl": "Czas Trwania (s):",
+        "generate": "Krok 1: Rozpocznij Skanowanie i Analizę",
+        "review_title": "Krok 2: Przegląd i Wybór Wykrytych Scen",
+        "btn_render": "Krok 2: Wyrenderuj Wybrane Klipy",
+        "logs_title": "Dziennik Zdarzeń & Diagnostyka:",
         "play_orig": "Odtwórz Oryginał",
         "play_result": "Odtwórz Wynik",
         "no_video": "Nie wybrano wideo",
-        "no_image": "Nie wybrano zdjęcia",
+        "no_image": "Nie wybrano zdjęcia referencyjnego",
         "no_output": "Nie wybrano miejsca zapisu",
         "err_no_human_face": "Nie znaleziono ludzkiej twarzy w zdjęciu referencyjnym '{name}'. Jeśli wybrałeś postać z Anime (np. Marin Kitagawa), przełącz tryb detekcji na 'Anime'!",
         "ready": "Gotowy do generowania",
-        "real_faces": "Prawdziwe Twarze",
-        "anime": "Anime",
-        "light": "Jasny",
-        "dark": "Ciemny",
-        "system": "Systemowy",
-        "colors": ["czerwony", "pomarańczowy", "żółty", "zielony", "niebieski", "indigo", "fioletowy", "różowy"],
-        "tt_pad_before": "Dodaje dodatkowe sekundy przed wykrytą twarzą, zapobiegając obcinaniu dialogów.",
-        "tt_pad_after": "Dodaje dodatkowe sekundy po wykrytej twarzy, zapobiegając obcinaniu dialogów.",
-        "tt_max_gap": "Łączy krótkie przerwy (np. odwrócenie głowy lub mrugnięcie), zapobiegając przedwczesnemu obcinaniu scen.",
-        "tt_min_scene": "Gwarantuje, że sceny mają co najmniej podaną długość, eliminując miganie i micro-cięcia.",
-        "tt_frame_skip": "Wyższa wartość = Szybsze przetwarzanie, ale może pominąć bardzo krótkie ujęcia.",
-        "tt_vad_enable": "Używa algorytmu Voice Activity Detection, by przedłużyć ujęcie do najbliższej ciszy/pauzy, aby nie ucinać słów w połowie zdania.",
-        "tt_vad_buffer": "Długość ciszy wymagana do uznania za koniec zdania/słowa.",
-        "tt_vad_speaker_enable": "Wyodrębnia głos celu ze sprawdzonych klatek twarzy i filtruje tło/narratorów.",
-        "tt_vad_speaker_threshold": "Próg podobieństwa cosinusowego do weryfikacji tożsamości mówcy.",
-        "tt_real_faces": "Używa rozpoznawania twarzy głębokiego uczenia. Najlepsze dla ludzi i postaci 3D.",
-        "tt_anime": "Używa klasyfikatorów 2D. Najlepsze dla rysowanej animacji 2D.",
-        "tutorial_title": "Jak Używać Focus",
+        "real_faces": "Prawdziwe Twarze (Filmy / Seriale)",
+        "anime": "Anime / Animacja 2D",
+        "aspect_16_9": "16:9 Oryginalny (Szeroki Ekran)",
+        "aspect_9_16_vert": "9:16 Pionowy (Śledzenie Postaci)",
+        "aspect_9_16_blur": "9:16 Pionowy (Rozmyte Tło)",
+        "th_include": "Dołącz",
+        "th_thumb": "Miniatura",
+        "th_start": "Początek",
+        "th_end": "Koniec",
+        "th_duration": "Długość (s)",
+        "tutorial_title": "Instrukcja Obsługi Focus",
         "tutorial_close": "Zrozumiałem!",
         "tutorial_body": (
             "• Obsługiwane Formaty:\n"
             "  • Wideo: MP4, MKV, MOV, AVI, WEBM, FLV, M4V, TS, WMV\n"
-            "  • Obrazy/Zdjęcia: PNG, JPG, JPEG, WEBP, BMP, TIFF\n\n"
-            "• Sposób 1 (Auto-Galeria Beta):\n"
+            "  • Obrazy: PNG, JPG, JPEG, WEBP, BMP, TIFF\n\n"
+            "• Metoda 1 (Automatyczna Galeria Beta):\n"
             "  1. Przejdź do zakładki 'Galeria Postaci (Beta)'.\n"
-            "  2. Kliknij 'Skanuj Wideo w Poszukiwaniu Postaci', aby automatycznie wykryć twarze w tle.\n"
-            "  3. Kliknij dowolną kartę postaci, aby ustawić jej twarz jako cel generowania!\n\n"
-            "• Sposób 2 (Ręczny Wybór):\n"
-            "  1. Wybierz plik wideo wejściowego.\n"
-            "  2. Wybierz wyraźne zdjęcie twarzy wzorcowej.\n"
-            "  3. Wybierz miejsce zapisu pliku scenepack.\n\n"
-            "• Format Wyjściowy (16:9 vs 9:16):\n"
-            "  • 16:9 Original: Zapisuje klip w oryginalnych proporcjach obrazu.\n"
-            "  • 9:16 Vertical: Automatycznie śledzi twarz, powiększa obraz i ucina (np. pod Shorts/TikTok).\n"
-            "  • 9:16 Rozmyte Tło: Wideo nałożone na rozmyte tło.\n\n"
-            "• Opcje i Ustawienia:\n"
-            "  • Ścieżka Audio: Pozwala wybrać język dubbingu, jeśli plik ma wiele ścieżek.\n"
-            "  • Jakość Eksportu: Pozwala dopasować jakość pliku i rozmiar.\n"
-            "  • Batch Mode (Wsadowy): Dodaj wiele plików na raz przyciskiem Trybu Wsadowego."
+            "  2. Kliknij 'Skanuj Wideo w Poszukiwaniu Postaci', aby automatycznie wykryć twarze.\n"
+            "  3. Kliknij dowolną postać, aby ustawić ją jako cel generowania!\n\n"
+            "• Metoda 2 (Ręczny Wybór):\n"
+            "  1. Wybierz plik(i) wideo wejściowego lub cały folder.\n"
+            "  2. Wybierz wyraźne zdjęcie referencyjne twarzy postaci.\n"
+            "  3. Wskaż miejsce zapisu scenepacka.\n"
+            "  4. Kliknij 'Krok 1: Rozpocznij Skanowanie i Analizę'.\n"
+            "  5. Przejrzyj wykryte sceny w tabeli i kliknij 'Krok 2: Wyrenderuj Wybrane Klipy'!\n\n"
+            "• Formaty Obrazu:\n"
+            "  • 16:9 Oryginalny: Wyciąga sceny w pełnym, oryginalnym kadrze wideo.\n"
+            "  • 9:16 Pionowy (Śledzenie): Dynamicznie podąża za twarzą postaci (TikTok/Reels/Shorts).\n"
+            "  • 9:16 Rozmyte Tło: Wyśrodkowane wideo 16:9 nałożone na estetycznie rozmyte tło."
         ),
         "changelog_title": "Historia Projektu i Zmiany",
-        "changelog_close": "Zamknij",
-        "appearance": "Wygląd Aplikacji:",
-        "theme": "Motyw Kolorystyczny:",
-        "language": "Język Interfejsu:",
-        "sec_workflow": "Ustawienia Procesu",
-        "sec_system": "Systemowe",
-        "generator_tab": "Generator Scen",
-        "gallery_tab": "Galeria Postaci (Beta)",
-        "hero_title": "Ekstraktor Klipów z Twarzą",
-        "hero_subtitle": "Wykrywa twarze używając AI i łączy sceny z wybraną postacią wideo.",
-        "aspect_label": "Proporcje i Kadrowanie:",
-        "review_title": "Podgląd i Weryfikacja Wykrytych Klipów:",
-        "btn_render": "Eksportuj Scenepack (Renderuj)",
-        "logs_title": "Konsola Diagnostyczna (Logi)",
-        "gallery_title": "Odkryj Postacie (Skan Beta)",
-        "gallery_desc": "Automatycznie analizuje cały film, by odnaleźć najczęstsze, unikalne twarze (Działa w tle).",
-        "scan_chars": "Skanuj Wideo w Poszukiwaniu Postaci",
-        "btn_cancel_gallery": "Anuluj Skanowanie",
-        "th_include": "Eksportuj?",
-        "th_thumb": "Podgląd",
-        "th_start": "Początek",
-        "th_end": "Koniec",
-        "th_duration": "Długość",
-        "aspect_16_9": "16:9 (Oryginalne proporcje)",
-        "aspect_9_16": "9:16 (Pionowy - Kadrowanie i Śledzenie Twarzy)",
-        "aspect_9_16_blur": "9:16 (Pionowy - Rozmyte Tło)",
-        "changelog_title": "Historia Projektu i Zmiany",
-        "changelog_close": "Zamknij",
-        "hero_title": "Focus — Inteligentny Generator Scenepacków AI",
-        "hero_subtitle": "Automatyczne śledzenie twarzy, analiza głosu VAD i precyzyjne wycinanie scen w wideo.",
-        "sec_workflow": "NAWIGACJA",
-        "sec_system": "KONFIGURACJA SYSTEMU",
-        "preset_label": "⚡ Gotowe profile konfiguracji (Preset):",
-        "aspect_label": "📐 Proporcje wideo i kadrowanie:",
-        "pad_before": "⏳ Margines czasowy przed sceną (s):",
-        "pad_after": "⏳ Margines czasowy po scenie (s):",
-        "max_gap": "🔄 Maks. tolerancja przerwy / mrugnięć (s):",
-        "min_scene": "⏱️ Minimalna długość ujęcia (s):",
-        "frame_skip": "⏭️ Krok skanowania klatek (interwał):",
-        "vad_enable": "🛡️ Inteligentna ochrona dialogów (VAD & Lip-Sync)",
-        "vad_buffer": "🎚️ Bufor pauzy i ciszy (ms):",
-        "vad_speaker_enable": "🎙️ Weryfikacja głosu postaci (filtr tła i narratorów)",
-        "vad_speaker_threshold": "🎯 Wymagane podobieństwo głosu:",
-        "skip_intro_enable": "🛡️ Pomiń Intro / Opening (OP)",
-        "skip_outro_enable": "🛑 Pomiń Outro / Ending (ED)",
-        "intro_mode_title": "Wykrywanie:",
-        "intro_mode_auto": "Automatycznie z rozdziałów (MKV/MP4)",
-        "intro_mode_90s": "Pierwsze 90s (Standard OP)",
-        "intro_mode_custom": "Własny czas trwania",
-        "intro_duration_lbl": "Długość (s):",
-        "sel_video": "📂 Wybierz wideo wejściowe...",
-        "sel_ref": "🖼️ Wybierz twarz wzorcową (zdjęcie)...",
-        "sel_output": "💾 Wybierz folder i nazwę pliku wynikowego...",
-        "generate": "🚀 Krok 1: Rozpocznij analizę i skanowanie wideo",
-        "review_title": "🎬 Krok 2: Przegląd wykrytych ujęć i wybór scen",
-        "btn_render": "✂️ Krok 2: Wyrenderuj i zapisz wybrane klipy",
-        "logs_title": "📋 Dziennik operacji i diagnostyka w czasie rzeczywistym:",
-        "gallery_title": "✨ Interaktywna Galeria Postaci (Wykrywanie AI)",
-        "gallery_desc": "Przeskanuj plik wideo, aby automatycznie wykryć unikalne twarze postaci. Kliknij dowolną kartę, aby wybrać cel!",
-        "scan_chars": "🔍 Skanuj wideo w poszukiwaniu postaci",
-        "btn_cancel_gallery": "⏹️ Anuluj skanowanie",
-        "how_to_use": "📖 Przewodnik i instrukcja",
-        "changelog": "📜 Historia wersji i zmiany",
-        "theme": "🎨 Motyw kolorystyczny:",
-        "language": "🌐 Język interfejsu / Language:",
-        "play_sound": "🔊 Dźwięk powiadomienia po zakończeniu",
-        "real_faces": "👤 Prawdziwe twarze (Ludzie / 3D)",
-        "anime": "🎨 Animacja 2D / Anime",
-        "play_orig": "▶️ Odtwórz oryginalne wideo",
-        "play_result": "▶️ Odtwórz ostatni wynik",
-        "aspect_16_9": "16:9 Oryginalny (Szerokoekranowy)",
-        "aspect_9_16_vert": "9:16 Pionowy (Auto-Kadrowanie)",
-        "aspect_9_16_blur": "9:16 Pionowy (Rozmyte Tło)",
-        "th_include": "Wybierz",
-        "th_thumb": "Podgląd",
-        "th_start": "Czas startu",
-        "th_end": "Czas końca",
-        "th_duration": "Długość (s)"
+        "changelog_close": "Zamknij"
     },
     "Deutsch": {
         "dashboard": "Dashboard",
-        "appearance": "Erscheinungsbild:",
-        "theme": "Farbthema:",
-        "language": "Sprache:",
-        "play_sound": "Ton bei Fertigstellung abspielen",
+        "generator_tab": "Generator",
+        "gallery_tab": "Charakter-Galerie (Beta)",
         "how_to_use": "Anleitung",
         "changelog": "Änderungsprotokoll",
-        "sel_video": "Eingabevideo auswählen",
-        "sel_ref": "Referenzgesicht auswählen",
-        "sel_output": "Speicherort auswählen",
-        "pad_before": "Puffer vorher (s):",
-        "pad_after": "Puffer nachher (s):",
-        "max_gap": "Max. Lückenpuffer (s):",
-        "frame_skip": "Frame-Intervall:",
-        "generate": "Generieren",
-        "review": "Ergebnisse überprüfen:",
-        "play_orig": "Original abspielen",
-        "play_result": "Ergebnis abspielen",
-        "no_video": "Kein Video ausgewählt",
-        "no_image": "Kein Bild ausgewählt",
-        "no_output": "Kein Speicherort ausgewählt",
-        "ready": "Bereit zum Generieren",
-        "real_faces": "Echte Gesichter",
-        "anime": "Anime",
-        "light": "Hell",
-        "dark": "Dunkel",
-        "system": "System",
-        "colors": ["rot", "orange", "gelb", "grün", "blau", "indigo", "violett", "rosa"],
-        "tt_pad_before": "Fügt zusätzliche Sekunden vor dem erkannten Gesicht hinzu.",
-        "tt_pad_after": "Fügt zusätzliche Sekunden nach dem erkannten Gesicht hinzu.",
-        "tt_max_gap": "Überbrückt kurze Lücken (z.B. Kopfverdrehen oder Blinzeln), um vorzeitige Schnitte zu verhindern.",
-        "tt_frame_skip": "Höher = Schneller, kann aber sehr kurze Auftritte verpassen.",
-        "tt_real_faces": "Nutzt Deep Learning für echte Menschen oder 3D-Charaktere.",
-        "tt_anime": "Nutzt 2D-Kaskadenklassifikatoren für 2D-Animationen.",
-        "tutorial_title": "Focus Anleitung",
-        "tutorial_close": "Verstanden!",
-        "tutorial_body": (
-            "• Schritt 1: Wählen Sie Ihre Videodatei aus.\n\n"
-            "• Schritt 2: Wählen Sie ein deutliches Gesichtsbild des Charakters aus.\n\n"
-            "• Schritt 3: Wählen Sie 'Echte Gesichter' oder 'Anime'.\n\n"
-            "• Schritt 4: Passen Sie Puffer und Frame-Überspringen an.\n\n"
-            "• Schritt 5: Klicken Sie auf Generieren!"
-        ),
-        "changelog_title": "Projekthistorie & Änderungsprotokoll",
-        "changelog_close": "Schließen"
-    },
-    "Русский": {
-        "dashboard": "Панель управления",
-        "appearance": "Режим отображения:",
-        "theme": "Цветовая тема:",
-        "language": "Язык:",
-        "play_sound": "Звук по завершении",
-        "how_to_use": "Как использовать",
-        "changelog": "История изменений",
-        "sel_video": "Выбрать видео",
-        "sel_ref": "Выбрать лицо",
-        "sel_output": "Сохранить в...",
-        "pad_before": "Отступ до (сек):",
-        "pad_after": "Отступ после (сек):",
-        "max_gap": "Макс. допуск паузы (сек):",
-        "frame_skip": "Пропуск кадров:",
-        "generate": "Создать сценпак",
-        "review": "Результаты:",
-        "play_orig": "Оригинал",
-        "play_result": "Результат",
-        "no_video": "Видео не выбрано",
-        "no_image": "Изображение не выбрано",
-        "no_output": "Место сохранения не выбрано",
-        "ready": "Готово к работе",
-        "real_faces": "Реальные лица",
-        "anime": "Аниме",
-        "light": "Светлая",
-        "dark": "Тёмная",
-        "system": "Системная",
-        "colors": ["красный", "оранжевый", "жёлтый", "зелёный", "синий", "индиго", "фиолетовый", "розовый"],
-        "tt_pad_before": "Добавляет секунды перед обнаруженным лицом, чтобы не обрезать диалог.",
-        "tt_pad_after": "Добавляет секунды после обнаруженного лица.",
-        "tt_max_gap": "Объединяет короткие паузы (поворот головы, моргание), предотвращая преждевременную обрезку.",
-        "tt_frame_skip": "Выше = Быстрее, но может пропустить короткие кадры.",
-        "tt_real_faces": "Использует глубокое обучение для реальных людей и 3D персонажей.",
-        "tt_anime": "Использует 2D классификаторы для аниме.",
-        "tutorial_title": "Инструкция Focus",
-        "tutorial_close": "Понятно!",
-        "tutorial_body": (
-            "• Шаг 1: Выберите исходный видеофайл.\n\n"
-            "• Шаг 2: Выберите четкое фото персонажа.\n\n"
-            "• Шаг 3: Выберите 'Реальные лица' или 'Аниме'.\n\n"
-            "• Шаг 4: Настройте отступы времени и пропуск кадров.\n\n"
-            "• Шаг 5: Нажмите Создать и дождитесь результата!"
-        ),
-        "changelog_title": "История проекта и изменений",
-        "changelog_close": "Закрыть"
-    },
-    "Українська": {
-        "dashboard": "Панель керування",
-        "appearance": "Режим вигляду:",
-        "theme": "Колірна тема:",
-        "language": "Мова:",
-        "play_sound": "Звук після завершення",
-        "how_to_use": "Як використовувати",
-        "changelog": "Журнал змін",
-        "sel_video": "Обрати відео",
-        "sel_ref": "Обрати обличчя",
-        "sel_output": "Зберегти в...",
-        "pad_before": "Відступ до (сек):",
-        "pad_after": "Відступ після (сек):",
-        "max_gap": "Макс. допуск паузи (сек):",
-        "frame_skip": "Пропуск кадрів:",
-        "generate": "Створити сценпак",
-        "review": "Результати:",
-        "play_orig": "Оригінал",
-        "play_result": "Результат",
-        "no_video": "Відео не обрано",
-        "no_image": "Зображення не обрано",
-        "no_output": "Місце збереження не обрано",
-        "ready": "Готово до роботи",
-        "real_faces": "Реальні обличчя",
-        "anime": "Аніме",
-        "light": "Світлий",
-        "dark": "Темний",
-        "system": "Системний",
-        "colors": ["червоний", "помаранчевий", "жовтий", "зелений", "синій", "індиго", "фіолетовий", "рожевий"],
-        "tt_pad_before": "Додає секунди перед виявленим обличчям.",
-        "tt_pad_after": "Додає секунди після виявленого обличчя.",
-        "tt_max_gap": "Об'єднує короткі паузи (поворот голови, кліпання), запобігаючи передчасній обрізці.",
-        "tt_frame_skip": "Більше = Швидше, але може пропустити короткі появи.",
-        "tt_real_faces": "Використовує глибоке навчання для реальних людей або 3D.",
-        "tt_anime": "Використовує 2D класифікатори для 2D анімації.",
-        "tutorial_title": "Інструкція Focus",
-        "tutorial_close": "Зрозуміло!",
-        "tutorial_body": (
-            "• Крок 1: Оберіть відеофайл.\n\n"
-            "• Крок 2: Оберіть чітке фото персонажа.\n\n"
-            "• Крок 3: Оберіть 'Реальні обличчя' або 'Аніме'.\n\n"
-            "• Крок 4: Налаштуйте відступи часу та пропуск кадрів.\n\n"
-            "• Крок 5: Натисніть Створити!"
-        ),
-        "changelog_title": "Історія проекту та змін",
-        "changelog_close": "Закрити"
+        "settings_btn": "Einstellungen",
+        "settings_title": "Focus Einstellungen",
+        "settings_appearance": "Erscheinungsbild",
+        "settings_accent": "Akzentfarbe",
+        "settings_lang": "Sprache",
+        "settings_sound": "Signalton bei Fertigstellung abspielen",
+        "settings_done": "Fertig",
+        "mode_dark": "Dunkel",
+        "mode_light": "Hell",
+        "mode_system": "System (Auto)",
+        "sel_video": "Eingabevideo auswählen...",
+        "sel_ref": "Referenzgesicht auswählen...",
+        "sel_output": "Speicherort auswählen...",
+        "generate": "Schritt 1: Video analysieren & scannen",
+        "btn_render": "Schritt 2: Ausgewählte Clips exportieren",
+        "review_title": "Ergebnisse überprüfen",
+        "logs_title": "Diagnose & Protokolle:",
+        "real_faces": "Echte Gesichter (Live-Action / 3D)",
+        "anime": "2D Animation / Anime",
+        "ready": "Bereit"
     },
     "Español": {
-        "dashboard": "Panel de control",
-        "appearance": "Modo de apariencia:",
-        "theme": "Tema de color:",
-        "language": "Idioma:",
-        "play_sound": "Reproducir sonido al finalizar",
-        "how_to_use": "Cómo usar",
-        "changelog": "Historial de cambios",
-        "sel_video": "Seleccionar video de entrada",
-        "sel_ref": "Seleccionar rostro de referencia",
-        "sel_output": "Ubicación de guardado",
-        "pad_before": "Margen anterior (s):",
-        "pad_after": "Margen posterior (s):",
-        "max_gap": "Tolerancia de pausa (s):",
-        "frame_skip": "Salto de fotogramas:",
-        "generate": "Generar",
-        "review": "Revisar resultados:",
-        "play_orig": "Reproducir original",
-        "play_result": "Reproducir resultado",
-        "no_video": "Ningún video seleccionado",
-        "no_image": "Ninguna imagen seleccionada",
-        "no_output": "Ubicación no seleccionada",
-        "ready": "Listo para generar",
-        "real_faces": "Caras reales",
-        "anime": "Anime",
-        "light": "Claro",
-        "dark": "Oscuro",
-        "system": "Sistema",
-        "colors": ["rojo", "naranja", "amarillo", "verde", "azul", "índigo", "violeta", "rosa"],
-        "tt_pad_before": "Agrega segundos adicionales antes del rostro detectado.",
-        "tt_pad_after": "Agrega segundos adicionales después del rostro detectado.",
-        "tt_max_gap": "Une pequeñas pausas (parpadeos o giros de cabeza) para evitar cortes prematuros.",
-        "tt_frame_skip": "Mayor = Más rápido, pero puede perder apariciones breves.",
-        "tt_real_faces": "Usa aprendizaje profundo para personas reales o personajes 3D.",
-        "tt_anime": "Usa clasificadores en cascada 2D para animación.",
-        "tutorial_title": "Guía de Focus",
-        "tutorial_close": "¡Entendido!",
-        "tutorial_body": (
-            "• Paso 1: Seleccione su archivo de video.\n\n"
-            "• Paso 2: Seleccione una imagen clara del personaje.\n\n"
-            "• Paso 3: Elija 'Caras reales' o 'Anime'.\n\n"
-            "• Paso 4: Ajuste márgenes y salto de fotogramas.\n\n"
-            "• Paso 5: ¡Haga clic en Generar!"
-        ),
-        "changelog_title": "Historial y Registro de Cambios",
-        "changelog_close": "Cerrar"
+        "dashboard": "Panel Principal",
+        "generator_tab": "Generador",
+        "gallery_tab": "Galería de Personajes (Beta)",
+        "how_to_use": "Instrucciones",
+        "changelog": "Historial de Cambios",
+        "settings_btn": "Configuración",
+        "settings_title": "Preferencias de Focus",
+        "settings_appearance": "Apariencia",
+        "settings_accent": "Color de Acento",
+        "settings_lang": "Idioma",
+        "settings_sound": "Reproducir sonido al finalizar",
+        "settings_done": "Listo",
+        "mode_dark": "Oscuro",
+        "mode_light": "Claro",
+        "mode_system": "Sistema (Auto)",
+        "sel_video": "Seleccionar video(s)...",
+        "sel_ref": "Seleccionar rostro de referencia...",
+        "sel_output": "Seleccionar destino...",
+        "generate": "Paso 1: Analizar y Escanear Video",
+        "btn_render": "Paso 2: Renderizar Clips Seleccionados",
+        "review_title": "Revisar Escenas Detectadas",
+        "logs_title": "Registros de Diagnóstico:",
+        "real_faces": "Rostros Reales (Películas / Series)",
+        "anime": "Animación 2D / Anime",
+        "ready": "Listo"
     },
     "Français": {
-        "dashboard": "Tableau de bord",
-        "appearance": "Mode d'apparence:",
-        "theme": "Thème de couleur:",
-        "language": "Langue:",
-        "play_sound": "Jouer un son à la fin",
-        "how_to_use": "Guide d'utilisation",
-        "changelog": "Journal des modifications",
-        "sel_video": "Sélectionner la vidéo",
-        "sel_ref": "Sélectionner le visage",
-        "sel_output": "Emplacement de sauvegarde",
-        "pad_before": "Marge avant (s):",
-        "pad_after": "Marge arrière (s):",
-        "max_gap": "Tolérance de pause (s):",
-        "frame_skip": "Saut d'images:",
-        "generate": "Générer",
-        "review": "Résultats:",
-        "play_orig": "Lire l'original",
-        "play_result": "Lire le résultat",
-        "no_video": "Aucune vidéo sélectionnée",
-        "no_image": "Aucune image sélectionnée",
-        "no_output": "Aucun emplacement sélectionné",
-        "ready": "Prêt à générer",
-        "real_faces": "Visages réels",
-        "anime": "Anime",
-        "light": "Clair",
-        "dark": "Sombre",
-        "system": "Système",
-        "colors": ["rouge", "orange", "jaune", "vert", "bleu", "indigo", "violet", "rose"],
-        "tt_pad_before": "Ajoute des secondes avant le visage détecté.",
-        "tt_pad_after": "Ajoute des secondes après le visage détecté.",
-        "tt_max_gap": "Fusionne les courtes pauses (clignements ou tours de tête) pour éviter les coupes prématurées.",
-        "tt_frame_skip": "Plus élevé = Plus rapide, mais peut manquer des scènes très courtes.",
-        "tt_real_faces": "Utilise l'apprentissage profond pour les personnes réelles ou 3D.",
-        "tt_anime": "Utilise des classificateurs 2D pour l'animation.",
-        "tutorial_title": "Guide Focus",
-        "tutorial_close": "Compris !",
+        "dashboard": "Tableau de Bord",
+        "generator_tab": "Générateur",
+        "gallery_tab": "Galerie de Personnages (Bêta)",
+        "how_to_use": "Mode d'Emploi",
+        "changelog": "Journal des Modifications",
+        "settings_btn": "Paramètres",
+        "settings_title": "Préférences Focus",
+        "settings_appearance": "Mode d'Apparence",
+        "settings_accent": "Couleur d'Accent",
+        "settings_lang": "Langue",
+        "settings_sound": "Jouer un son à la fin du rendu",
+        "settings_done": "Terminé",
+        "mode_dark": "Sombre",
+        "mode_light": "Clair",
+        "mode_system": "Système (Auto)",
+        "sel_video": "Sélectionner vidéo(s)...",
+        "sel_ref": "Sélectionner visage de référence...",
+        "sel_output": "Dossier de sortie...",
+        "generate": "Étape 1 : Analyser la Vidéo",
+        "btn_render": "Étape 2 : Rendre les Clips",
+        "review_title": "Vérifier les Scènes Détectées",
+        "logs_title": "Journaux d'Exécution :",
+        "real_faces": "Visages Réels (Films / Séries)",
+        "anime": "Animation 2D / Anime",
+        "ready": "Prêt",
+        "tutorial_title": "Comment Utiliser Focus",
         "tutorial_body": (
-            "• Étape 1 : Sélectionnez votre fichier vidéo.\n\n"
-            "• Étape 2 : Sélectionnez une image claire du personnage.\n\n"
-            "• Étape 3 : Choisissez 'Visages réels' ou 'Anime'.\n\n"
-            "• Étape 4 : Ajustez les marges et le saut d'images.\n\n"
-            "• Étape 5 : Cliquez sur Générer !"
+            "• Étape 1 : Ajoutez un ou plusieurs fichiers vidéo.\n\n"
+            "• Étape 2 : Sélectionnez une image nette du visage de référence.\n\n"
+            "• Étape 3 : Choisissez le mode Visages Réels ou Anime.\n\n"
+            "• Étape 4 : Ajustez les marges et les filtres audio VAD.\n\n"
+            "• Étape 5 : Lancez l'analyse et exportez vos scènes !"
         ),
         "changelog_title": "Historique du Projet & Modifications",
         "changelog_close": "Fermer"
@@ -874,6 +633,11 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.32 (UI/UX Overhaul, Dedicated Settings Window, Light/Dark Modes & Translation Polish):\n"
+            "  - Dodano nowoczesne, dedykowane okno ustawień (Preferences Dialog) w stylu macOS/Apple HIG z wizualnym wyborem motywu, 8 kolorami akcentu, językiem i zachowaniem.\n"
+            "  - Wdrożono pełną obsługę Trybu Jasnego (Light Mode), Ciemnego (Dark Mode) oraz Automatycznego/Systemowego z dopracowanymi arkuszami stylów QSS.\n"
+            "  - Uporządkowano i odchudzono pasek boczny (Sidebar), usuwając przeładowane kontrolki i eliminując ucinanie tekstu.\n"
+            "  - Całkowicie przebudowano i uzupełniono słownik tłumaczeń w języku polskim i angielskim, usuwając nienaturalne zwroty i błędy podwójnych znaków ampersand.\n\n"
             "• v1.3.31 (Multi-Season & Multi-Title Chronological Media Sorting):\n"
             "  - Wprowadzono hierarchiczny analizator nazw i sezonów (`extract_season_episode`): pliki są teraz w pierwszej kolejności precyzyjnie grupowane według Sezonów (S01 -> S02 -> S03 -> ...), a wewnątrz sezonów według numerów odcinków (E01 -> E02 -> ... -> E24).\n"
             "  - Prawidłowo sortuje odcinki nawet przy różnych tytułach w obrębie serii (np. 'Sono Bisque Doll wa Koi wo Suru S01' przed 'KiseKoi S02').\n\n"
@@ -1146,6 +910,11 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.32 (UI/UX Overhaul, Dedicated Settings Window, Light/Dark Modes & Translation Polish):\n"
+            "  - Introduced modern Apple/macOS-styled Preferences Dialog with visual appearance picker, 8 vibrant accent colors, language switcher, and audio notification controls.\n"
+            "  - Added complete, responsive Light Mode, Dark Mode, and System Theme Auto-Sync with refined QSS stylesheets.\n"
+            "  - Decluttered sidebar navigation, eliminated horizontal text truncation, and fixed all double-ampersand display bugs.\n"
+            "  - Thoroughly overhauled and aligned all Polish and English localization strings.\n\n"
             "• v1.3.31 (Multi-Season & Multi-Title Chronological Media Sorting):\n"
             "  - Implemented hierarchical season/episode metadata parser (`extract_season_episode`): video files are strictly ordered by Season (S01 -> S02 -> S03 -> ...) and then Episode (E01 -> E02 -> ... -> E24).\n"
             "  - Accurately sorts multi-season releases even with differing title conventions across seasons (e.g. 'Sono Bisque Doll wa Koi wo Suru S01' before 'KiseKoi S02').\n\n"
