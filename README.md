@@ -1,6 +1,6 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.30)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v1.3.31)
 
-[![Version](https://img.shields.io/badge/version-v1.3.30-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.31-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -16,8 +16,9 @@ By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Pe
 
 ---
 
-## ⚡ Key Features (v1.3.30)
+## ⚡ Key Features (v1.3.31)
 
+* **🎬 Multi-Season & Multi-Title Chronological Media Ordering (`S01E01 ➔ S01E12 ➔ S02E01 ➔ S02E12`):** Hierarchical metadata parser accurately detects and sorts files by Season and Episode first, even when seasons have different title conventions (e.g. *Sono Bisque Doll S01* before *KiseKoi S02*).
 * **✨ Intelligent Auto-Matching Source Bitrate:** Automatically inspects input stream bitrates using `ffprobe` to match source quality (+15% headroom). Keeps scenepack file sizes perfectly proportional without quality loss or file bloating.
 * **💎 Crystal Clear / Master Quality Video Rendering Engine:** Hardware-accelerated Apple Silicon VideoToolbox, NVENC, and QSV encoders configured with adaptive quality factors (`-q:v 72-85` / `CRF 14-17`) and high bitrate headroom (20M-35M). Eliminates all macroblocking and pixelation.
 * **🚀 PySide6 / Qt 6 Modern Dark Studio:** Built with a responsive, high-DPI dark studio layout with fluid animations, native system typography (`.AppleSystemUIFont` on macOS, `Segoe UI` on Windows), and zero visual lag.
