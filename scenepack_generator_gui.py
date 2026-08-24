@@ -9,7 +9,7 @@ import threading
 import queue
 import time
 import platform
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Optional, Dict, Union, Set, Callable
 import json
 import numpy as np
 from PIL import Image, ImageDraw

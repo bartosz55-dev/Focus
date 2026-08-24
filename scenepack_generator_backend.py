@@ -14,7 +14,7 @@ import platform
 import zipfile
 import gzip
 import multiprocessing
-from typing import List, Tuple, Any, Optional
+from typing import List, Tuple, Any, Optional, Dict, Union, Set, Callable
 import urllib.request
 import json
 import numpy as np
@@ -231,7 +231,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.32"
+APP_VERSION = "v1.3.33"
 
 
 class PlatformManager:
@@ -633,6 +633,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.33 (Hotfix Startu / Startup Fix):\n"
+            "  - Naprawiono błąd NameError (brakujący import 'Union' z biblioteki typing), który powodował crash podczas uruchamiania skompilowanej aplikacji na macOS i Windows.\n"
+            "  - Zweryfikowano bezbłędny start GUI oraz zgodność modułów na wszystkich platformach.\n\n"
             "• v1.3.32 (UI/UX Overhaul, Dedicated Settings Window, Light/Dark Modes & Translation Polish):\n"
             "  - Dodano nowoczesne, dedykowane okno ustawień (Preferences Dialog) w stylu macOS/Apple HIG z wizualnym wyborem motywu, 8 kolorami akcentu, językiem i zachowaniem.\n"
             "  - Wdrożono pełną obsługę Trybu Jasnego (Light Mode), Ciemnego (Dark Mode) oraz Automatycznego/Systemowego z dopracowanymi arkuszami stylów QSS.\n"
@@ -910,6 +913,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.33 (Startup Hotfix):\n"
+            "  - Fixed NameError (missing 'Union' import from typing module) that caused application startup crashes on macOS and Windows.\n"
+            "  - Verified clean startup and runtime module compatibility across all platforms.\n\n"
             "• v1.3.32 (UI/UX Overhaul, Dedicated Settings Window, Light/Dark Modes & Translation Polish):\n"
             "  - Introduced modern Apple/macOS-styled Preferences Dialog with visual appearance picker, 8 vibrant accent colors, language switcher, and audio notification controls.\n"
             "  - Added complete, responsive Light Mode, Dark Mode, and System Theme Auto-Sync with refined QSS stylesheets.\n"
