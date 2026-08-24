@@ -3,7 +3,7 @@ import shutil
 import tempfile
 import logging
 from pathlib import Path
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Optional, Dict, Union, Set, Callable
 import gc
 
 import cv2

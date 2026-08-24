@@ -5,7 +5,7 @@ import logging
 import subprocess
 import platform
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Any, Dict, Union, Set, Callable
 
 # macOS specific GUI fixes to prevent Cocoa/Qt/OpenCV collisions and window hiding
 if sys.platform == "darwin":
