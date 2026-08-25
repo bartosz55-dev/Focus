@@ -231,7 +231,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.34"
+APP_VERSION = "v1.3.35"
 
 
 class PlatformManager:
@@ -664,6 +664,18 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.35 (Domyślny Język Systemowy / Angielski i Motyw Systemowy):\n"
+            "  - Ustawiono domyślny motyw wizualny na 'Systemowy (System Auto-Sync)', automatycznie dostosowujący się do jasnego/ciemnego motywu macOS i Windows.\n"
+            "  - Wdrożono automatyczne wykrywanie języka systemowego z płynnym mapowaniem i bezpiecznym fallbackiem do języka angielskiego (English).\n"
+            "  - Zaktualizowano domyślne profile konfiguracji i dialog preferencji.\n\n"
+            "• v1.3.34 (Kompleksowy Szlif UI/UX i Poprawki Wizualne):\n"
+            "  - Wyeliminowano wycieki surowych nazw zmiennych (np. 'sec_workflow') oraz ujednolicono nagłówki sekcji paska bocznego (WORKFLOW / MATERIAŁY).\n"
+            "  - Poszerzono pasek boczny do 240px i zoptymalizowano marginesy, całkowicie eliminując ucinanie tekstu przycisku '✨ Galeria Postaci (Beta)'.\n"
+            "  - Zdeduplikowano nawigację: usunięto zbędne przyciski zakładek z nagłówka, czyniąc pasek boczny jedynym, spójnym źródłem nawigacji.\n"
+            "  - Przebudowano siatkę dostrajania scen i detekcji na precyzyjny 3-kolumnowy układ QGridLayout z idealnym wyrównaniem etykiet i pól tekstowych.\n"
+            "  - Uporządkowano kontrolki audio i rozdziałów: pogrupowano ochronę dialogów (VAD / Lip-Sync), filtr głosu oraz pomijanie Intro/Outro w estetyczne, zwarte wiersze.\n"
+            "  - Zwiększono kontrast i wysokość pasków podglądu ścieżek plików, nadając im nowoczesny wygląd czytelnych paneli.\n"
+            "  - Poprawiono literówki i ujednolicono teksty przycisków głównych akcji we wszystkich językach.\n\n"
             "• v1.3.33 (Hotfix Startu / Startup Fix):\n"
             "  - Naprawiono błąd NameError (brakujący import 'Union' z biblioteki typing), który powodował crash podczas uruchamiania skompilowanej aplikacji na macOS i Windows.\n"
             "  - Zweryfikowano bezbłędny start GUI oraz zgodność modułów na wszystkich platformach.\n\n"
@@ -944,6 +956,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.35 (System-Detected Language & System Theme by Default):\n"
+            "  - Configured default appearance mode to 'System', automatically matching the operating system's Dark/Light mode theme.\n"
+            "  - Implemented automatic system language detection with graceful fallback to English across all platforms.\n"
+            "  - Synchronized default configuration profiles and Preferences modal.\n\n"
             "• v1.3.34 (Comprehensive UI/UX Polish & Visual Bug-Fix Pass):\n"
             "  - Resolved raw variable leaks (such as 'sec_workflow') and styled sidebar section headers with clean uppercase typography.\n"
             "  - Expanded sidebar width to 240px with adjusted padding, eliminating all text truncation on '✨ Beta / Character Gallery'.\n"

@@ -86,6 +86,54 @@ def get_system_font(size: int = 10, weight: QFont.Weight = QFont.Weight.Normal) 
     family = ".AppleSystemUIFont" if sys.platform == "darwin" else "Segoe UI"
     return QFont(family, size, weight)
 
+
+def detect_default_system_language() -> str:
+    """
+    Detects the operating system language and maps to a supported language in Focus.
+    Defaults to 'English' if unsupported or indeterminate.
+    """
+    try:
+        from PySide6.QtCore import QLocale
+        lang_code = QLocale.system().name().lower()
+        if lang_code.startswith("pl"):
+            return "Polski"
+        elif lang_code.startswith("de"):
+            return "Deutsch"
+        elif lang_code.startswith("es"):
+            return "Español"
+        elif lang_code.startswith("fr"):
+            return "Français"
+        elif lang_code.startswith("ru"):
+            return "Русский"
+        elif lang_code.startswith("uk"):
+            return "Українська"
+        elif lang_code.startswith("ja"):
+            return "日本語"
+    except Exception:
+        pass
+    try:
+        import locale
+        loc_tuple = locale.getlocale()
+        loc = (loc_tuple[0] or "en").lower() if loc_tuple and loc_tuple[0] else "en"
+        if loc.startswith("pl"):
+            return "Polski"
+        elif loc.startswith("de"):
+            return "Deutsch"
+        elif loc.startswith("es"):
+            return "Español"
+        elif loc.startswith("fr"):
+            return "Français"
+        elif loc.startswith("ru"):
+            return "Русский"
+        elif loc.startswith("uk"):
+            return "Українська"
+        elif loc.startswith("ja"):
+            return "日本語"
+    except Exception:
+        pass
+    return "English"
+
+
 class ModernCard(QFrame):
     """Rounded container frame with border styling for grouping UI elements."""
     def __init__(self, parent=None):
@@ -274,7 +322,7 @@ class PreferencesDialog(QDialog):
         self.btn_light = QPushButton("☀️ Light")
         self.btn_system = QPushButton("🖥️ System")
 
-        cur_mode = self.main_app.settings.get("appearance_mode", "Dark")
+        cur_mode = self.main_app.settings.get("appearance_mode", "System")
         for btn, name in [(self.btn_dark, "Dark"), (self.btn_light, "Light"), (self.btn_system, "System")]:
             btn.setCheckable(True)
             btn.setObjectName("ModeBtn")
@@ -471,14 +519,15 @@ class FocusApp(QMainWindow):
         self.queue_proxy.put(("log", "Welcome to Focus! AI Scenepack Generator ready."))
 
     def load_settings(self) -> dict:
+        default_lang = detect_default_system_language()
         default_settings = {
             "pad_before": 2.0, "pad_after": 2.0, "max_gap_tolerance": 1.5,
             "min_scene_duration": 1.0, "frame_skip": 15, "vad_enabled": True,
             "vad_buffer": 300, "vad_speaker_enabled": True, "vad_speaker_threshold": 0.68,
             "skip_intro": True, "skip_outro": False, "intro_mode": "Auto Chapters (MKV/MP4)",
             "intro_duration": 90, "export_quality": "Auto (Match Source Bitrate)",
-            "play_sound": True, "appearance_mode": "Dark", "theme": "violet",
-            "language": "Polski", "default_mode": "Real Faces"
+            "play_sound": True, "appearance_mode": "System", "theme": "violet",
+            "language": default_lang, "default_mode": "Real Faces"
         }
         settings_path = Path.home() / ".focus_settings.json"
         if not settings_path.exists():
@@ -510,7 +559,7 @@ class FocusApp(QMainWindow):
                 "intro_mode": getattr(self, 'combo_intro_mode', None) and self.combo_intro_mode.currentText(),
                 "intro_duration": float(getattr(self, 'input_intro_duration', None) and self.input_intro_duration.text() or 90),
                 "play_sound": self.settings.get("play_sound", True),
-                "appearance_mode": self.settings.get("appearance_mode", "Dark"),
+                "appearance_mode": self.settings.get("appearance_mode", "System"),
                 "theme": self.current_theme,
                 "language": self.current_lang,
                 "default_mode": self.current_mode
@@ -1178,11 +1227,13 @@ class FocusApp(QMainWindow):
         if appearance_mode:
             self.settings["appearance_mode"] = appearance_mode
 
-        mode = self.settings.get("appearance_mode", "Dark")
+        mode = self.settings.get("appearance_mode", "System")
         if mode == "System":
             try:
                 import darkdetect
                 is_dark = darkdetect.isDark() if hasattr(darkdetect, 'isDark') else True
+                if is_dark is None:
+                    is_dark = True
             except Exception:
                 is_dark = True
         else:

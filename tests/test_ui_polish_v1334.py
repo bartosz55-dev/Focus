@@ -80,6 +80,19 @@ class TestUIPolishV1334(unittest.TestCase):
         finally:
             window.close()
 
+    def test_default_appearance_and_language(self):
+        """Verify default language detection and System appearance mode."""
+        detected_lang = gui_qt.detect_default_system_language()
+        self.assertIn(detected_lang, ["English", "Polski", "Deutsch", "Español", "Français", "Русский", "Українська", "日本語"])
+
+        # Check raw unconfigured default settings dictionary initialization
+        from unittest.mock import patch
+        with patch("pathlib.Path.exists", return_value=False):
+            defaults = gui_qt.FocusApp.load_settings(gui_qt.FocusApp.__new__(gui_qt.FocusApp))
+            self.assertEqual(defaults.get("appearance_mode"), "System")
+            self.assertEqual(defaults.get("language"), detected_lang)
+
 
 if __name__ == "__main__":
     unittest.main()
+
