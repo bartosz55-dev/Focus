@@ -574,10 +574,11 @@ class FocusApp(QMainWindow):
         # --- SIDEBAR NAV ---
         self.sidebar = QFrame()
         self.sidebar.setObjectName("SidebarNav")
-        self.sidebar.setFixedWidth(220)
+        self.sidebar.setFixedWidth(240)
+        self.sidebar.setMinimumWidth(240)
         sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(16, 20, 16, 18)
-        sidebar_layout.setSpacing(8)
+        sidebar_layout.setContentsMargins(14, 20, 14, 18)
+        sidebar_layout.setSpacing(6)
 
         # Logo & App Title
         logo_box = QHBoxLayout()
@@ -593,19 +594,19 @@ class FocusApp(QMainWindow):
         sidebar_layout.addLayout(logo_box)
         sidebar_layout.addSpacing(14)
 
-        # Section: Navigation
-        self.lbl_wf = QLabel("WORKFLOW")
+        # Section: Navigation / Workflow
+        self.lbl_wf = QLabel(get_translation(self.current_lang, "sec_workflow"))
         self.lbl_wf.setObjectName("SectionHeader")
         sidebar_layout.addWidget(self.lbl_wf)
 
-        self.btn_sidebar_gen = QPushButton("🎬 Generator")
+        self.btn_sidebar_gen = QPushButton(f"🎬 {get_translation(self.current_lang, 'generator_tab')}")
         self.btn_sidebar_gen.setObjectName("SidebarNavBtn")
         self.btn_sidebar_gen.setCheckable(True)
         self.btn_sidebar_gen.setChecked(True)
         self.btn_sidebar_gen.clicked.connect(lambda: self._switch_main_view(0))
         sidebar_layout.addWidget(self.btn_sidebar_gen)
 
-        self.btn_sidebar_gal = QPushButton("✨ Character Gallery")
+        self.btn_sidebar_gal = QPushButton(f"✨ {get_translation(self.current_lang, 'gallery_tab')}")
         self.btn_sidebar_gal.setObjectName("SidebarNavBtn")
         self.btn_sidebar_gal.setCheckable(True)
         self.btn_sidebar_gal.clicked.connect(lambda: self._switch_main_view(1))
@@ -614,16 +615,16 @@ class FocusApp(QMainWindow):
         sidebar_layout.addSpacing(12)
 
         # Section: Resources
-        self.lbl_res = QLabel("RESOURCES")
+        self.lbl_res = QLabel(get_translation(self.current_lang, "sec_resources"))
         self.lbl_res.setObjectName("SectionHeader")
         sidebar_layout.addWidget(self.lbl_res)
 
-        self.btn_tutorial = QPushButton("📖 How to Use")
+        self.btn_tutorial = QPushButton(f"📖 {get_translation(self.current_lang, 'how_to_use')}")
         self.btn_tutorial.setObjectName("SidebarBtn")
         self.btn_tutorial.clicked.connect(self.open_tutorial)
         sidebar_layout.addWidget(self.btn_tutorial)
 
-        self.btn_changelog = QPushButton("📜 Changelog")
+        self.btn_changelog = QPushButton(f"📜 {get_translation(self.current_lang, 'changelog')}")
         self.btn_changelog.setObjectName("SidebarBtn")
         self.btn_changelog.clicked.connect(self.open_changelog)
         sidebar_layout.addWidget(self.btn_changelog)
@@ -631,7 +632,7 @@ class FocusApp(QMainWindow):
         sidebar_layout.addStretch()
 
         # Section: Preferences / Settings Button at Bottom
-        self.btn_settings = QPushButton("⚙️ Settings")
+        self.btn_settings = QPushButton(f"⚙️ {get_translation(self.current_lang, 'settings_btn')}")
         self.btn_settings.setObjectName("SidebarSettingsBtn")
         self.btn_settings.clicked.connect(self.open_preferences)
         sidebar_layout.addWidget(self.btn_settings)
@@ -645,19 +646,20 @@ class FocusApp(QMainWindow):
         content_layout.setSpacing(16)
         main_layout.addWidget(self.content_area)
 
-        # Header bar (Dashboard + Mode Switch + Tab Switcher)
+        # Header bar (Dashboard + Single Source Model Switcher)
         header_layout = QHBoxLayout()
-        self.lbl_dashboard = QLabel("Dashboard")
+        self.lbl_dashboard = QLabel(get_translation(self.current_lang, "dashboard"))
         self.lbl_dashboard.setFont(get_system_font(20, QFont.Weight.Bold))
         header_layout.addWidget(self.lbl_dashboard)
         header_layout.addStretch(1)
 
-        # Mode switcher buttons
-        self.btn_mode_real = QPushButton("Real Faces")
-        self.btn_mode_anime = QPushButton("Anime")
+        # Mode switcher buttons (Real Faces vs Anime)
+        self.btn_mode_real = QPushButton(get_translation(self.current_lang, "real_faces"))
+        self.btn_mode_anime = QPushButton(get_translation(self.current_lang, "anime"))
         for b in (self.btn_mode_real, self.btn_mode_anime):
             b.setCheckable(True)
             b.setObjectName("ModeBtn")
+            b.setFixedHeight(34)
         if self.current_mode == "Anime":
             self.btn_mode_anime.setChecked(True)
         else:
@@ -666,27 +668,10 @@ class FocusApp(QMainWindow):
         self.btn_mode_anime.clicked.connect(lambda: self._on_mode_switched("Anime"))
 
         mode_box = QHBoxLayout()
-        mode_box.setSpacing(4)
+        mode_box.setSpacing(6)
         mode_box.addWidget(self.btn_mode_real)
         mode_box.addWidget(self.btn_mode_anime)
         header_layout.addLayout(mode_box)
-        header_layout.addSpacing(12)
-
-        # Tab Switcher
-        self.btn_tab_gen = QPushButton("Generator")
-        self.btn_tab_gal = QPushButton("Beta / Character Gallery")
-        for b in (self.btn_tab_gen, self.btn_tab_gal):
-            b.setCheckable(True)
-            b.setObjectName("TabBtn")
-        self.btn_tab_gen.setChecked(True)
-        self.btn_tab_gen.clicked.connect(lambda: self._switch_main_view(0))
-        self.btn_tab_gal.clicked.connect(lambda: self._switch_main_view(1))
-
-        tab_box = QHBoxLayout()
-        tab_box.setSpacing(4)
-        tab_box.addWidget(self.btn_tab_gen)
-        tab_box.addWidget(self.btn_tab_gal)
-        header_layout.addLayout(tab_box)
 
         content_layout.addLayout(header_layout)
 
@@ -719,24 +704,24 @@ class FocusApp(QMainWindow):
         presets_layout.setContentsMargins(14, 10, 14, 10)
         presets_layout.setSpacing(10)
 
-        lbl_presets_head = QLabel("⚡ Quick Presets:")
-        lbl_presets_head.setFont(get_system_font(11, QFont.Weight.Bold))
-        presets_layout.addWidget(lbl_presets_head)
+        self.lbl_presets_head = QLabel("⚡ Quick Presets:")
+        self.lbl_presets_head.setFont(get_system_font(11, QFont.Weight.Bold))
+        presets_layout.addWidget(self.lbl_presets_head)
 
-        self.btn_autotune = QPushButton("✨ Auto-Tune")
+        self.btn_autotune = QPushButton(get_translation(self.current_lang, "preset_auto"))
         self.btn_autotune.setObjectName("AccentBtn")
         self.btn_autotune.clicked.connect(self.apply_auto_tune)
         presets_layout.addWidget(self.btn_autotune)
 
-        self.btn_preset_tiktok = QPushButton("📱 TikTok / Shorts (9:16)")
+        self.btn_preset_tiktok = QPushButton(get_translation(self.current_lang, "preset_tiktok"))
         self.btn_preset_tiktok.clicked.connect(lambda: self._apply_smart_preset("tiktok"))
         presets_layout.addWidget(self.btn_preset_tiktok)
 
-        self.btn_preset_youtube = QPushButton("🎬 YouTube (16:9)")
+        self.btn_preset_youtube = QPushButton(get_translation(self.current_lang, "preset_youtube"))
         self.btn_preset_youtube.clicked.connect(lambda: self._apply_smart_preset("youtube"))
         presets_layout.addWidget(self.btn_preset_youtube)
 
-        self.btn_preset_draft = QPushButton("🚀 Fast Draft Scan")
+        self.btn_preset_draft = QPushButton(get_translation(self.current_lang, "preset_draft"))
         self.btn_preset_draft.clicked.connect(lambda: self._apply_smart_preset("draft"))
         presets_layout.addWidget(self.btn_preset_draft)
 
@@ -751,26 +736,26 @@ class FocusApp(QMainWindow):
 
         # Row 1: Video selection + Folder + Clear + Master/Separate output mode
         top_v_row = QHBoxLayout()
-        self.btn_select_video = QPushButton("📁 Select Video(s)...")
+        self.btn_select_video = QPushButton(f"📁 {get_translation(self.current_lang, 'sel_video')}")
         self.btn_select_video.setObjectName("AccentBtn")
         self.btn_select_video.clicked.connect(self.select_video)
         top_v_row.addWidget(self.btn_select_video)
 
-        self.btn_select_folder = QPushButton("📂 Add Folder...")
+        self.btn_select_folder = QPushButton(f"📂 {get_translation(self.current_lang, 'sel_folder')}")
         self.btn_select_folder.clicked.connect(self.add_folder_videos)
         top_v_row.addWidget(self.btn_select_folder)
 
-        self.btn_clear_batch = QPushButton("🗑️ Clear")
+        self.btn_clear_batch = QPushButton(f"🗑️ {get_translation(self.current_lang, 'clear')}")
         self.btn_clear_batch.clicked.connect(self.clear_batch_queue)
         top_v_row.addWidget(self.btn_clear_batch)
 
         top_v_row.addSpacing(16)
-        lbl_batch_mode = QLabel("Output Mode:")
-        lbl_batch_mode.setFont(get_system_font(10, QFont.Weight.Bold))
-        top_v_row.addWidget(lbl_batch_mode)
+        self.lbl_batch_mode = QLabel(get_translation(self.current_lang, "output_mode"))
+        self.lbl_batch_mode.setFont(get_system_font(10, QFont.Weight.Bold))
+        top_v_row.addWidget(self.lbl_batch_mode)
 
-        self.radio_batch_single = QRadioButton("📦 Master Scenepack (Single Video)")
-        self.radio_batch_separate = QRadioButton("📁 Separate Episode Files")
+        self.radio_batch_single = QRadioButton(f"📦 {get_translation(self.current_lang, 'master_scenepack')}")
+        self.radio_batch_separate = QRadioButton(f"📁 {get_translation(self.current_lang, 'separate_episodes')}")
         self.radio_batch_single.setChecked(True)
         top_v_row.addWidget(self.radio_batch_single)
         top_v_row.addWidget(self.radio_batch_separate)
@@ -778,39 +763,43 @@ class FocusApp(QMainWindow):
         files_layout.addLayout(top_v_row)
 
         # Row 2: Selected Videos Status Badge
-        self.lbl_video_path = QLabel("No video selected")
+        self.lbl_video_path = QLabel(get_translation(self.current_lang, "no_video"))
         self.lbl_video_path.setObjectName("PathLabel")
-        self.lbl_video_path.setStyleSheet("background-color: #1A1E26; border: 1px solid #2D3545; border-radius: 6px; padding: 6px 12px; font-weight: 500;")
+        self.lbl_video_path.setMinimumHeight(38)
         files_layout.addWidget(self.lbl_video_path)
 
         # Row 3: Reference Face & Output Save Location (Clean 2-column)
         ref_out_grid = QGridLayout()
         ref_out_grid.setSpacing(10)
 
-        self.btn_select_image = QPushButton("👤 Select Reference Face")
+        self.btn_select_image = QPushButton(f"👤 {get_translation(self.current_lang, 'sel_ref')}")
+        self.btn_select_image.setFixedHeight(36)
         self.btn_select_image.clicked.connect(self.select_image)
-        self.lbl_image_path = QLabel("No image selected")
+        self.lbl_image_path = QLabel(get_translation(self.current_lang, "no_image"))
         self.lbl_image_path.setObjectName("PathLabel")
-        self.lbl_image_path.setStyleSheet("background-color: #1A1E26; border: 1px solid #2D3545; border-radius: 6px; padding: 6px 12px;")
+        self.lbl_image_path.setMinimumHeight(38)
         ref_out_grid.addWidget(self.btn_select_image, 0, 0)
         ref_out_grid.addWidget(self.lbl_image_path, 0, 1)
 
-        self.btn_select_output = QPushButton("💾 Select Save Location")
+        self.btn_select_output = QPushButton(f"💾 {get_translation(self.current_lang, 'sel_output')}")
+        self.btn_select_output.setFixedHeight(36)
         self.btn_select_output.clicked.connect(self.select_output)
-        self.lbl_output_path = QLabel("No save location selected")
+        self.lbl_output_path = QLabel(get_translation(self.current_lang, "no_output"))
         self.lbl_output_path.setObjectName("PathLabel")
-        self.lbl_output_path.setStyleSheet("background-color: #1A1E26; border: 1px solid #2D3545; border-radius: 6px; padding: 6px 12px;")
+        self.lbl_output_path.setMinimumHeight(38)
         ref_out_grid.addWidget(self.btn_select_output, 1, 0)
         ref_out_grid.addWidget(self.lbl_output_path, 1, 1)
 
+        ref_out_grid.setColumnStretch(0, 0)
         ref_out_grid.setColumnStretch(1, 1)
         files_layout.addLayout(ref_out_grid)
 
         # Row 4: Audio Track Selector
         box_a = QHBoxLayout()
-        self.lbl_audio_track = QLabel("🎧 Audio Track:")
+        self.lbl_audio_track = QLabel(f"🎧 {get_translation(self.current_lang, 'audio_track')}")
         self.combo_audio_track = QComboBox()
         self.combo_audio_track.addItem("Default Audio Stream (Track 1)", 0)
+        self.combo_audio_track.setFixedHeight(34)
         box_a.addWidget(self.lbl_audio_track)
         box_a.addWidget(self.combo_audio_track, 1)
         files_layout.addLayout(box_a)
@@ -823,29 +812,35 @@ class FocusApp(QMainWindow):
         set_layout.setContentsMargins(16, 14, 16, 14)
         set_layout.setSpacing(12)
 
-        lbl_settings_head = QLabel("⚙️ Scene & Detection Tuning")
-        lbl_settings_head.setFont(get_system_font(11, QFont.Weight.Bold))
-        set_layout.addWidget(lbl_settings_head)
+        self.lbl_settings_head = QLabel(f"⚙️ {get_translation(self.current_lang, 'sec_tuning')}")
+        self.lbl_settings_head.setFont(get_system_font(11, QFont.Weight.Bold))
+        set_layout.addWidget(self.lbl_settings_head)
 
         inputs_grid = QGridLayout()
         inputs_grid.setSpacing(10)
+        inputs_grid.setVerticalSpacing(8)
 
-        self.lbl_pad_before = QLabel("Padding Before (s):")
+        self.lbl_pad_before = QLabel(get_translation(self.current_lang, "pad_before"))
         self.input_pad_before = QLineEdit(str(self.settings.get("pad_before", 2.0)))
-        self.lbl_pad_after = QLabel("Padding After (s):")
+        self.lbl_pad_after = QLabel(get_translation(self.current_lang, "pad_after"))
         self.input_pad_after = QLineEdit(str(self.settings.get("pad_after", 2.0)))
-        self.lbl_max_gap = QLabel("Max Gap (s):")
+        self.lbl_max_gap = QLabel(get_translation(self.current_lang, "max_gap"))
         self.input_max_gap = QLineEdit(str(self.settings.get("max_gap_tolerance", 1.5)))
 
-        self.lbl_min_scene = QLabel("Min Scene (s):")
+        self.lbl_min_scene = QLabel(get_translation(self.current_lang, "min_scene"))
         self.input_min_scene = QLineEdit(str(self.settings.get("min_scene_duration", 1.0)))
-        self.lbl_frame_skip = QLabel("Frame Skip:")
+        self.lbl_frame_skip = QLabel(get_translation(self.current_lang, "frame_skip"))
         self.input_frame_skip = QLineEdit(str(self.settings.get("frame_skip", 15)))
-        self.lbl_aspect_title = QLabel("Aspect Ratio:")
+        self.lbl_aspect_title = QLabel(get_translation(self.current_lang, "aspect_label"))
         self.combo_aspect = QComboBox()
-        self.combo_aspect.addItems(["16:9 Original", "9:16 Vertical", "9:16 Blurred Background"])
+        self.combo_aspect.addItems([
+            get_translation(self.current_lang, "aspect_16_9"),
+            get_translation(self.current_lang, "aspect_9_16_vert"),
+            get_translation(self.current_lang, "aspect_9_16_blur")
+        ])
+        self.combo_aspect.setFixedHeight(32)
 
-        self.lbl_quality_title = QLabel("Export Quality:")
+        self.lbl_quality_title = QLabel(get_translation(self.current_lang, "export_quality"))
         self.combo_export_quality = QComboBox()
         self.combo_export_quality.addItems([
             "Auto (Match Source Bitrate)",
@@ -854,12 +849,12 @@ class FocusApp(QMainWindow):
             "Medium (Standard / CRF 20 / 10 Mbps)",
             "Draft / Fast (CRF 24 / 4 Mbps)"
         ])
+        self.combo_export_quality.setFixedHeight(32)
         saved_quality = self.settings.get("export_quality", "Auto (Match Source Bitrate)")
         idx = self.combo_export_quality.findText(saved_quality)
         if idx >= 0:
             self.combo_export_quality.setCurrentIndex(idx)
         else:
-            # Match by substring
             for i in range(self.combo_export_quality.count()):
                 if "auto" in saved_quality.lower() and "auto" in self.combo_export_quality.itemText(i).lower():
                     self.combo_export_quality.setCurrentIndex(i)
@@ -874,59 +869,76 @@ class FocusApp(QMainWindow):
                     self.combo_export_quality.setCurrentIndex(i)
                     break
             else:
-                self.combo_export_quality.setCurrentIndex(0) # Default Auto (Match Source)
+                self.combo_export_quality.setCurrentIndex(0)
 
         self.combo_export_quality.currentTextChanged.connect(self.save_current_settings)
 
         for edit in (self.input_pad_before, self.input_pad_after, self.input_max_gap, self.input_min_scene, self.input_frame_skip):
-            edit.setFixedWidth(55)
+            edit.setFixedWidth(65)
+            edit.setFixedHeight(32)
+            edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
             edit.editingFinished.connect(self.save_current_settings)
 
-        # Row 0
-        inputs_grid.addWidget(self.lbl_pad_before, 0, 0)
+        # Row 0: Pad Before, Pad After, Max Gap
+        inputs_grid.addWidget(self.lbl_pad_before, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         inputs_grid.addWidget(self.input_pad_before, 0, 1)
-        inputs_grid.addWidget(self.lbl_pad_after, 0, 2)
+        inputs_grid.addWidget(self.lbl_pad_after, 0, 2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         inputs_grid.addWidget(self.input_pad_after, 0, 3)
-        inputs_grid.addWidget(self.lbl_max_gap, 0, 4)
+        inputs_grid.addWidget(self.lbl_max_gap, 0, 4, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         inputs_grid.addWidget(self.input_max_gap, 0, 5)
 
-        # Row 1
-        inputs_grid.addWidget(self.lbl_min_scene, 1, 0)
+        # Row 1: Min Scene, Frame Skip, Aspect Ratio
+        inputs_grid.addWidget(self.lbl_min_scene, 1, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         inputs_grid.addWidget(self.input_min_scene, 1, 1)
-        inputs_grid.addWidget(self.lbl_frame_skip, 1, 2)
+        inputs_grid.addWidget(self.lbl_frame_skip, 1, 2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         inputs_grid.addWidget(self.input_frame_skip, 1, 3)
-        inputs_grid.addWidget(self.lbl_aspect_title, 1, 4)
+        inputs_grid.addWidget(self.lbl_aspect_title, 1, 4, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         inputs_grid.addWidget(self.combo_aspect, 1, 5)
 
-        # Row 2
-        inputs_grid.addWidget(self.lbl_quality_title, 2, 0)
+        # Row 2: Export Quality
+        inputs_grid.addWidget(self.lbl_quality_title, 2, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         inputs_grid.addWidget(self.combo_export_quality, 2, 1, 1, 5)
+
+        inputs_grid.setColumnStretch(0, 0)
+        inputs_grid.setColumnStretch(1, 1)
+        inputs_grid.setColumnStretch(2, 0)
+        inputs_grid.setColumnStretch(3, 1)
+        inputs_grid.setColumnStretch(4, 0)
+        inputs_grid.setColumnStretch(5, 2)
 
         set_layout.addLayout(inputs_grid)
 
-        # VAD & Speaker protection row
+        # VAD & Speaker protection rows
         vad_box = QHBoxLayout()
-        self.chk_vad = QCheckBox("Smart Sentence Protection (VAD & Lip-Sync)")
+        vad_box.setSpacing(10)
+        self.chk_vad = QCheckBox(get_translation(self.current_lang, "vad_enable"))
         self.chk_vad.setChecked(self.settings.get("vad_enabled", True))
         self.chk_vad.toggled.connect(self.save_current_settings)
         vad_box.addWidget(self.chk_vad)
 
-        self.lbl_vad_buf = QLabel("Silence Buffer (ms):")
+        vad_box.addSpacing(16)
+        self.lbl_vad_buf = QLabel(get_translation(self.current_lang, "vad_buffer"))
+        self.lbl_vad_buf.setFont(get_system_font(10))
         vad_box.addWidget(self.lbl_vad_buf)
         self.input_vad_buffer = QLineEdit(str(self.settings.get("vad_buffer", 300)))
-        self.input_vad_buffer.setFixedWidth(55)
+        self.input_vad_buffer.setFixedWidth(65)
+        self.input_vad_buffer.setFixedHeight(28)
+        self.input_vad_buffer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.input_vad_buffer.editingFinished.connect(self.save_current_settings)
         vad_box.addWidget(self.input_vad_buffer)
         vad_box.addStretch()
         set_layout.addLayout(vad_box)
 
         speaker_box = QHBoxLayout()
-        self.chk_speaker = QCheckBox("Target Speaker Voice Matching")
+        speaker_box.setSpacing(10)
+        self.chk_speaker = QCheckBox(get_translation(self.current_lang, "vad_speaker_enable"))
         self.chk_speaker.setChecked(self.settings.get("vad_speaker_enabled", True))
         self.chk_speaker.toggled.connect(self.save_current_settings)
         speaker_box.addWidget(self.chk_speaker)
 
-        self.lbl_speaker_thresh = QLabel("Similarity:")
+        speaker_box.addSpacing(16)
+        self.lbl_speaker_thresh = QLabel(get_translation(self.current_lang, "vad_speaker_threshold"))
+        self.lbl_speaker_thresh.setFont(get_system_font(10))
         speaker_box.addWidget(self.lbl_speaker_thresh)
 
         init_thresh = int(self.settings.get("vad_speaker_threshold", 0.68) * 100)
@@ -935,6 +947,8 @@ class FocusApp(QMainWindow):
         self.slider_speaker.setValue(init_thresh)
         self.slider_speaker.setFixedWidth(130)
         self.lbl_speaker_val = QLabel(f"{init_thresh/100:.2f}")
+        self.lbl_speaker_val.setFont(get_system_font(10, QFont.Weight.Bold))
+        self.lbl_speaker_val.setFixedWidth(36)
         self.slider_speaker.valueChanged.connect(lambda v: (self.lbl_speaker_val.setText(f"{v/100:.2f}"), self.save_current_settings()))
         speaker_box.addWidget(self.slider_speaker)
         speaker_box.addWidget(self.lbl_speaker_val)
@@ -943,17 +957,20 @@ class FocusApp(QMainWindow):
 
         # Intro & Outro Removal row
         intro_box = QHBoxLayout()
-        self.chk_skip_intro = QCheckBox("Skip Intro / Opening (OP)")
+        intro_box.setSpacing(12)
+        self.chk_skip_intro = QCheckBox(get_translation(self.current_lang, "skip_intro_enable"))
         self.chk_skip_intro.setChecked(self.settings.get("skip_intro", True))
         self.chk_skip_intro.toggled.connect(self.save_current_settings)
         intro_box.addWidget(self.chk_skip_intro)
 
-        self.chk_skip_outro = QCheckBox("Skip Outro / Ending (ED)")
+        self.chk_skip_outro = QCheckBox(get_translation(self.current_lang, "skip_outro_enable"))
         self.chk_skip_outro.setChecked(self.settings.get("skip_outro", False))
         self.chk_skip_outro.toggled.connect(self.save_current_settings)
         intro_box.addWidget(self.chk_skip_outro)
 
-        self.lbl_intro_mode = QLabel("Detection:")
+        intro_box.addSpacing(16)
+        self.lbl_intro_mode = QLabel(get_translation(self.current_lang, "intro_mode_title"))
+        self.lbl_intro_mode.setFont(get_system_font(10))
         intro_box.addWidget(self.lbl_intro_mode)
 
         self.combo_intro_mode = QComboBox()
@@ -969,10 +986,13 @@ class FocusApp(QMainWindow):
         self.combo_intro_mode.currentIndexChanged.connect(self._on_intro_mode_changed)
         intro_box.addWidget(self.combo_intro_mode)
 
-        self.lbl_intro_dur = QLabel("Duration (s):")
+        self.lbl_intro_dur = QLabel(get_translation(self.current_lang, "intro_duration_lbl"))
+        self.lbl_intro_dur.setFont(get_system_font(10))
         intro_box.addWidget(self.lbl_intro_dur)
         self.input_intro_duration = QLineEdit(str(self.settings.get("intro_duration", 90)))
         self.input_intro_duration.setFixedWidth(50)
+        self.input_intro_duration.setFixedHeight(28)
+        self.input_intro_duration.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.input_intro_duration.editingFinished.connect(self.save_current_settings)
         intro_box.addWidget(self.input_intro_duration)
         intro_box.addStretch()
@@ -991,7 +1011,7 @@ class FocusApp(QMainWindow):
         action_layout.setContentsMargins(16, 14, 16, 14)
         action_layout.setSpacing(10)
 
-        self.btn_generate = QPushButton("▶ 1. Start Scan & Analyze Video")
+        self.btn_generate = QPushButton(get_translation(self.current_lang, "generate"))
         self.btn_generate.setObjectName("PrimaryActionBtn")
         self.btn_generate.setFixedHeight(46)
         self.btn_generate.setFont(get_system_font(13, QFont.Weight.Bold))
@@ -1251,7 +1271,7 @@ class FocusApp(QMainWindow):
             color: {text_muted};
             font-size: 11px;
             font-weight: bold;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
         }}
         QLabel#LogoText {{
             color: {primary};
@@ -1283,9 +1303,10 @@ class FocusApp(QMainWindow):
             background: transparent;
             border: 1px solid transparent;
             text-align: left;
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-radius: 8px;
             color: {text_main};
+            font-size: 12px;
             font-weight: 500;
         }}
         QPushButton#SidebarBtn:hover, QPushButton#SidebarNavBtn:hover, QPushButton#SidebarSettingsBtn:hover {{
@@ -1307,17 +1328,18 @@ class FocusApp(QMainWindow):
         QPushButton#PrimaryActionBtn:hover, QPushButton#AccentBtn:hover {{
             background-color: {hover};
         }}
-        QPushButton#ModeBtn, QPushButton#TabBtn {{
+        QPushButton#ModeBtn {{
             background-color: {btn_bg};
             border: 1px solid {btn_border};
             border-radius: 6px;
             padding: 6px 14px;
             color: {text_main};
+            font-weight: 500;
         }}
-        QPushButton#ModeBtn:hover, QPushButton#TabBtn:hover {{
+        QPushButton#ModeBtn:hover {{
             border-color: {primary};
         }}
-        QPushButton#ModeBtn:checked, QPushButton#TabBtn:checked {{
+        QPushButton#ModeBtn:checked {{
             background-color: {primary};
             border-color: {hover};
             color: #FFFFFF;
@@ -1442,7 +1464,7 @@ class FocusApp(QMainWindow):
         """
         self.setStyleSheet(qss)
 
-        path_style = f"background-color: {bg_input}; border: 1px solid {border_input}; border-radius: 6px; padding: 6px 12px; color: {text_main};"
+        path_style = f"background-color: {bg_input}; border: 1px solid {border_input}; border-radius: 8px; padding: 8px 14px; color: {text_main}; font-weight: 500; font-size: 12px;"
         if hasattr(self, "lbl_video_path"):
             self.lbl_video_path.setStyleSheet(path_style)
         if hasattr(self, "lbl_image_path"):
@@ -1456,7 +1478,9 @@ class FocusApp(QMainWindow):
         self.current_lang = lang_name
         self.lbl_dashboard.setText(get_translation(lang_name, "dashboard"))
         if hasattr(self, "lbl_wf"):
-            self.lbl_wf.setText(get_translation(lang_name, "sec_workflow") or "WORKFLOW")
+            self.lbl_wf.setText(get_translation(lang_name, "sec_workflow"))
+        if hasattr(self, "lbl_res"):
+            self.lbl_res.setText(get_translation(lang_name, "sec_resources"))
         if hasattr(self, "btn_sidebar_gen"):
             self.btn_sidebar_gen.setText(f"🎬 {get_translation(lang_name, 'generator_tab')}")
         if hasattr(self, "btn_sidebar_gal"):
@@ -1470,9 +1494,9 @@ class FocusApp(QMainWindow):
 
         self.btn_mode_real.setText(get_translation(lang_name, "real_faces"))
         self.btn_mode_anime.setText(get_translation(lang_name, "anime"))
-        self.btn_tab_gen.setText(get_translation(lang_name, "generator_tab"))
-        self.btn_tab_gal.setText(get_translation(lang_name, "gallery_tab"))
 
+        if hasattr(self, "lbl_presets_head"):
+            self.lbl_presets_head.setText(f"⚡ {get_translation(lang_name, 'preset_label')}")
         if hasattr(self, "btn_autotune"):
             self.btn_autotune.setText(get_translation(lang_name, "preset_auto"))
         if hasattr(self, "btn_preset_tiktok"):
@@ -1483,18 +1507,27 @@ class FocusApp(QMainWindow):
             self.btn_preset_draft.setText(get_translation(lang_name, "preset_draft"))
 
         if hasattr(self, "btn_select_video"):
-            self.btn_select_video.setText(get_translation(lang_name, "sel_video"))
+            self.btn_select_video.setText(f"📁 {get_translation(lang_name, 'sel_video')}")
         if hasattr(self, "btn_select_folder"):
-            self.btn_select_folder.setText(get_translation(lang_name, "sel_folder"))
+            self.btn_select_folder.setText(f"📂 {get_translation(lang_name, 'sel_folder')}")
         if hasattr(self, "btn_clear_batch"):
-            self.btn_clear_batch.setText(get_translation(lang_name, "clear"))
+            self.btn_clear_batch.setText(f"🗑️ {get_translation(lang_name, 'clear')}")
+        if hasattr(self, "lbl_batch_mode"):
+            self.lbl_batch_mode.setText(get_translation(lang_name, "output_mode"))
+        if hasattr(self, "radio_batch_single"):
+            self.radio_batch_single.setText(f"📦 {get_translation(lang_name, 'master_scenepack')}")
+        if hasattr(self, "radio_batch_separate"):
+            self.radio_batch_separate.setText(f"📁 {get_translation(lang_name, 'separate_episodes')}")
+
         if hasattr(self, "btn_select_image"):
-            self.btn_select_image.setText(get_translation(lang_name, "sel_ref"))
+            self.btn_select_image.setText(f"👤 {get_translation(lang_name, 'sel_ref')}")
         if hasattr(self, "btn_select_output"):
-            self.btn_select_output.setText(get_translation(lang_name, "sel_output"))
+            self.btn_select_output.setText(f"💾 {get_translation(lang_name, 'sel_output')}")
         if hasattr(self, "lbl_audio_track"):
             self.lbl_audio_track.setText(f"🎧 {get_translation(lang_name, 'audio_track')}")
 
+        if hasattr(self, "lbl_settings_head"):
+            self.lbl_settings_head.setText(f"⚙️ {get_translation(lang_name, 'sec_tuning')}")
         if hasattr(self, "lbl_pad_before"):
             self.lbl_pad_before.setText(get_translation(lang_name, "pad_before"))
         if hasattr(self, "lbl_pad_after"):
@@ -1571,11 +1604,6 @@ class FocusApp(QMainWindow):
                 self.combo_aspect.setCurrentIndex(cur_aspect_idx)
             self.combo_aspect.blockSignals(False)
 
-        if hasattr(self, "radio_batch_single"):
-            self.radio_batch_single.setText(f"📦 {get_translation(lang_name, 'master_scenepack')}")
-        if hasattr(self, "radio_batch_separate"):
-            self.radio_batch_separate.setText(f"📁 {get_translation(lang_name, 'separate_episodes')}")
-
         self.save_current_settings()
 
     def change_theme_event(self, new_theme: str):
@@ -1605,20 +1633,10 @@ class FocusApp(QMainWindow):
 
     def _switch_main_view(self, index: int):
         self.stacked_view.setCurrentIndex(index)
-        if index == 0:
-            self.btn_tab_gen.setChecked(True)
-            self.btn_tab_gal.setChecked(False)
-            if hasattr(self, 'btn_sidebar_gen'):
-                self.btn_sidebar_gen.setChecked(True)
-            if hasattr(self, 'btn_sidebar_gal'):
-                self.btn_sidebar_gal.setChecked(False)
-        else:
-            self.btn_tab_gen.setChecked(False)
-            self.btn_tab_gal.setChecked(True)
-            if hasattr(self, 'btn_sidebar_gen'):
-                self.btn_sidebar_gen.setChecked(False)
-            if hasattr(self, 'btn_sidebar_gal'):
-                self.btn_sidebar_gal.setChecked(True)
+        if hasattr(self, 'btn_sidebar_gen'):
+            self.btn_sidebar_gen.setChecked(index == 0)
+        if hasattr(self, 'btn_sidebar_gal'):
+            self.btn_sidebar_gal.setChecked(index == 1)
 
     def open_tutorial(self):
         try:

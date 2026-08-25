@@ -231,7 +231,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.33"
+APP_VERSION = "v1.3.34"
 
 
 class PlatformManager:
@@ -254,10 +254,24 @@ class PlatformManager:
         return 0
 
     @staticmethod
+    def get_subprocess_creation_flags() -> int:
+        if platform.system() == "Windows":
+            return getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+        return 0
+
+    @staticmethod
     def get_exe_suffix() -> str:
         if PlatformManager.is_windows():
             return ".exe"
         return ""
+
+    @staticmethod
+    def get_ffmpeg_safe_path(binary_name: str = "ffmpeg") -> str:
+        return shutil.which(binary_name) or binary_name
+
+    @staticmethod
+    def write_concat_demuxer_manifest(file_list: List[Path], manifest_path: Path):
+        write_concat_list(file_list, manifest_path)
 
 
 CREATE_NO_WINDOW = PlatformManager.get_creation_flags()
@@ -275,6 +289,8 @@ def write_concat_list(chunk_paths: List[Path], concat_list_path: Path):
 TRANSLATIONS = {
     "English": {
         "dashboard": "Dashboard",
+        "sec_workflow": "WORKFLOW",
+        "sec_resources": "RESOURCES",
         "generator_tab": "Generator",
         "gallery_tab": "Beta / Character Gallery",
         "gallery_title": "Interactive Character Auto-Gallery (AI Detection)",
@@ -307,7 +323,7 @@ TRANSLATIONS = {
         "sel_folder": "Add Folder...",
         "clear": "Clear",
         "sel_ref": "Select Reference Face Image...",
-        "sel_output": "Select Save Location & Output File...",
+        "sel_output": "Select Export Folder / Output...",
         "output_mode": "Output Mode:",
         "master_scenepack": "Master Scenepack (Single Video)",
         "separate_episodes": "Separate Episode Files",
@@ -320,13 +336,13 @@ TRANSLATIONS = {
         "frame_skip": "Frame Skip Interval:",
         "aspect_label": "Aspect Ratio & Framing:",
         "export_quality": "Export Quality:",
-        "vad_enable": "Smart Dialogue Protection (VAD & Lip-Sync)",
+        "vad_enable": "Smart Dialogue Protection (VAD / Lip-Sync)",
         "vad_buffer": "Silence Snapping Buffer (ms):",
         "vad_speaker_enable": "Target Speaker Voice Matching (Filter Background/Narrator)",
-        "vad_speaker_threshold": "Voice Similarity Threshold:",
-        "skip_intro_enable": "Skip Intro / Opening (OP)",
-        "skip_outro_enable": "Skip Outro / Ending (ED)",
-        "intro_mode_title": "Detection:",
+        "vad_speaker_threshold": "Similarity Threshold:",
+        "skip_intro_enable": "Skip Intro (OP)",
+        "skip_outro_enable": "Skip Outro (ED)",
+        "intro_mode_title": "Detection Engine:",
         "intro_mode_auto": "Auto Chapters (MKV/MP4)",
         "intro_mode_90s": "First 90s (Standard OP)",
         "intro_mode_custom": "Custom Duration",
@@ -378,6 +394,8 @@ TRANSLATIONS = {
     },
     "Polski": {
         "dashboard": "Panel Główny",
+        "sec_workflow": "PROJEKT / WORKFLOW",
+        "sec_resources": "MATERIAŁY",
         "generator_tab": "Generator Scen",
         "gallery_tab": "Galeria Postaci (Beta)",
         "gallery_title": "Interaktywna Galeria Postaci (Wykrywanie AI)",
@@ -410,7 +428,7 @@ TRANSLATIONS = {
         "sel_folder": "Dodaj Folder...",
         "clear": "Wyczyść",
         "sel_ref": "Wybierz Twarz Referencyjną...",
-        "sel_output": "Wybierz Miejsce Zapisu...",
+        "sel_output": "Wybierz Folder Docelowy / Zapisz Jako...",
         "output_mode": "Tryb Wyjściowy:",
         "master_scenepack": "Pojedynczy Master Scenepack",
         "separate_episodes": "Osobne Pliki dla Odcinków",
@@ -423,18 +441,18 @@ TRANSLATIONS = {
         "frame_skip": "Krok Analizy Klatek:",
         "aspect_label": "Format i Kadrowanie:",
         "export_quality": "Jakość Renderowania:",
-        "vad_enable": "Inteligentna Ochrona Zdań (VAD & Lip-Sync)",
+        "vad_enable": "Inteligentna Ochrona Dialogów (VAD / Lip-Sync)",
         "vad_buffer": "Bufor Ciszy (ms):",
         "vad_speaker_enable": "Dopasowanie Głosu Postaci (Filtr Tła)",
         "vad_speaker_threshold": "Próg Podobieństwa Głosu:",
-        "skip_intro_enable": "Pomiń Intro / Czołówkę (OP)",
-        "skip_outro_enable": "Pomiń Outro / Napisy Końcowe (ED)",
-        "intro_mode_title": "Wykrywanie:",
+        "skip_intro_enable": "Pomiń Intro (OP)",
+        "skip_outro_enable": "Pomiń Outro (ED)",
+        "intro_mode_title": "Silnik Wykrywania:",
         "intro_mode_auto": "Automatycznie z Rozdziałów (MKV/MP4)",
         "intro_mode_90s": "Pierwsze 90s (Standard Anime OP)",
         "intro_mode_custom": "Własny Czas Trwania",
         "intro_duration_lbl": "Czas Trwania (s):",
-        "generate": "Krok 1: Rozpocznij Skanowanie i Analizę",
+        "generate": "Krok 1: Rozpocznij Skanowanie & Analizę Wideo",
         "review_title": "Krok 2: Przegląd i Wybór Wykrytych Scen",
         "btn_render": "Krok 2: Wyrenderuj Wybrane Klipy",
         "logs_title": "Dziennik Zdarzeń & Diagnostyka:",
@@ -481,6 +499,8 @@ TRANSLATIONS = {
     },
     "Deutsch": {
         "dashboard": "Dashboard",
+        "sec_workflow": "WORKFLOW",
+        "sec_resources": "RESSOURCEN",
         "generator_tab": "Generator",
         "gallery_tab": "Charakter-Galerie (Beta)",
         "how_to_use": "Anleitung",
@@ -497,7 +517,7 @@ TRANSLATIONS = {
         "mode_system": "System (Auto)",
         "sel_video": "Eingabevideo auswählen...",
         "sel_ref": "Referenzgesicht auswählen...",
-        "sel_output": "Speicherort auswählen...",
+        "sel_output": "Exportordner auswählen...",
         "generate": "Schritt 1: Video analysieren & scannen",
         "btn_render": "Schritt 2: Ausgewählte Clips exportieren",
         "review_title": "Ergebnisse überprüfen",
@@ -508,6 +528,8 @@ TRANSLATIONS = {
     },
     "Español": {
         "dashboard": "Panel Principal",
+        "sec_workflow": "FLUJO DE TRABAJO",
+        "sec_resources": "RECURSOS",
         "generator_tab": "Generador",
         "gallery_tab": "Galería de Personajes (Beta)",
         "how_to_use": "Instrucciones",
@@ -524,7 +546,7 @@ TRANSLATIONS = {
         "mode_system": "Sistema (Auto)",
         "sel_video": "Seleccionar video(s)...",
         "sel_ref": "Seleccionar rostro de referencia...",
-        "sel_output": "Seleccionar destino...",
+        "sel_output": "Seleccionar carpeta de exportación...",
         "generate": "Paso 1: Analizar y Escanear Video",
         "btn_render": "Paso 2: Renderizar Clips Seleccionados",
         "review_title": "Revisar Escenas Detectadas",
@@ -535,6 +557,8 @@ TRANSLATIONS = {
     },
     "Français": {
         "dashboard": "Tableau de Bord",
+        "sec_workflow": "WORKFLOW",
+        "sec_resources": "RESSOURCES",
         "generator_tab": "Générateur",
         "gallery_tab": "Galerie de Personnages (Bêta)",
         "how_to_use": "Mode d'Emploi",
@@ -551,7 +575,7 @@ TRANSLATIONS = {
         "mode_system": "Système (Auto)",
         "sel_video": "Sélectionner vidéo(s)...",
         "sel_ref": "Sélectionner visage de référence...",
-        "sel_output": "Dossier de sortie...",
+        "sel_output": "Dossier d'exportation...",
         "generate": "Étape 1 : Analyser la Vidéo",
         "btn_render": "Étape 2 : Rendre les Clips",
         "review_title": "Vérifier les Scènes Détectées",
@@ -572,6 +596,8 @@ TRANSLATIONS = {
     },
     "日本語": {
         "dashboard": "ダッシュボード",
+        "sec_workflow": "ワークフロー",
+        "sec_resources": "リソース",
         "appearance": "外観モード:",
         "theme": "カラーテーマ:",
         "language": "言語:",
@@ -580,12 +606,12 @@ TRANSLATIONS = {
         "changelog": "更新履歴",
         "sel_video": "入力動画を選択",
         "sel_ref": "参照顔画像を選択",
-        "sel_output": "保存先を選択",
+        "sel_output": "出力先フォルダを選択",
         "pad_before": "前パディング(秒):",
         "pad_after": "後パディング(秒):",
         "max_gap": "最大許容間隔(秒):",
         "frame_skip": "フレームスキップ間隔:",
-        "generate": "生成開始",
+        "generate": "ステップ1: 動画スキャン・解析開始",
         "review": "結果の確認:",
         "play_orig": "元の動画を再生",
         "play_result": "結果を再生",
@@ -593,8 +619,8 @@ TRANSLATIONS = {
         "no_image": "画像が選択されていません",
         "no_output": "保存先が選択されていません",
         "ready": "生成の準備ができました",
-        "real_faces": "実写顔",
-        "anime": "アニメ",
+        "real_faces": "実写顔 (Live-Action / 3D)",
+        "anime": "2D アニメーション / アニメ",
         "light": "ライト",
         "dark": "ダーク",
         "system": "システム",
@@ -621,11 +647,16 @@ TRANSLATIONS = {
 
 
 def get_translation(lang_name: str, key: str) -> Any:
-    """Safely retrieves a localized string with fallback to English and key name."""
+    """Safely retrieves a localized string with fallback to English and clean formatted string."""
     lang_dict = TRANSLATIONS.get(lang_name, TRANSLATIONS.get("English", {}))
     if key in lang_dict:
         return lang_dict[key]
-    return TRANSLATIONS.get("English", {}).get(key, key)
+    val = TRANSLATIONS.get("English", {}).get(key)
+    if val is not None:
+        return val
+    if key.startswith("sec_"):
+        return key.replace("sec_", "").replace("_", " ").upper()
+    return key
 
 
 def get_changelog_text(lang_name: str = "English") -> str:
@@ -913,6 +944,14 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.34 (Comprehensive UI/UX Polish & Visual Bug-Fix Pass):\n"
+            "  - Resolved raw variable leaks (such as 'sec_workflow') and styled sidebar section headers with clean uppercase typography.\n"
+            "  - Expanded sidebar width to 240px with adjusted padding, eliminating all text truncation on '✨ Beta / Character Gallery'.\n"
+            "  - Deduplicated navigation by removing redundant header tab buttons, keeping the sidebar as the single source of navigation truth.\n"
+            "  - Re-engineered Scene & Detection Tuning into a strict 3-column QGridLayout with baseline-aligned labels and unified control heights.\n"
+            "  - Restructured audio & chapter detection controls into clean horizontal groups: VAD dialogue protection, target voice matching slider, and Intro/Outro skip engine.\n"
+            "  - Enhanced input path displays with increased padding, higher contrast, and modern text readout styling.\n"
+            "  - Fixed string typos and standardized action button labels across all localization dictionaries.\n\n"
             "• v1.3.33 (Startup Hotfix):\n"
             "  - Fixed NameError (missing 'Union' import from typing module) that caused application startup crashes on macOS and Windows.\n"
             "  - Verified clean startup and runtime module compatibility across all platforms.\n\n"
