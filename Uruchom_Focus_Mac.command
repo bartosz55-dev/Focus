@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# 0. Resolve symlinks to find real script directory
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 cd "$DIR" || exit 1
+
 # Automatically remove macOS Gatekeeper quarantine flags
 xattr -cr "$DIR" 2>/dev/null || true
 xattr -dr com.apple.quarantine "$DIR" 2>/dev/null || true
