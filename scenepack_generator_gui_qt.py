@@ -192,6 +192,9 @@ class ToastNotification(QFrame):
         
         self.timer.start(duration_ms)
 
+    def show_message(self, text: str, icon: str = "✨", duration_ms: int = 3200):
+        self.show_toast(text, icon, duration_ms)
+
     def fade_out(self):
         self.anim = QPropertyAnimation(self.opacity_effect, b"opacity", self)
         self.anim.setDuration(300)
@@ -573,6 +576,22 @@ class FocusApp(QMainWindow):
         dlg = PreferencesDialog(self)
         dlg.exec()
 
+    def _toggle_quick_theme(self):
+        current_mode = self.settings.get("appearance_mode", "Dark")
+        new_mode = "Light" if current_mode == "Dark" else "Dark"
+        self.settings["appearance_mode"] = new_mode
+        self._apply_theme(self.current_theme, new_mode)
+        self.save_current_settings()
+        self.toast.show_message(f"Theme switched to {new_mode} Mode", "🎨")
+
+    def _on_header_language_changed(self, lang_name: str):
+        if lang_name and lang_name != self.current_lang:
+            self.current_lang = lang_name
+            self.settings["language"] = lang_name
+            self._apply_language(lang_name)
+            self.save_current_settings()
+            self.toast.show_message(f"Language changed to {lang_name}", "🌐")
+
     def _setup_proxy_connections(self):
         self.queue_proxy.log_signal.connect(self._on_log_msg)
         self.queue_proxy.progress_signal.connect(self._on_progress_update)
@@ -721,6 +740,36 @@ class FocusApp(QMainWindow):
         mode_box.addWidget(self.btn_mode_anime)
         header_layout.addLayout(mode_box)
 
+        # Header quick controls: Language dropdown, Theme Toggle button, Preferences button
+        header_controls = QHBoxLayout()
+        header_controls.setSpacing(6)
+
+        self.combo_header_lang = QComboBox()
+        self.combo_header_lang.setObjectName("HeaderLangCombo")
+        self.combo_header_lang.setFixedHeight(34)
+        self.combo_header_lang.addItems(["English", "Polski", "Deutsch", "Español", "Français", "Русский", "Українська", "日本語"])
+        self.combo_header_lang.setCurrentText(self.current_lang)
+        self.combo_header_lang.currentTextChanged.connect(self._on_header_language_changed)
+        header_controls.addWidget(self.combo_header_lang)
+
+        is_dark_init = (self.settings.get("appearance_mode", "Dark") != "Light")
+        self.btn_header_theme = QPushButton("☀️ Light" if is_dark_init else "🌙 Dark")
+        self.btn_header_theme.setObjectName("HeaderThemeBtn")
+        self.btn_header_theme.setFixedHeight(34)
+        self.btn_header_theme.setCursor(Qt.PointingHandCursor)
+        self.btn_header_theme.clicked.connect(self._toggle_quick_theme)
+        header_controls.addWidget(self.btn_header_theme)
+
+        self.btn_header_pref = QPushButton("⚙️")
+        self.btn_header_pref.setObjectName("HeaderPrefBtn")
+        self.btn_header_pref.setFixedHeight(34)
+        self.btn_header_pref.setFixedWidth(38)
+        self.btn_header_pref.setToolTip("Open Preferences & Custom Themes")
+        self.btn_header_pref.setCursor(Qt.PointingHandCursor)
+        self.btn_header_pref.clicked.connect(self.open_preferences)
+        header_controls.addWidget(self.btn_header_pref)
+
+        header_layout.addLayout(header_controls)
         content_layout.addLayout(header_layout)
 
         # Stacked Widget for Generator vs Gallery
@@ -1511,7 +1560,23 @@ class FocusApp(QMainWindow):
             border-radius: 8px;
             color: {log_text};
         }}
+        QComboBox#HeaderLangCombo, QPushButton#HeaderThemeBtn, QPushButton#HeaderPrefBtn {{
+            background-color: {btn_bg};
+            border: 1px solid {border_input};
+            border-radius: 8px;
+            padding: 4px 10px;
+            color: {text_main};
+            font-weight: 600;
+            font-size: 11px;
+        }}
+        QComboBox#HeaderLangCombo:hover, QPushButton#HeaderThemeBtn:hover, QPushButton#HeaderPrefBtn:hover {{
+            background-color: {btn_hover};
+            border: 1px solid {hover};
+        }}
         """
+        app = QApplication.instance()
+        if app:
+            app.setStyleSheet(qss)
         self.setStyleSheet(qss)
 
         path_style = f"background-color: {bg_input}; border: 1px solid {border_input}; border-radius: 8px; padding: 8px 14px; color: {text_main}; font-weight: 500; font-size: 12px;"
@@ -1522,11 +1587,19 @@ class FocusApp(QMainWindow):
         if hasattr(self, "lbl_output_path"):
             self.lbl_output_path.setStyleSheet(path_style)
 
+        if hasattr(self, "btn_header_theme"):
+            self.btn_header_theme.setText("☀️ Light" if is_dark else "🌙 Dark")
+            self.btn_header_theme.setToolTip("Switch to Light Mode" if is_dark else "Switch to Dark Mode")
+
         self.save_current_settings()
 
     def _apply_language(self, lang_name: str):
         self.current_lang = lang_name
         self.lbl_dashboard.setText(get_translation(lang_name, "dashboard"))
+        if hasattr(self, "combo_header_lang"):
+            self.combo_header_lang.blockSignals(True)
+            self.combo_header_lang.setCurrentText(lang_name)
+            self.combo_header_lang.blockSignals(False)
         if hasattr(self, "lbl_wf"):
             self.lbl_wf.setText(get_translation(lang_name, "sec_workflow"))
         if hasattr(self, "lbl_res"):

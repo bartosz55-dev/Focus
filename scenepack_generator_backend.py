@@ -231,7 +231,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.36"
+APP_VERSION = "v1.3.37"
 
 
 class PlatformManager:
@@ -664,6 +664,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.37 (Szybki Przełącznik Motywów i Języków w Nagłówku / Quick Header Switchers):\n"
+            "  - Dodano wygodne przełączniki bezpośrednio na górnym pasku: szybki wybór języka (English, Polski, Deutsch, Español, Français, itd.), przycisk błyskawicznej zmiany motywu (Dark / Light) oraz przycisk pełnych ustawień (Preferences).\n"
+            "  - Zapewniono natychmiastową, dynamiczną zmianę stylów dla całej aplikacji i otwartych okien dialogowych bez konieczności restartu.\n\n"
             "• v1.3.36 (Domyślny Język Angielski i Tryb Ciemny / Dark Mode Default):\n"
             "  - Ustawiono domyślny motyw wizualny na 'Tryb Ciemny (Dark Mode)' oraz domyślny język interfejsu na angielski (English).\n"
             "  - Zaktualizowano profile konfiguracyjne i skróty startowe.\n\n"
@@ -959,6 +962,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.37 (Quick Header Theme & Language Switchers):\n"
+            "  - Added convenient quick switcher controls directly to the top header bar: interactive language dropdown, instant Dark/Light mode toggle button, and Quick Preferences modal launcher.\n"
+            "  - Enabled live multi-window stylesheet and theme transitions without application restarts.\n\n"
             "• v1.3.36 (Default English Language & Dark Mode Theme):\n"
             "  - Configured default visual appearance mode to Dark Mode and default interface language to English.\n"
             "  - Synchronized default configuration profiles and desktop launch scripts.\n\n"
