@@ -485,7 +485,7 @@ class FocusApp(QMainWindow):
         # State and settings
         self.settings = self.load_settings()
         self.current_theme = self.settings.get("theme", "violet")
-        self.current_lang = self.settings.get("language", "Polski")
+        self.current_lang = self.settings.get("language", detect_default_system_language())
         self.current_mode = self.settings.get("default_mode", "Real Faces")
 
         # Selected data

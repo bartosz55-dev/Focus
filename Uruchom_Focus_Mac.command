@@ -69,7 +69,7 @@ fi
 # 6. Launch Application
 echo ""
 echo "[INFO] Uruchamianie nowoczesnego interfejsu Focus (Qt 6 / PySide6)..."
-python scenepack_generator_gui_qt.py
+"$DIR/venv/bin/python" "$DIR/scenepack_generator_gui_qt.py"
 if [ $? -ne 0 ]; then
     echo ""
     echo "[BŁĄD] Aplikacja zakończyła działanie z błędem!"
