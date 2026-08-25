@@ -322,7 +322,7 @@ class PreferencesDialog(QDialog):
         self.btn_light = QPushButton("☀️ Light")
         self.btn_system = QPushButton("🖥️ System")
 
-        cur_mode = self.main_app.settings.get("appearance_mode", "System")
+        cur_mode = self.main_app.settings.get("appearance_mode", "Dark")
         for btn, name in [(self.btn_dark, "Dark"), (self.btn_light, "Light"), (self.btn_system, "System")]:
             btn.setCheckable(True)
             btn.setObjectName("ModeBtn")
@@ -485,7 +485,7 @@ class FocusApp(QMainWindow):
         # State and settings
         self.settings = self.load_settings()
         self.current_theme = self.settings.get("theme", "violet")
-        self.current_lang = self.settings.get("language", detect_default_system_language())
+        self.current_lang = self.settings.get("language", "English")
         self.current_mode = self.settings.get("default_mode", "Real Faces")
 
         # Selected data
@@ -519,15 +519,14 @@ class FocusApp(QMainWindow):
         self.queue_proxy.put(("log", "Welcome to Focus! AI Scenepack Generator ready."))
 
     def load_settings(self) -> dict:
-        default_lang = detect_default_system_language()
         default_settings = {
             "pad_before": 2.0, "pad_after": 2.0, "max_gap_tolerance": 1.5,
             "min_scene_duration": 1.0, "frame_skip": 15, "vad_enabled": True,
             "vad_buffer": 300, "vad_speaker_enabled": True, "vad_speaker_threshold": 0.68,
             "skip_intro": True, "skip_outro": False, "intro_mode": "Auto Chapters (MKV/MP4)",
             "intro_duration": 90, "export_quality": "Auto (Match Source Bitrate)",
-            "play_sound": True, "appearance_mode": "System", "theme": "violet",
-            "language": default_lang, "default_mode": "Real Faces"
+            "play_sound": True, "appearance_mode": "Dark", "theme": "violet",
+            "language": "English", "default_mode": "Real Faces"
         }
         settings_path = Path.home() / ".focus_settings.json"
         if not settings_path.exists():
@@ -559,7 +558,7 @@ class FocusApp(QMainWindow):
                 "intro_mode": getattr(self, 'combo_intro_mode', None) and self.combo_intro_mode.currentText(),
                 "intro_duration": float(getattr(self, 'input_intro_duration', None) and self.input_intro_duration.text() or 90),
                 "play_sound": self.settings.get("play_sound", True),
-                "appearance_mode": self.settings.get("appearance_mode", "System"),
+                "appearance_mode": self.settings.get("appearance_mode", "Dark"),
                 "theme": self.current_theme,
                 "language": self.current_lang,
                 "default_mode": self.current_mode
@@ -1227,7 +1226,7 @@ class FocusApp(QMainWindow):
         if appearance_mode:
             self.settings["appearance_mode"] = appearance_mode
 
-        mode = self.settings.get("appearance_mode", "System")
+        mode = self.settings.get("appearance_mode", "Dark")
         if mode == "System":
             try:
                 import darkdetect
