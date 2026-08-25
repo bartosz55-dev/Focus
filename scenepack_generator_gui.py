@@ -160,8 +160,8 @@ class FocusApp(ctk.CTk if ctk else object):
         self.app_dir.mkdir(parents=True, exist_ok=True)
         self.anime_cascade_path = self.app_dir / "lbpcascade_animeface.xml"
         
-        # UI/UX Redesign: Modern System/Dark-Mode Dashboard aesthetic
-        current_appearance = self.settings.get("appearance_mode", "System")
+        # UI/UX Redesign: Modern Dark-Mode Dashboard aesthetic
+        current_appearance = self.settings.get("appearance_mode", "Dark")
         current_theme = self.settings.get("color_theme", "blue")
         current_language = self.settings.get("language", "English")
         

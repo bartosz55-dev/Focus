@@ -231,7 +231,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.3.35"
+APP_VERSION = "v1.3.36"
 
 
 class PlatformManager:
@@ -664,6 +664,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.3.36 (Domyślny Język Angielski i Tryb Ciemny / Dark Mode Default):\n"
+            "  - Ustawiono domyślny motyw wizualny na 'Tryb Ciemny (Dark Mode)' oraz domyślny język interfejsu na angielski (English).\n"
+            "  - Zaktualizowano profile konfiguracyjne i skróty startowe.\n\n"
             "• v1.3.35 (Domyślny Język Systemowy / Angielski i Motyw Systemowy):\n"
             "  - Ustawiono domyślny motyw wizualny na 'Systemowy (System Auto-Sync)', automatycznie dostosowujący się do jasnego/ciemnego motywu macOS i Windows.\n"
             "  - Wdrożono automatyczne wykrywanie języka systemowego z płynnym mapowaniem i bezpiecznym fallbackiem do języka angielskiego (English).\n"
@@ -956,6 +959,9 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.3.36 (Default English Language & Dark Mode Theme):\n"
+            "  - Configured default visual appearance mode to Dark Mode and default interface language to English.\n"
+            "  - Synchronized default configuration profiles and desktop launch scripts.\n\n"
             "• v1.3.35 (System-Detected Language & System Theme by Default):\n"
             "  - Configured default appearance mode to 'System', automatically matching the operating system's Dark/Light mode theme.\n"
             "  - Implemented automatic system language detection with graceful fallback to English across all platforms.\n"
