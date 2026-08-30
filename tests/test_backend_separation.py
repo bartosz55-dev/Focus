@@ -46,10 +46,10 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         self.assertEqual(res.returncode, 0, f"Qt GUI import check failed: {res.stderr or res.stdout}")
 
     def test_app_version_is_incremented(self):
-        """Verify APP_VERSION in backend follows valid semver string pattern."""
+        """Verify APP_VERSION in backend follows valid version string pattern (e.g. v1.38)."""
         import scenepack_generator_backend as backend
         import re
-        self.assertTrue(bool(re.match(r"^v\d+\.\d+\.\d+$", backend.APP_VERSION)), f"Invalid APP_VERSION format: {backend.APP_VERSION}")
+        self.assertTrue(bool(re.match(r"^v\d+\.\d{2,}$", backend.APP_VERSION)), f"Invalid APP_VERSION format: {backend.APP_VERSION}")
 
     def test_platform_manager_flags(self):
         """Verify PlatformManager isolates Windows creationflags from macOS/POSIX."""
@@ -88,8 +88,8 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         backend.init_gpu_acceleration()
         cl_en = backend.get_changelog_text("English")
         cl_pl = backend.get_changelog_text("Polski")
-        self.assertIn("v1.2.1", cl_en)
-        self.assertIn("v1.2.1", cl_pl)
+        self.assertIn("v1.21", cl_en)
+        self.assertIn("v1.21", cl_pl)
 
     def test_focus_debug_log_creation(self):
         """Verify get_app_dir creates Focus_Logs directory in user Documents folder."""
