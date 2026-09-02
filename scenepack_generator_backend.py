@@ -88,24 +88,34 @@ def safe_face_distance(face_encodings, face_to_compare):
 def get_cascade_classifier(cascade_path: Optional[str]):
     """
     Safely instantiates cv2.CascadeClassifier with robust fallbacks for PyInstaller bundled environments.
+    Resolves symlinks to absolute paths and handles multiple cv2 namespace variants.
     Returns None safely if CascadeClassifier cannot be instantiated, avoiding runtime crashes.
     """
-    if not cascade_path or not os.path.exists(cascade_path):
+    if not cascade_path:
         return None
 
-    try:
-        if hasattr(cv2, 'CascadeClassifier'):
-            clf = cv2.CascadeClassifier(cascade_path)
-            if hasattr(clf, 'empty') and not clf.empty():
-                return clf
-        if hasattr(cv2, 'cv2') and hasattr(cv2.cv2, 'CascadeClassifier'):
-            clf = cv2.cv2.CascadeClassifier(cascade_path)
-            if hasattr(clf, 'empty') and not clf.empty():
-                return clf
-    except Exception as e:
-        logging.warning(f"Could not load cv2.CascadeClassifier for path '{cascade_path}': {e}")
+    real_path = os.path.realpath(str(cascade_path))
+    if not os.path.exists(real_path):
+        logging.warning(f"Cascade classifier file does not exist: {cascade_path} (resolved: {real_path})")
         return None
 
+    candidate_classes = []
+    if hasattr(cv2, 'CascadeClassifier'):
+        candidate_classes.append(cv2.CascadeClassifier)
+    if hasattr(cv2, 'objdetect') and hasattr(cv2.objdetect, 'CascadeClassifier'):
+        candidate_classes.append(cv2.objdetect.CascadeClassifier)
+    if hasattr(cv2, 'cv2') and hasattr(cv2.cv2, 'CascadeClassifier'):
+        candidate_classes.append(cv2.cv2.CascadeClassifier)
+
+    for clf_cls in candidate_classes:
+        try:
+            clf = clf_cls(real_path)
+            if hasattr(clf, 'empty') and not clf.empty():
+                return clf
+        except Exception as e:
+            logging.debug(f"Failed loading cascade with {clf_cls}: {e}")
+
+    logging.warning(f"Could not load cv2.CascadeClassifier for path '{real_path}' with available OpenCV classes.")
     return None
 
 
@@ -262,7 +272,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.40"
+APP_VERSION = "v1.41"
 
 
 class PlatformManager:
@@ -695,6 +705,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.41 (Naprawa Kompatybilności OpenCV, Rozwiązywanie Dowiązań Symbolicznych i Zapasowy Model Wizualny):\n"
+            "  - Zablokowano wersję opencv-python (<5.0.0) w requirements.txt, eliminując błędy wersji zapoznawczej OpenCV 5.0.0 z PyPI, która usunęła atrybut cv2.CascadeClassifier w module głównym.\n"
+            "  - Wzmocniono get_cascade_classifier o automatyczne rozwijanie dowiązań symbolicznych (os.path.realpath) oraz wielopoziomowe wsparcie dla przestrzeni nazw cv2, cv2.objdetect i cv2.cv2.\n"
+            "  - Rozbudowano wyszukiwanie wbudowanego modelu lbpcascade_animeface.xml w paczkach macOS (.app) o strukturę Contents/Resources/models i automatyczne rozwiązywanie ścieżek (.resolve()).\n"
+            "  - Zaimplementowano w _process_single_frame bezpośredni zapasowy model sieciowy (safe_face_locations), zapobiegając utracie detekcji nawet w przypadku braku lub uszkodzenia pliku kaskady.\n"
+            "  - Zastąpiono tradycyjny logger mechanizmem RotatingFileHandler z limitem 5 MB, zapobiegając rozrastaniu się pliku focus_debug.log i eliminując archiwalne komunikaty o błędach z poprzednich tygodni.\n\n"
             "• v1.40 (Precyzyjna Detekcja Mowy VAD, Ochrona Scen Głosowych i Wbudowane Modele Anime):\n"
             "  - Naprawiono przechwytywanie znaczników wyciszenia w FFmpeg VAD (_detect_silences) poprzez dostosowanie poziomu logowania do info, przywracając pełną funkcjonalność inteligentnej ochrony dialogów i przyciągania do ciszy.\n"
             "  - Zabezpieczono rozpakowywanie krotek interwałów w _build_target_voice_print, eliminując błąd ValueError przy 2-elementowych krotkach.\n"
@@ -930,6 +946,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.41 (OpenCV Compatibility Fix, Symlink Dereferencing & Neural Face Fallback):\n"
+            "  - Pinned opencv-python (<5.0.0) in requirements.txt to prevent breaking changes from the newly uploaded OpenCV 5.0.0 preview on PyPI which stripped cv2.CascadeClassifier from the top-level module.\n"
+            "  - Hardened get_cascade_classifier with canonical symlink resolution (os.path.realpath) and multi-namespace support across cv2, cv2.objdetect, and cv2.cv2.\n"
+            "  - Enhanced lbpcascade_animeface.xml discovery in macOS .app bundles across Contents/Resources/models and canonical path resolution (.resolve()).\n"
+            "  - Added neural face recognition model fallback (safe_face_locations) in _process_single_frame so face detection never completely drops even if an offline cascade is unavailable.\n"
+            "  - Integrated RotatingFileHandler with 5MB ceiling preventing log inflation and suppressing historical crash noise.\n\n"
             "• v1.40 (Precision VAD Speech Detection, Voice Filter Fallback & Bundled Anime Models):\n"
             "  - Fixed FFmpeg silencedetect marker parsing in _detect_silences by switching from -loglevel error to -loglevel info, restoring full intelligent dialogue protection and boundary snapping.\n"
             "  - Hardened tuple unpacking in _build_target_voice_print, preventing ValueError crashes when 2-tuple intervals are provided.\n"
@@ -1302,23 +1324,26 @@ class ScenePackGenerator:
         # Locate anime cascade: prioritize PyInstaller bundle, project models/ directory, or app_dir
         bundle_cascade = None
         if hasattr(sys, '_MEIPASS'):
-            p_meipass = Path(sys._MEIPASS) / "models" / "lbpcascade_animeface.xml"
-            if p_meipass.exists():
-                bundle_cascade = p_meipass
-            else:
-                p_meipass_root = Path(sys._MEIPASS) / "lbpcascade_animeface.xml"
-                if p_meipass_root.exists():
-                    bundle_cascade = p_meipass_root
+            candidates = [
+                Path(sys._MEIPASS) / "models" / "lbpcascade_animeface.xml",
+                Path(sys._MEIPASS).parent / "Resources" / "models" / "lbpcascade_animeface.xml",
+                Path(sys._MEIPASS) / "lbpcascade_animeface.xml",
+                Path(sys._MEIPASS).parent / "Resources" / "lbpcascade_animeface.xml"
+            ]
+            for c in candidates:
+                if c.exists():
+                    bundle_cascade = c.resolve()
+                    break
 
         if not bundle_cascade:
             local_models = Path(__file__).resolve().parent / "models" / "lbpcascade_animeface.xml"
             if local_models.exists():
-                bundle_cascade = local_models
+                bundle_cascade = local_models.resolve()
 
         if bundle_cascade and bundle_cascade.exists():
             self.anime_cascade_path = bundle_cascade
         else:
-            self.anime_cascade_path = self.app_dir / "lbpcascade_animeface.xml"
+            self.anime_cascade_path = (self.app_dir / "lbpcascade_animeface.xml").resolve()
 
         self.bin_dir = self.app_dir / "bin"
         self.bin_dir.mkdir(parents=True, exist_ok=True)
@@ -2344,6 +2369,7 @@ class ScenePackGenerator:
                                 rel_x = center_x / w_resized
                                 return (target_idx / fps, rel_x)
                     else:
+                        faces = []
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
                         if not hasattr(thread_local_data, 'face_cascade'):
                             if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
@@ -2353,20 +2379,30 @@ class ScenePackGenerator:
                                 thread_local_data.face_cascade = None
                         local_face_cascade = thread_local_data.face_cascade
                         if local_face_cascade and not local_face_cascade.empty():
-                            faces = local_face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
-                            if len(faces) > 0:
-                                if ref_anime_feats:
-                                    for (x_f, y_f, w_f, h_f) in faces:
-                                        crop_bgr = small_frame[y_f:y_f+h_f, x_f:x_f+w_f]
-                                        if crop_bgr.size > 0:
-                                            curr_feat = extract_anime_face_features(crop_bgr)
-                                            if any(is_anime_feature_match(ref_f, curr_feat, tolerance=self.tolerance) for ref_f in ref_anime_feats):
-                                                rel_x = (x_f + w_f / 2.0) / w_resized
-                                                return (target_idx / fps, rel_x)
-                                else:
-                                    (x_f, y_f, w_f, h_f) = faces[0]
-                                    rel_x = (x_f + w_f / 2.0) / w_resized
-                                    return (target_idx / fps, rel_x)
+                            detected = local_face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+                            if len(detected) > 0:
+                                faces = list(detected)
+
+                        # If cascade classifier found nothing or is absent, fall back to neural face recognition model
+                        if len(faces) == 0:
+                            rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+                            flocs = safe_face_locations(rgb_frame, model="hog")
+                            for (top, right, bottom, left) in flocs:
+                                faces.append((left, top, right - left, bottom - top))
+
+                        if len(faces) > 0:
+                            if ref_anime_feats:
+                                for (x_f, y_f, w_f, h_f) in faces:
+                                    crop_bgr = small_frame[y_f:y_f+h_f, x_f:x_f+w_f]
+                                    if crop_bgr.size > 0:
+                                        curr_feat = extract_anime_face_features(crop_bgr)
+                                        if any(is_anime_feature_match(ref_f, curr_feat, tolerance=self.tolerance) for ref_f in ref_anime_feats):
+                                            rel_x = (x_f + w_f / 2.0) / w_resized
+                                            return (target_idx / fps, rel_x)
+                            else:
+                                (x_f, y_f, w_f, h_f) = faces[0]
+                                rel_x = (x_f + w_f / 2.0) / w_resized
+                                return (target_idx / fps, rel_x)
 
                 return None
 
