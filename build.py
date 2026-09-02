@@ -44,6 +44,7 @@ args = [
     f'--add-data={frm_path}{sep}face_recognition_models',
     f'--add-data={cv2_path}{sep}cv2',
     f'--add-data=themes{sep}themes',
+    f'--add-data=models{sep}models',
     '--collect-all=cv2',
     '--collect-all=PySide6',
     '--collect-all=shiboken6',
