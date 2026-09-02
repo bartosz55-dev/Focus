@@ -993,11 +993,12 @@ class FocusApp(QMainWindow):
         self.lbl_speaker_thresh.setFont(get_system_font(10))
         speaker_box.addWidget(self.lbl_speaker_thresh)
 
-        init_thresh = int(self.settings.get("vad_speaker_threshold", 0.68) * 100)
+        init_thresh = min(85, max(30, int(self.settings.get("vad_speaker_threshold", 0.65) * 100)))
         self.slider_speaker = QSlider(Qt.Horizontal)
-        self.slider_speaker.setRange(10, 99)
+        self.slider_speaker.setRange(30, 85)
         self.slider_speaker.setValue(init_thresh)
         self.slider_speaker.setFixedWidth(130)
+        self.slider_speaker.setToolTip("Target Voice Matching Threshold (0.50: Lenient, 0.65: Balanced, 0.75: Strict)")
         self.lbl_speaker_val = QLabel(f"{init_thresh/100:.2f}")
         self.lbl_speaker_val.setFont(get_system_font(10, QFont.Weight.Bold))
         self.lbl_speaker_val.setFixedWidth(36)
@@ -1952,7 +1953,8 @@ class FocusApp(QMainWindow):
             pad_before, pad_after, max_gap, min_scene, skip,
             vad_enabled, vad_buffer, vad_speaker_enabled, vad_speaker_threshold,
             self.current_mode, self.queue_proxy,
-            skip_intro, skip_outro, intro_mode, intro_duration
+            skip_intro, skip_outro, intro_mode, intro_duration,
+            float(self.settings.get("tolerance", 0.6))
         )
         self.scan_worker.start()
 

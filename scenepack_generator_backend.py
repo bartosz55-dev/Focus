@@ -261,7 +261,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.39"
+APP_VERSION = "v1.40"
 
 
 class PlatformManager:
@@ -694,6 +694,14 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.40 (Precyzyjna Detekcja Mowy VAD, Ochrona Scen Głosowych i Wbudowane Modele Anime):\n"
+            "  - Naprawiono przechwytywanie znaczników wyciszenia w FFmpeg VAD (_detect_silences) poprzez dostosowanie poziomu logowania do info, przywracając pełną funkcjonalność inteligentnej ochrony dialogów i przyciągania do ciszy.\n"
+            "  - Zabezpieczono rozpakowywanie krotek interwałów w _build_target_voice_print, eliminując błąd ValueError przy 2-elementowych krotkach.\n"
+            "  - Wprowadzono natychmiastowe zatrzymanie (fail-fast) w przypadku braku wykrytych klatek postaci, eliminując zbędne 30-sekundowe skanowanie cięć scen FFmpeg przy pustych wynikach.\n"
+            "  - Zaimplementowano bezpieczny fallback weryfikacji głosu (speaker verification) – przy zbyt restrykcyjnym progu aplikacja zachowuje wykryte wizualnie sceny zamiast błędnie zgłaszać brak postaci.\n"
+            "  - Wbudowano model lbpcascade_animeface.xml bezpośrednio do repozytorium i instalatora PyInstaller (katalog models/), gwarantując 100% działanie w trybie offline bez konieczności pobierania z sieci.\n"
+            "  - Ulepszono ekstrakcję twarzy referencyjnych w trybie Anime o multi-scale, kaskady pomocnicze i inteligentne kadrowanie plakatów.\n"
+            "  - Zoptymalizowano suwak progu głosu (zakres 0.30 - 0.85, domyślnie 0.65 z podpowiedziami w UI) oraz przekazywanie tolerancji do wątku skanującego.\n\n"
             "• v1.39 (Audyt Wieloplatformowości, Zabezpieczenie Wyjątków i GitHub Actions Node 24):\n"
             "  - Zaktualizowano workflow GitHub Actions do obsługi środowiska Node.js 24 (checkout@v7, setup-python@v7, upload-artifact@v7, download-artifact@v8, action-gh-release@v3), eliminując ostrzeżenia o przestarzałym Node 20.\n"
             "  - Zabezpieczono metody detekcji twarzy (dlib) przed wyjątkami C++ i pustymi danymi w safe_face_locations, safe_face_encodings, safe_compare_faces i safe_face_distance.\n"
@@ -921,6 +929,14 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.40 (Precision VAD Speech Detection, Voice Filter Fallback & Bundled Anime Models):\n"
+            "  - Fixed FFmpeg silencedetect marker parsing in _detect_silences by switching from -loglevel error to -loglevel info, restoring full intelligent dialogue protection and boundary snapping.\n"
+            "  - Hardened tuple unpacking in _build_target_voice_print, preventing ValueError crashes when 2-tuple intervals are provided.\n"
+            "  - Implemented fail-fast scanning in scan_and_prepare, eliminating wasteful 30-second FFmpeg scene cut runs when zero character frames are detected.\n"
+            "  - Added graceful speaker verification fallback — when an overly strict threshold filters out all intervals, visual face detections are retained rather than raising false negative errors.\n"
+            "  - Bundled lbpcascade_animeface.xml directly inside the repository and PyInstaller distribution (models/ directory), guaranteeing 100% offline functionality without network downloads.\n"
+            "  - Improved anime reference face extraction with multi-scale cascades, auxiliary frontalface detection, and smart portrait cropping for landscape wallpapers/posters.\n"
+            "  - Constrained the GUI speaker voice threshold slider to safe bounds (0.30 - 0.85, default 0.65) with descriptive UX tooltips and wired tolerance into background scan workers.\n\n"
             "• v1.39 (Cross-Platform Hardening, Native Exception Safety & GitHub Actions Node 24):\n"
             "  - Upgraded GitHub Actions workflows to modern Node.js 24 actions (checkout@v7, setup-python@v7, upload-artifact@v7, download-artifact@v8, action-gh-release@v3), resolving Node 20 deprecation warnings.\n"
             "  - Hardened facial recognition pipelines against native C++ dlib crashes with thread locks and input validation across safe_face_* functions.\n"
@@ -1282,7 +1298,26 @@ class ScenePackGenerator:
             self.app_dir = Path(os.path.expanduser('~/.local/share/Focus'))
         self.app_dir.mkdir(parents=True, exist_ok=True)
 
-        self.anime_cascade_path = self.app_dir / "lbpcascade_animeface.xml"
+        # Locate anime cascade: prioritize PyInstaller bundle, project models/ directory, or app_dir
+        bundle_cascade = None
+        if hasattr(sys, '_MEIPASS'):
+            p_meipass = Path(sys._MEIPASS) / "models" / "lbpcascade_animeface.xml"
+            if p_meipass.exists():
+                bundle_cascade = p_meipass
+            else:
+                p_meipass_root = Path(sys._MEIPASS) / "lbpcascade_animeface.xml"
+                if p_meipass_root.exists():
+                    bundle_cascade = p_meipass_root
+
+        if not bundle_cascade:
+            local_models = Path(__file__).resolve().parent / "models" / "lbpcascade_animeface.xml"
+            if local_models.exists():
+                bundle_cascade = local_models
+
+        if bundle_cascade and bundle_cascade.exists():
+            self.anime_cascade_path = bundle_cascade
+        else:
+            self.anime_cascade_path = self.app_dir / "lbpcascade_animeface.xml"
 
         self.bin_dir = self.app_dir / "bin"
         self.bin_dir.mkdir(parents=True, exist_ok=True)
@@ -1455,6 +1490,19 @@ class ScenePackGenerator:
 
     def _download_anime_cascade(self):
         with CASCADE_DOWNLOAD_LOCK:
+            if self.anime_cascade_path.exists() and self.anime_cascade_path.stat().st_size >= 50000:
+                return
+
+            # Check if bundled or project models directory has it first
+            local_candidate = Path(__file__).resolve().parent / "models" / "lbpcascade_animeface.xml"
+            if local_candidate.exists() and local_candidate.stat().st_size >= 50000:
+                try:
+                    self.anime_cascade_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(local_candidate, self.anime_cascade_path)
+                    return
+                except Exception:
+                    pass
+
             if not self.anime_cascade_path.exists() or self.anime_cascade_path.stat().st_size < 50000:
                 self.log_queue.put(("log", "Downloading anime face cascade model..."))
                 url = "https://raw.githubusercontent.com/nagadomi/lbpcascade_animeface/master/lbpcascade_animeface.xml"
@@ -1788,23 +1836,55 @@ class ScenePackGenerator:
         else:
             image_bgr = cv2.imread(str(path_obj))
             if image_bgr is None:
+                try:
+                    with open(str(path_obj), "rb") as f_img:
+                        img_arr = np.frombuffer(f_img.read(), dtype=np.uint8)
+                        image_bgr = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+                except Exception:
+                    pass
+            if image_bgr is None:
                 raise ValueError(f"Could not load reference image: {path_obj}")
+
             gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
             self._download_anime_cascade()
             anime_cascade = get_cascade_classifier(str(self.anime_cascade_path))
-            if anime_cascade is None or (hasattr(anime_cascade, 'empty') and anime_cascade.empty()):
-                return None
-            
-            faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
+
+            faces = []
+            if anime_cascade is not None and hasattr(anime_cascade, 'empty') and not anime_cascade.empty():
+                faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
+                if len(faces) == 0:
+                    faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.03, minNeighbors=1, minSize=(20, 20))
+
             if len(faces) == 0:
-                faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.03, minNeighbors=1, minSize=(20, 20))
+                # Auxiliary fallback: attempt frontalface Haar cascade for semi-realistic anime characters
+                aux_cascade = None
+                if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                    p_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
+                    aux_cascade = get_cascade_classifier(p_path)
+                if aux_cascade is not None and hasattr(aux_cascade, 'empty') and not aux_cascade.empty():
+                    aux_faces = aux_cascade.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=3, minSize=(30, 30))
+                    if len(aux_faces) > 0:
+                        faces = aux_faces
 
             if len(faces) > 0:
+                # Sort by area descending and pick the largest detected face
+                faces = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
                 x, y, w, h = faces[0]
                 crop_bgr = image_bgr[y:y+h, x:x+w]
             else:
-                # Fall back to using the reference image itself (e.g. when user provides a pre-cropped avatar)
-                crop_bgr = image_bgr
+                # Smart crop fallback for full posters / wallpapers to avoid diluted background histograms
+                h_img, w_img = image_bgr.shape[:2]
+                if w_img > 1.3 * h_img:
+                    # Landscape wallpaper: crop top 70% and middle 60%
+                    x_s = int(w_img * 0.2)
+                    x_e = int(w_img * 0.8)
+                    y_e = int(h_img * 0.7)
+                    crop_bgr = image_bgr[0:y_e, x_s:x_e]
+                elif h_img > 1.3 * w_img:
+                    # Tall poster/portrait: crop top 50%
+                    crop_bgr = image_bgr[0:int(h_img * 0.5), :]
+                else:
+                    crop_bgr = image_bgr
 
             features = extract_anime_face_features(crop_bgr)
             return features
@@ -1935,20 +2015,22 @@ class ScenePackGenerator:
             return [(s, e) for s, e, _ in result]
         return result
 
-    def _detect_silences(self, video_path: Path, buffer_ms: int = 300) -> List[Tuple[float, float]]:
+    def _detect_silences(self, video_path: Path, buffer_ms: int = 300, **kwargs) -> List[Tuple[float, float]]:
+        if 'vad_buffer' in kwargs:
+            buffer_ms = kwargs['vad_buffer']
         silences = []
         try:
             d_sec = buffer_ms / 1000.0
             cmd = [
                 str(self.ffmpeg_path),
-                '-hide_banner', '-loglevel', 'error',
+                '-hide_banner', '-loglevel', 'info',
                 '-i', str(video_path),
                 '-vn', '-sn', '-dn',
                 '-af', f'silencedetect=noise=-30dB:d={d_sec}',
                 '-f', 'null', '-'
             ]
             result = self.run_subprocess(cmd, capture_output=True, text=True)
-            output = result.stderr
+            output = result.stderr or ""
             starts = re.findall(r'silence_start:\s*([\d\.]+)', output)
             ends = re.findall(r'silence_end:\s*([\d\.]+)', output)
 
@@ -2046,10 +2128,13 @@ class ScenePackGenerator:
         except Exception:
             return None
 
-    def _build_target_voice_print(self, video_path: Path, intervals: List[Tuple[float, float, float]]) -> Optional[np.ndarray]:
-        sorted_intervals = sorted(intervals, key=lambda x: x[1] - x[0], reverse=True)
+    def _build_target_voice_print(self, video_path: Path, intervals: List[Any]) -> Optional[np.ndarray]:
+        sorted_intervals = sorted(intervals, key=lambda x: (x[1] - x[0]) if len(x) >= 2 else 0, reverse=True)
         embeddings = []
-        for s, e, _ in sorted_intervals[:3]:
+        for item in sorted_intervals[:3]:
+            if not isinstance(item, (list, tuple)) or len(item) < 2:
+                continue
+            s, e = float(item[0]), float(item[1])
             dur = e - s
             if dur < 0.5:
                 continue
@@ -2655,6 +2740,10 @@ class ScenePackGenerator:
                 intro_mode=intro_mode, intro_duration=intro_duration
             )
 
+            if not intervals:
+                logging.warning(f"[{v_path.name}] No character/face occurrences were detected during scanning. Skipping shot boundaries and audio filters.")
+                continue
+
             logging.info(f"[{v_path.name}] Detecting shot boundaries for scene snapping...")
             scene_cuts = self._detect_scene_cuts(v_path)
 
@@ -2746,7 +2835,14 @@ class ScenePackGenerator:
                                         logging.warning(f"Clip [{s:.2f}-{e:.2f}] Discarded! Background/Narrator detected (Similarity: {sim:.3f} < {vad_speaker_threshold})")
                                 else:
                                     verified_intervals.append((s, e, avg_x))
-                            intervals = verified_intervals
+
+                            if len(verified_intervals) == 0 and len(intervals) > 0:
+                                logging.warning(
+                                    f"[{v_path.name}] Speaker voice verification filtered out all {len(intervals)} clips "
+                                    f"using threshold {vad_speaker_threshold:.2f}. Retaining visual face detections to avoid dropping valid scenes."
+                                )
+                            else:
+                                intervals = verified_intervals
                         else:
                             logging.warning(f"[{v_path.name}] Failed to build Target Voice Print. Skipping speaker verification.")
 
@@ -2776,7 +2872,7 @@ class ScenePackGenerator:
                     all_intervals.append((start, end, avg_x))
 
         if not all_intervals:
-            raise ValueError("Target face was not detected in any of the input videos.")
+            raise ValueError("Target face was not detected in any of the input videos. Ensure your reference image clearly shows the target face, or try lowering detection strictness.")
 
         return all_intervals
 

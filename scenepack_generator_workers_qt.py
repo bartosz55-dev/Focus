@@ -99,7 +99,8 @@ class ScanWorker(QThread):
                  vad_speaker_enabled: bool, vad_speaker_threshold: float,
                  mode: str, queue_proxy: QtQueueProxy,
                  skip_intro: bool = False, skip_outro: bool = False,
-                 intro_mode: str = "Auto Chapters", intro_duration: float = 90.0):
+                 intro_mode: str = "Auto Chapters", intro_duration: float = 90.0,
+                 tolerance: float = 0.6):
         super().__init__()
         self.generator_cls = generator_cls
         self.video_path = video_path
@@ -119,6 +120,7 @@ class ScanWorker(QThread):
         self.skip_outro = skip_outro
         self.intro_mode = intro_mode
         self.intro_duration = intro_duration
+        self.tolerance = tolerance
         self.generator_instance = None
         self.is_cancelled = False
 
@@ -130,7 +132,7 @@ class ScanWorker(QThread):
     def run(self):
         try:
             self.generator_instance = self.generator_cls(
-                log_queue=self.queue_proxy, frame_skip=self.skip, mode=self.mode
+                log_queue=self.queue_proxy, frame_skip=self.skip, mode=self.mode, tolerance=self.tolerance
             )
             ref_arg = self.image_path if isinstance(self.image_path, dict) or self.image_path is None else Path(self.image_path)
             scanned_intervals = self.generator_instance.scan_and_prepare(
