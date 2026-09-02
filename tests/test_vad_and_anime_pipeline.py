@@ -89,6 +89,26 @@ class TestVadAndAnimePipeline(unittest.TestCase):
                 )
                 self.assertEqual(len(result), 2)
 
+    def test_get_cascade_classifier_resolves_symlinks(self):
+        """Verify get_cascade_classifier correctly dereferences symlinks and loads classifier."""
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "test_cascade.xml"
+            target.write_bytes(self.generator.anime_cascade_path.read_bytes())
+            sym = Path(td) / "sym_cascade.xml"
+            os.symlink(str(target), str(sym))
+
+            clf = backend.get_cascade_classifier(str(sym))
+            self.assertIsNotNone(clf)
+            self.assertFalse(clf.empty())
+
+    def test_opencv_pinned_below_5_in_requirements(self):
+        """Verify requirements.txt prevents OpenCV 5.x installation which breaks CascadeClassifier."""
+        req_path = Path(__file__).resolve().parent.parent / "requirements.txt"
+        self.assertTrue(req_path.exists())
+        content = req_path.read_text(encoding="utf-8")
+        self.assertIn("opencv-python>=4.8.0,<5.0.0", content)
+
 
 if __name__ == "__main__":
     unittest.main()
+
