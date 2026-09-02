@@ -23,10 +23,10 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
         cache: 'pip'
@@ -61,7 +61,7 @@ jobs:
         zip -ry ../Focus-macOS.zip Focus.app Uruchom_Focus.command
 
     - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Focus-${{ matrix.os }}
         path: |
@@ -77,16 +77,15 @@ jobs:
     
     steps:
     - name: Download all workflow run artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: artifacts
 
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         files: |
-          artifacts/Focus-windows-latest/Focus-Windows.zip
-          artifacts/Focus-macos-latest/Focus-macOS.zip
+          artifacts/**/*.zip
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

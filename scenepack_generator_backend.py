@@ -261,7 +261,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.38"
+APP_VERSION = "v1.39"
 
 
 class PlatformManager:
@@ -694,6 +694,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.39 (Audyt Wieloplatformowości, Zabezpieczenie Wyjątków i GitHub Actions Node 24):\n"
+            "  - Zaktualizowano workflow GitHub Actions do obsługi środowiska Node.js 24 (checkout@v7, setup-python@v7, upload-artifact@v7, download-artifact@v8, action-gh-release@v3), eliminując ostrzeżenia o przestarzałym Node 20.\n"
+            "  - Zabezpieczono metody detekcji twarzy (dlib) przed wyjątkami C++ i pustymi danymi w safe_face_locations, safe_face_encodings, safe_compare_faces i safe_face_distance.\n"
+            "  - Naprawiono brakujący import shutil w generatorze pojedynczego pliku master w GUI Qt.\n"
+            "  - Wprowadzono pełne wsparcie dla otwierania plików i powiadomień dźwiękowych na Linuxie, macOS i Windowsie.\n"
+            "  - Dodano automatyczne oczyszczanie katalogów budowania przed startem PyInstallera.\n\n"
             "• v1.38 (Ujednolicenie Wersjonowania i Czysty Nagłówek / Clean Header & Standardized Decimal Versioning):\n"
             "  - Usunięto zbędne kontrolki z górnego paska nawigacyjnego, przywracając czysty i minimalistyczny nagłówek (dostęp do wszystkich motywów, kolorów i języków odbywa się przez dedykowane okno Preferencji w pasku bocznym).\n"
             "  - Wprowadzono precyzyjny, dwumiejscowy system numeracji wersji w całym projekcie i changelogu (np. v1.30 + 0.01 = v1.31 ... v1.99 + 0.01 = v2.00).\n\n"
@@ -915,6 +921,12 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.39 (Cross-Platform Hardening, Native Exception Safety & GitHub Actions Node 24):\n"
+            "  - Upgraded GitHub Actions workflows to modern Node.js 24 actions (checkout@v7, setup-python@v7, upload-artifact@v7, download-artifact@v8, action-gh-release@v3), resolving Node 20 deprecation warnings.\n"
+            "  - Hardened facial recognition pipelines against native C++ dlib crashes with thread locks and input validation across safe_face_* functions.\n"
+            "  - Fixed missing shutil import in Qt GUI master scenepack export.\n"
+            "  - Added cross-platform system launchers and sound fallbacks for Linux, macOS, and Windows.\n"
+            "  - Implemented pre-build directory cleanup preventing PyInstaller locked file collisions.\n\n"
             "• v1.38 (Clean Header & Standardized Decimal Versioning):\n"
             "  - Removed redundant quick switcher controls from the top header bar, restoring a clean and minimal header layout (all themes, colors, and languages remain conveniently accessible in the dedicated Preferences modal via the sidebar).\n"
             "  - Standardized strict two-decimal version numbering across all project components and changelog entries (e.g. v1.30 + 0.01 = v1.31 ... v1.99 + 0.01 = v2.00).\n\n"
