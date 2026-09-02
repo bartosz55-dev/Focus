@@ -117,5 +117,68 @@ class TestProcessCancellationTracking(unittest.TestCase):
         self.assertEqual(len(gui_gen._active_subprocesses), 0)
 
 
+class TestSafeFaceRobustness(unittest.TestCase):
+    """Verifies that safe_face_* functions handle None and empty arrays without raising exceptions."""
+
+    def test_safe_face_functions_with_none_and_empty(self):
+        import numpy as np
+        import scenepack_generator_backend as backend
+
+        self.assertEqual(backend.safe_face_locations(None), [])
+        self.assertEqual(backend.safe_face_locations(np.array([])), [])
+        self.assertEqual(backend.safe_face_encodings(None), [])
+        self.assertEqual(backend.safe_face_encodings(np.array([])), [])
+        self.assertEqual(backend.safe_compare_faces([], None), [])
+        self.assertEqual(backend.safe_face_landmarks(None), [])
+        self.assertEqual(len(backend.safe_face_distance([], None)), 0)
+
+
+class TestCrossPlatformSeasonSorting(unittest.TestCase):
+    """Verifies natural and season-aware chronological sorting across diverse naming patterns."""
+
+    def test_season_episode_ordering(self):
+        import scenepack_generator_backend as backend
+        
+        input_files = [
+            Path("Attack on Titan - S02E01.mkv"),
+            Path("Attack on Titan - S01E02.mkv"),
+            Path("Attack on Titan - S01E01.mkv"),
+            Path("Attack on Titan - S01E10.mkv"),
+        ]
+        sorted_files = sorted(input_files, key=backend.natural_sort_key)
+        expected = [
+            Path("Attack on Titan - S01E01.mkv"),
+            Path("Attack on Titan - S01E02.mkv"),
+            Path("Attack on Titan - S01E10.mkv"),
+            Path("Attack on Titan - S02E01.mkv"),
+        ]
+        self.assertEqual(sorted_files, expected)
+
+    def test_natural_number_ordering(self):
+        import scenepack_generator_backend as backend
+        
+        input_files = [
+            Path("Episode 10.mp4"),
+            Path("Episode 2.mp4"),
+            Path("Episode 1.mp4"),
+        ]
+        sorted_files = sorted(input_files, key=backend.natural_sort_key)
+        expected = [
+            Path("Episode 1.mp4"),
+            Path("Episode 2.mp4"),
+            Path("Episode 10.mp4"),
+        ]
+        self.assertEqual(sorted_files, expected)
+
+
+class TestQtGuiModuleIntegrity(unittest.TestCase):
+    """Verifies that Qt GUI module loads with all required standard libraries like shutil."""
+
+    def test_shutil_present_in_qt_gui(self):
+        import scenepack_generator_gui_qt as gui_mod
+        self.assertTrue(hasattr(gui_mod, 'shutil'), "scenepack_generator_gui_qt must import shutil")
+
+
 if __name__ == "__main__":
     unittest.main()
+

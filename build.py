@@ -27,6 +27,14 @@ print(f"Located face_recognition_models at: {frm_path}")
 print(f"Located PySide6 at: {pyside_path}")
 print(f"Located cv2 at: {cv2_path}")
 
+# Pre-clean dist and build directories to prevent permission and locked file errors
+for old_dir in [Path("build"), Path("dist")]:
+    if old_dir.exists():
+        try:
+            shutil.rmtree(old_dir, ignore_errors=True)
+        except Exception:
+            pass
+
 args = [
     'scenepack_generator_gui_qt.py',
     '--name=Focus',

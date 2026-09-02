@@ -30,28 +30,58 @@ DLIB_THREAD_LOCK = threading.Lock()
 
 
 def safe_face_locations(img, number_of_times_to_upsample=1, model="hog"):
+    if img is None or getattr(img, 'size', 0) == 0:
+        return []
     with DLIB_THREAD_LOCK:
-        return face_recognition.face_locations(img, number_of_times_to_upsample=number_of_times_to_upsample, model=model)
+        try:
+            return face_recognition.face_locations(img, number_of_times_to_upsample=number_of_times_to_upsample, model=model)
+        except Exception as e:
+            logging.debug(f"safe_face_locations exception: {e}")
+            return []
 
 
 def safe_face_encodings(face_image, known_face_locations=None, num_jitters=1, model="small"):
+    if face_image is None or getattr(face_image, 'size', 0) == 0:
+        return []
     with DLIB_THREAD_LOCK:
-        return face_recognition.face_encodings(face_image, known_face_locations=known_face_locations, num_jitters=num_jitters, model=model)
+        try:
+            return face_recognition.face_encodings(face_image, known_face_locations=known_face_locations, num_jitters=num_jitters, model=model)
+        except Exception as e:
+            logging.debug(f"safe_face_encodings exception: {e}")
+            return []
 
 
 def safe_compare_faces(known_face_encodings, face_encoding_to_check, tolerance=0.6):
+    if not known_face_encodings or face_encoding_to_check is None:
+        return []
     with DLIB_THREAD_LOCK:
-        return face_recognition.compare_faces(known_face_encodings, face_encoding_to_check, tolerance=tolerance)
+        try:
+            return face_recognition.compare_faces(known_face_encodings, face_encoding_to_check, tolerance=tolerance)
+        except Exception as e:
+            logging.debug(f"safe_compare_faces exception: {e}")
+            return []
 
 
 def safe_face_landmarks(face_image, face_locations=None, model="large"):
+    if face_image is None or getattr(face_image, 'size', 0) == 0:
+        return []
     with DLIB_THREAD_LOCK:
-        return face_recognition.face_landmarks(face_image, face_locations=face_locations, model=model)
+        try:
+            return face_recognition.face_landmarks(face_image, face_locations=face_locations, model=model)
+        except Exception as e:
+            logging.debug(f"safe_face_landmarks exception: {e}")
+            return []
 
 
 def safe_face_distance(face_encodings, face_to_compare):
+    if not face_encodings or face_to_compare is None:
+        return np.empty(0)
     with DLIB_THREAD_LOCK:
-        return face_recognition.face_distance(face_encodings, face_to_compare)
+        try:
+            return face_recognition.face_distance(face_encodings, face_to_compare)
+        except Exception as e:
+            logging.debug(f"safe_face_distance exception: {e}")
+            return np.empty(0)
 
 
 
@@ -1381,6 +1411,11 @@ class ScenePackGenerator:
                     zip_ref.extractall(self.bin_dir)
                 zip_path.unlink()
             os.chmod(self.ffmpeg_path, 0o755)
+            if PlatformManager.is_macos():
+                try:
+                    subprocess.run(["xattr", "-d", "com.apple.quarantine", str(self.ffmpeg_path)], capture_output=True)
+                except Exception:
+                    pass
 
         if not self.ffprobe_path.exists():
             self.log_queue.put(("log", "Downloading static FFprobe binary..."))
@@ -1400,6 +1435,11 @@ class ScenePackGenerator:
                     zip_ref.extractall(self.bin_dir)
                 zip_path.unlink()
             os.chmod(self.ffprobe_path, 0o755)
+            if PlatformManager.is_macos():
+                try:
+                    subprocess.run(["xattr", "-d", "com.apple.quarantine", str(self.ffprobe_path)], capture_output=True)
+                except Exception:
+                    pass
 
     def _download_anime_cascade(self):
         with CASCADE_DOWNLOAD_LOCK:

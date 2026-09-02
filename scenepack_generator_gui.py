@@ -31,6 +31,12 @@ try:
 except ImportError:
     ctk = None
 
+import urllib.request
+import cv2
+import face_recognition
+import multiprocessing
+
+import scenepack_generator_backend as sg_engine
 from scenepack_generator_backend import (
     APP_VERSION,
     CASCADE_DOWNLOAD_LOCK,
@@ -47,6 +53,11 @@ from scenepack_generator_backend import (
     get_translation,
     get_changelog_text,
     TextboxLogHandler,
+    safe_face_locations,
+    safe_face_encodings,
+    safe_compare_faces,
+    safe_face_landmarks,
+    safe_face_distance,
 )
 
 THEME_COLORS = {
@@ -155,6 +166,8 @@ class FocusApp(ctk.CTk if ctk else object):
         self._target_progress = 0.0
         self._is_scanning = False
         self._is_rendering = False
+        self.tutorial_win = None
+        self.changelog_win = None
 
         self.app_dir = get_app_dir()
         self.app_dir.mkdir(parents=True, exist_ok=True)
@@ -1142,7 +1155,7 @@ class FocusApp(ctk.CTk if ctk else object):
                         
                     if mode == "Real Faces":
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                        face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+                        face_locations = safe_face_locations(rgb_frame, model="hog")
                         
                         if not face_locations and profile_cascade and not profile_cascade.empty():
                             gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
@@ -1159,7 +1172,7 @@ class FocusApp(ctk.CTk if ctk else object):
                                 face_locations.append((y, x_real+w, y+h, x_real))
     
                         if face_locations:
-                            encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                            encodings = safe_face_encodings(rgb_frame, face_locations)
                             for loc, encoding in zip(face_locations, encodings):
                                 top, right, bottom, left = loc
                                 face_crop_rgb = make_square_crop(rgb_frame, top, right, bottom, left, pad_ratio=0.30)
@@ -1211,7 +1224,7 @@ class FocusApp(ctk.CTk if ctk else object):
                 matched_merged = None
                 if mode == "Real Faces" and candidate['encoding'] is not None:
                     for mc in merged_clusters:
-                        dists = face_recognition.face_distance(mc['encodings'], candidate['encoding'])
+                        dists = safe_face_distance(mc['encodings'], candidate['encoding'])
                         if len(dists) > 0 and min(dists) <= 0.55:
                             matched_merged = mc
                             break
@@ -1417,8 +1430,14 @@ class FocusApp(ctk.CTk if ctk else object):
                         if platform.system() == "Darwin":
                             subprocess.Popen(['afplay', '/System/Library/Sounds/Glass.aiff'])
                         elif platform.system() == "Windows":
-                            import winsound
-                            winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)
+                            try:
+                                import winsound
+                                winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)
+                            except Exception:
+                                pass
+                        else:
+                            sys.stdout.write('\a')
+                            sys.stdout.flush()
                     except Exception as e:
                         logging.error(f"Failed to play notification sound: {e}")
             elif msg_type == "gallery_status":
@@ -1455,8 +1474,10 @@ class FocusApp(ctk.CTk if ctk else object):
             try:
                 if platform.system() == "Windows":
                     os.startfile(v_path)
-                else:
+                elif platform.system() == "Darwin":
                     subprocess.Popen(['open', v_path])
+                else:
+                    subprocess.Popen(['xdg-open', v_path])
             except Exception as e:
                 logging.error(f"Failed to open original video: {e}")
 
@@ -1466,8 +1487,10 @@ class FocusApp(ctk.CTk if ctk else object):
             try:
                 if platform.system() == "Windows":
                     os.startfile(o_path)
-                else:
+                elif platform.system() == "Darwin":
                     subprocess.Popen(['open', o_path])
+                else:
+                    subprocess.Popen(['xdg-open', o_path])
             except Exception as e:
                 logging.error(f"Failed to open generated scenepack: {e}")
 
