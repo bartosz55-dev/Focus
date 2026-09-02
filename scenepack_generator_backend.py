@@ -225,10 +225,11 @@ def get_app_dir() -> Path:
 
 
 def setup_crash_logger():
-    """Configures file logging to focus_debug.log and hooks uncaught exceptions across threads."""
+    """Configures file logging to focus_debug.log with rotation and hooks uncaught exceptions across threads."""
     try:
+        from logging.handlers import RotatingFileHandler
         log_file = get_app_dir() / "focus_debug.log"
-        file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+        file_handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=2, encoding='utf-8')
         file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
         file_handler.setLevel(logging.INFO)
         
