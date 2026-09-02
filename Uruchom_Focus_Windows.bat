@@ -75,7 +75,7 @@ if errorlevel 1 (
 :: 6. Launch Application
 echo.
 echo [INFO] Uruchamianie nowoczesnego interfejsu Focus (Qt 6 / PySide6)...
-python scenepack_generator_gui_qt.py
+"%~dp0venv\Scripts\python.exe" "%~dp0scenepack_generator_gui_qt.py"
 if errorlevel 1 (
     echo.
     echo [BŁĄD] Aplikacja zakończyła działanie z błędem!
