@@ -108,6 +108,35 @@ class TestVadAndAnimePipeline(unittest.TestCase):
         content = req_path.read_text(encoding="utf-8")
         self.assertIn("opencv-python>=4.8.0,<5.0.0", content)
 
+    def test_dead_dependencies_removed_from_requirements(self):
+        """Verify unused scipy and python_speech_features are absent from requirements.txt."""
+        req_path = Path(__file__).resolve().parent.parent / "requirements.txt"
+        content = req_path.read_text(encoding="utf-8")
+        self.assertNotIn("scipy", content)
+        self.assertNotIn("python_speech_features", content)
+
+    def test_speaker_verification_runs_when_no_silences_detected(self):
+        """Verify vad_speaker_enabled still executes voice verification even if _detect_silences finds 0 silences."""
+        with tempfile.NamedTemporaryFile(suffix=".mp4") as tf_v, \
+             tempfile.NamedTemporaryFile(suffix=".jpg") as tf_i:
+
+            with patch.object(self.generator, "find_scenes", return_value=[(10.0, 15.0, 0.5)]), \
+                 patch.object(self.generator, "load_reference_face", return_value=(np.zeros((16, 16)), np.zeros((16, 16)), np.zeros(256))), \
+                 patch.object(self.generator, "_detect_scene_cuts", return_value=[]), \
+                 patch.object(self.generator, "_detect_silences", return_value=[]), \
+                 patch.object(self.generator, "_build_target_voice_print", return_value=np.ones(13)), \
+                 patch.object(self.generator, "_extract_audio_embedding", return_value=np.ones(13)), \
+                 patch.object(self.generator, "_check_and_download_ffmpeg"):
+
+                result = self.generator.scan_and_prepare(
+                    video_path=tf_v.name,
+                    ref_image_path=tf_i.name,
+                    vad_enabled=True,
+                    vad_speaker_enabled=True,
+                    vad_speaker_threshold=0.5
+                )
+                self.assertEqual(len(result), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v1.41)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v1.42)
 
-[![Version](https://img.shields.io/badge/version-v1.41-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
+[![Version](https://img.shields.io/badge/version-v1.42-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -16,7 +16,7 @@ By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Pe
 
 ---
 
-## ⚡ Key Features (v1.3.32)
+## ⚡ Key Features (v1.42)
 
 * **⚙️ Dedicated Modern Preferences & Settings Window:** Uncluttered studio sidebar with a dedicated Preferences modal for Appearance Mode (Dark, Light, System Auto), 8 circular accent color swatches, dynamic language selection, and audio notification controls.
 * **☀️ Full Light & Dark Mode Engine:** Complete high-contrast design system with crisp typography, elevated cards, and responsive palette switching across all dialogs and cards.
