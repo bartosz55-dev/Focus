@@ -11,8 +11,11 @@ set PYTHON_CMD=
 for %%P in (python.exe py.exe python3.exe) do (
     %%P --version >nul 2>&1
     if not errorlevel 1 (
-        set PYTHON_CMD=%%P
-        goto :python_found
+        where %%P 2>nul | findstr /i /v "WindowsApps" >nul 2>&1
+        if not errorlevel 1 (
+            set PYTHON_CMD=%%P
+            goto :python_found
+        )
     )
 )
 

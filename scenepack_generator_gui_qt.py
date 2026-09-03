@@ -240,8 +240,7 @@ class MiniPreviewDialog(QDialog):
     def _load_preview_frame(self):
         try:
             cap = cv2.VideoCapture(self.video_path)
-            fps = cap.get(cv2.CAP_PROP_FPS) or 24.0
-            cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.start_sec * fps))
+            cap.set(cv2.CAP_PROP_POS_MSEC, int(self.start_sec * 1000.0))
             ret, frame = cap.read()
             cap.release()
 
@@ -251,7 +250,7 @@ class MiniPreviewDialog(QDialog):
                 new_h = int(h * (new_w / w))
                 frame_resized = cv2.resize(frame, (new_w, new_h))
                 rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
-                qimg = QImage(rgb.data, new_w, new_h, new_w * 3, QImage.Format.Format_RGB888)
+                qimg = QImage(rgb.data, new_w, new_h, new_w * 3, QImage.Format.Format_RGB888).copy()
                 self.lbl_frame.setPixmap(QPixmap.fromImage(qimg))
             else:
                 self.lbl_frame.setText("Preview frame unavailable")
@@ -1981,6 +1980,8 @@ class FocusApp(QMainWindow):
         if not self.output_path_str:
             path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", "scenepack.mp4", "MP4 Video (*.mp4);;All Files (*.*)")
             if path:
+                if not path.lower().endswith(".mp4"):
+                    path += ".mp4"
                 self.output_path_str = path
                 self.lbl_output_path.setText(Path(path).name)
             else:
@@ -2143,7 +2144,6 @@ class FocusApp(QMainWindow):
             self.start_scan()
             return
 
-        self.btn_run_batch.setEnabled(False)
         self.btn_generate.setEnabled(False)
         self.is_batch_running = True
         self.batch_rendered_outputs = []
@@ -2152,7 +2152,6 @@ class FocusApp(QMainWindow):
 
     def _process_next_batch_item(self):
         if not self.is_batch_running:
-            self.btn_run_batch.setEnabled(True)
             self.btn_generate.setEnabled(True)
             return
 
@@ -2170,7 +2169,6 @@ class FocusApp(QMainWindow):
             self.start_scan()
         else:
             self.is_batch_running = False
-            self.btn_run_batch.setEnabled(True)
             self.btn_generate.setEnabled(True)
 
             valid_rendered = [p for p in self.batch_rendered_outputs if os.path.exists(p)]
@@ -2205,15 +2203,15 @@ class FocusApp(QMainWindow):
                 self.master_concat_worker = MasterConcatWorker(sg_engine, valid_paths, master_out, self.queue_proxy)
                 self.master_concat_worker.start()
             else:
-                self.btn_run_batch.setEnabled(True)
+                self.btn_generate.setEnabled(True)
                 QMessageBox.warning(self, "Master Scenepack Error", "No valid rendered outputs found to concatenate. Make sure you have successfully rendered clips first.")
         except Exception as e:
-            self.btn_run_batch.setEnabled(True)
+            self.btn_generate.setEnabled(True)
             logging.error(f"Master concatenation failed: {e}")
 
     @Slot(str)
     def _on_master_concat_complete(self, master_out: str):
-        self.btn_run_batch.setEnabled(True)
+        self.btn_generate.setEnabled(True)
         if master_out:
             master_out_path = Path(master_out)
             self.lbl_batch_status.setText(f"Master Scenepack Created: {master_out_path.name}")
@@ -2349,7 +2347,7 @@ class FocusApp(QMainWindow):
             if idx < len(thumbnails) and thumbnails[idx] is not None:
                 pil_img = thumbnails[idx]
                 data = pil_img.convert("RGBA").tobytes("raw", "RGBA")
-                qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format.Format_RGBA8888)
+                qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format.Format_RGBA8888).copy()
                 pixmap = QPixmap.fromImage(qimg)
                 thumb_label.setPixmap(pixmap)
             else:

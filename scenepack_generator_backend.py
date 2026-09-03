@@ -272,7 +272,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.41"
+APP_VERSION = "v1.42"
 
 
 class PlatformManager:
@@ -705,6 +705,14 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.42 (Kompleksowy Audyt Kodu — 7 Naprawionych Błędów):\n"
+            "  - [CRITICAL] Naprawiono losowe segfaulty/artefakty graficzne w podglądzie klipów i miniaturach Review Checklist — QImage z PySide6 nie kopiuje bufora pamięci, dodano .copy() aby wymusić bezpieczną kopię danych.\n"
+            "  - [HIGH] Naprawiono pomijanie weryfikacji głosu mówcy (VAD Speaker) gdy wideo nie zawiera absolutnych cisz — blok weryfikacji był nieprawidłowo zagnieżdżony wewnątrz `if silences:`, przeniesiony na właściwy poziom.\n"
+            "  - [HIGH] Naprawiono crash batch mode (AttributeError) — metody przetwarzania wsadowego odwoływały się do nieistniejącego przycisku btn_run_batch, zamieniono na btn_generate.\n"
+            "  - [MEDIUM] Naprawiono niedokładne pozycjonowanie podglądu mini-klipów — zastąpiono szukanie po numerze klatki (CAP_PROP_POS_FRAMES) szukaniem po milisekundach (CAP_PROP_POS_MSEC) dla poprawnej obsługi VFR.\n"
+            "  - [MEDIUM] Usunięto martwe zależności scipy i python_speech_features z requirements.txt — zastąpione czystym NumPy MFCC od v1.30, build.py aktywnie je wyklucza.\n"
+            "  - [MEDIUM] Naprawiono fałszywe wykrywanie Pythona w Windows Launcher — dodano filtrowanie aliasów App Execution Alias z WindowsApps.\n"
+            "  - [LOW] Dodano automatyczne dopisywanie rozszerzenia .mp4 w zapasowym oknie zapisu, zapobiegając tworzeniu plików bez rozszerzenia.\n\n"
             "• v1.41 (Naprawa Kompatybilności OpenCV, Rozwiązywanie Dowiązań Symbolicznych i Zapasowy Model Wizualny):\n"
             "  - Zablokowano wersję opencv-python (<5.0.0) w requirements.txt, eliminując błędy wersji zapoznawczej OpenCV 5.0.0 z PyPI, która usunęła atrybut cv2.CascadeClassifier w module głównym.\n"
             "  - Wzmocniono get_cascade_classifier o automatyczne rozwijanie dowiązań symbolicznych (os.path.realpath) oraz wielopoziomowe wsparcie dla przestrzeni nazw cv2, cv2.objdetect i cv2.cv2.\n"
@@ -946,6 +954,14 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.42 (Comprehensive Code Audit — 7 Bugs Fixed):\n"
+            "  - [CRITICAL] Fixed random segfaults and green artifacts in clip previews and Review Checklist thumbnails — PySide6 QImage does not copy raw memory buffers, added .copy() to force safe deep copy.\n"
+            "  - [HIGH] Fixed speaker voice verification (VAD Speaker) being silently skipped when videos contain no absolute silences — the verification block was incorrectly nested inside `if silences:`, moved to correct indentation level.\n"
+            "  - [HIGH] Fixed batch mode crash (AttributeError) — batch processing methods referenced non-existent btn_run_batch widget, replaced with btn_generate.\n"
+            "  - [MEDIUM] Fixed inaccurate mini-clip preview positioning — replaced frame-number seeking (CAP_PROP_POS_FRAMES) with millisecond seeking (CAP_PROP_POS_MSEC) for correct VFR video handling.\n"
+            "  - [MEDIUM] Removed dead dependencies scipy and python_speech_features from requirements.txt — replaced by pure NumPy MFCC since v1.30, build.py actively excludes them.\n"
+            "  - [MEDIUM] Fixed false Python detection in Windows Launcher — added App Execution Alias filtering to prevent WindowsApps stub from masquerading as real Python.\n"
+            "  - [LOW] Added automatic .mp4 extension appending in fallback save dialog, preventing creation of extensionless output files.\n\n"
             "• v1.41 (OpenCV Compatibility Fix, Symlink Dereferencing & Neural Face Fallback):\n"
             "  - Pinned opencv-python (<5.0.0) in requirements.txt to prevent breaking changes from the newly uploaded OpenCV 5.0.0 preview on PyPI which stripped cv2.CascadeClassifier from the top-level module.\n"
             "  - Hardened get_cascade_classifier with canonical symlink resolution (os.path.realpath) and multi-namespace support across cv2, cv2.objdetect, and cv2.cv2.\n"
@@ -2843,45 +2859,45 @@ class ScenePackGenerator:
                                 final_intervals.append((s, e, avg_x))
                     intervals = final_intervals
 
-                    if vad_speaker_enabled and len(intervals) > 0:
-                        logging.info(f"[{v_path.name}] Target Speaker Voice Matching Enabled. Enrolling Target Voice Print...")
-                        voice_print = self._build_target_voice_print(v_path, intervals)
-                        if voice_print is not None:
-                            logging.info(f"[{v_path.name}] Target Voice Enrolled. Verifying speakers across {len(intervals)} clips...")
-                            verified_intervals = []
-                            for item in intervals:
-                                s, e = item[0], item[1]
-                                avg_x = item[2] if len(item) > 2 else 0.5
-                                dur = e - s
-                                if dur < 0.2:
-                                    continue
-                                test_s = s + (dur / 2) - min(1.0, dur / 2)
-                                test_e = test_s + min(2.0, dur)
-                                emb = self._extract_audio_embedding(v_path, test_s, test_e)
-                                if emb is not None:
-                                    norm_vp = np.linalg.norm(voice_print)
-                                    norm_emb = np.linalg.norm(emb)
-                                    sim = 0.0
-                                    if norm_vp > 0 and norm_emb > 0:
-                                        sim = np.dot(voice_print, emb) / (norm_vp * norm_emb)
+                if vad_speaker_enabled and len(intervals) > 0:
+                    logging.info(f"[{v_path.name}] Target Speaker Voice Matching Enabled. Enrolling Target Voice Print...")
+                    voice_print = self._build_target_voice_print(v_path, intervals)
+                    if voice_print is not None:
+                        logging.info(f"[{v_path.name}] Target Voice Enrolled. Verifying speakers across {len(intervals)} clips...")
+                        verified_intervals = []
+                        for item in intervals:
+                            s, e = item[0], item[1]
+                            avg_x = item[2] if len(item) > 2 else 0.5
+                            dur = e - s
+                            if dur < 0.2:
+                                continue
+                            test_s = s + (dur / 2) - min(1.0, dur / 2)
+                            test_e = test_s + min(2.0, dur)
+                            emb = self._extract_audio_embedding(v_path, test_s, test_e)
+                            if emb is not None:
+                                norm_vp = np.linalg.norm(voice_print)
+                                norm_emb = np.linalg.norm(emb)
+                                sim = 0.0
+                                if norm_vp > 0 and norm_emb > 0:
+                                    sim = np.dot(voice_print, emb) / (norm_vp * norm_emb)
 
-                                    if sim >= vad_speaker_threshold:
-                                        logging.info(f"Clip [{s:.2f}-{e:.2f}] Verified (Similarity: {sim:.3f} >= {vad_speaker_threshold})")
-                                        verified_intervals.append((s, e, avg_x))
-                                    else:
-                                        logging.warning(f"Clip [{s:.2f}-{e:.2f}] Discarded! Background/Narrator detected (Similarity: {sim:.3f} < {vad_speaker_threshold})")
-                                else:
+                                if sim >= vad_speaker_threshold:
+                                    logging.info(f"Clip [{s:.2f}-{e:.2f}] Verified (Similarity: {sim:.3f} >= {vad_speaker_threshold})")
                                     verified_intervals.append((s, e, avg_x))
-
-                            if len(verified_intervals) == 0 and len(intervals) > 0:
-                                logging.warning(
-                                    f"[{v_path.name}] Speaker voice verification filtered out all {len(intervals)} clips "
-                                    f"using threshold {vad_speaker_threshold:.2f}. Retaining visual face detections to avoid dropping valid scenes."
-                                )
+                                else:
+                                    logging.warning(f"Clip [{s:.2f}-{e:.2f}] Discarded! Background/Narrator detected (Similarity: {sim:.3f} < {vad_speaker_threshold})")
                             else:
-                                intervals = verified_intervals
+                                verified_intervals.append((s, e, avg_x))
+
+                        if len(verified_intervals) == 0 and len(intervals) > 0:
+                            logging.warning(
+                                f"[{v_path.name}] Speaker voice verification filtered out all {len(intervals)} clips "
+                                f"using threshold {vad_speaker_threshold:.2f}. Retaining visual face detections to avoid dropping valid scenes."
+                            )
                         else:
-                            logging.warning(f"[{v_path.name}] Failed to build Target Voice Print. Skipping speaker verification.")
+                            intervals = verified_intervals
+                    else:
+                        logging.warning(f"[{v_path.name}] Failed to build Target Voice Print. Skipping speaker verification.")
 
             snapped_intervals = []
             for item in intervals:
