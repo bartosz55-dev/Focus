@@ -175,7 +175,7 @@ class FocusApp(ctk.CTk if ctk else object):
         
         # UI/UX Redesign: Modern Dark-Mode Dashboard aesthetic
         current_appearance = self.settings.get("appearance_mode", "Dark")
-        current_theme = self.settings.get("color_theme", "blue")
+        current_theme = self.settings.get("color_theme", "violet")
         current_language = self.settings.get("language", "English")
         
         # Override window background to deep dark color

@@ -41,6 +41,7 @@ Thumbs.db
 *.mkv
 *.avi
 *.png
+!icon.png
 *.jpg
 *.jpeg
 
