@@ -56,6 +56,15 @@ if [ -f "${ROOT_DIR}/icon.png" ]; then
     echo "Copied icon.png -> icon.png"
 fi
 
+# Copy Python backend scripts and AI models
+cp "${ROOT_DIR}/scenepack_generator.py" "${APP_BUNDLE}/Contents/Resources/"
+cp "${ROOT_DIR}/scenepack_generator_backend.py" "${APP_BUNDLE}/Contents/Resources/"
+if [ -d "${ROOT_DIR}/models" ]; then
+    cp -r "${ROOT_DIR}/models" "${APP_BUNDLE}/Contents/Resources/"
+    echo "Bundled models/ -> Resources"
+fi
+echo "Bundled Python backend scripts -> Resources"
+
 # 4. Generate Info.plist
 cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
