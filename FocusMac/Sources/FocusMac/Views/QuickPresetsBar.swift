@@ -8,24 +8,24 @@ public struct QuickPresetsBar: View {
 
     public var body: some View {
         HStack(spacing: 8) {
-            Text("⚡ Quick Presets:")
+            Text(appState.localized("quick_presets"))
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(.secondary)
 
             // Built-in smart presets
-            Button("📱 TikTok (9:16)") {
+            Button(appState.localized("preset_tiktok")) {
                 applyTikTokPreset()
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
 
-            Button("🎬 YouTube (16:9)") {
+            Button(appState.localized("preset_youtube")) {
                 applyYouTubePreset()
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
 
-            Button("⚡ Draft (Fast)") {
+            Button(appState.localized("preset_draft")) {
                 applyDraftPreset()
             }
             .buttonStyle(.bordered)
@@ -36,7 +36,7 @@ public struct QuickPresetsBar: View {
 
             // Custom user presets picker
             Picker("", selection: $selectedPreset) {
-                Text("Custom Presets...").tag("Presets...")
+                Text(appState.localized("custom_presets")).tag("Presets...")
                 ForEach(appState.customPresets, id: \.self) { name in
                     Text("👤 \(name)").tag(name)
                 }
@@ -56,6 +56,7 @@ public struct QuickPresetsBar: View {
                 showSaveSheet = true
             }) {
                 Image(systemName: "plus.circle")
+                    .foregroundColor(appState.accentColor)
             }
             .buttonStyle(.borderless)
             .help("Save current settings as a custom preset")
@@ -104,7 +105,7 @@ public struct QuickPresetsBar: View {
                     }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
-                    .tint(.purple)
+                    .tint(appState.accentColor)
                 }
             }
             .padding(24)

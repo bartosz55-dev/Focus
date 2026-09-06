@@ -14,18 +14,18 @@ public struct ProgressCardView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "wand.and.rays")
                                 .font(.system(size: 14, weight: .bold))
-                            Text(appState.isProcessing ? "Processing Video..." : "Scan and Analyze Video")
+                            Text(appState.isProcessing ? appState.processingStatus : appState.localized("scan_button"))
                                 .font(.system(size: 13, weight: .bold))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.purple)
+                    .tint(appState.accentColor)
                     .disabled(appState.isProcessing)
 
                     if appState.isProcessing {
-                        Button("Cancel") {
+                        Button(appState.localized("cancel_button")) {
                             appState.cancel()
                         }
                         .buttonStyle(.bordered)
@@ -41,7 +41,7 @@ public struct ProgressCardView: View {
                                 .font(.system(size: 11, weight: .bold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 2)
-                                .background(Capsule().fill(Color.purple.opacity(0.3)))
+                                .background(Capsule().fill(appState.accentColor.opacity(0.3)))
                         }
 
                         Text(appState.processingStatus)
@@ -53,11 +53,11 @@ public struct ProgressCardView: View {
 
                         Text("\(Int(appState.progressValue * 100))%")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.purple)
+                            .foregroundColor(appState.accentColor)
                     }
 
                     ProgressView(value: appState.progressValue, total: 1.0)
-                        .tint(.purple)
+                        .tint(appState.accentColor)
                 }
             }
         }

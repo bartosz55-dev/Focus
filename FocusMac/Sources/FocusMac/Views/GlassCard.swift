@@ -3,11 +3,13 @@ import SwiftUI
 public struct GlassCard<Content: View>: View {
     public let title: String?
     public let icon: String?
+    public var iconColor: Color?
     public let content: Content
 
-    public init(title: String? = nil, icon: String? = nil, @ViewBuilder content: () -> Content) {
+    public init(title: String? = nil, icon: String? = nil, iconColor: Color? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
         self.icon = icon
+        self.iconColor = iconColor
         self.content = content()
     }
 
@@ -17,7 +19,7 @@ public struct GlassCard<Content: View>: View {
                 HStack(spacing: 8) {
                     if let icon {
                         Image(systemName: icon)
-                            .foregroundColor(.purple)
+                            .foregroundColor(iconColor ?? .accentColor)
                             .font(.system(size: 14, weight: .bold))
                     }
                     Text(title)

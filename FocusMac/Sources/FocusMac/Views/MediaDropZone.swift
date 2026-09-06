@@ -14,14 +14,14 @@ public struct MediaDropZone: View {
             // Row 1: Video selection drop zone
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Input Video Footage")
+                    Text(appState.localized("input_footage"))
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 12) {
                         Image(systemName: "film.stack")
                             .font(.system(size: 20))
-                            .foregroundColor(.purple)
+                            .foregroundColor(appState.accentColor)
                             .frame(width: 32)
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -40,7 +40,7 @@ public struct MediaDropZone: View {
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
                             } else {
-                                Text("Click to select video or drag & drop MKV/MP4 files here")
+                                Text(appState.localized("drop_video"))
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
@@ -63,12 +63,13 @@ public struct MediaDropZone: View {
                         }
                     }
                     .padding(10)
+                    .contentShape(Rectangle())
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(isVideoTargeted ? Color.purple.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                            .fill(isVideoTargeted ? appState.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.6))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isVideoTargeted ? Color.purple : Color.white.opacity(0.1), lineWidth: 1)
+                                    .stroke(isVideoTargeted ? appState.accentColor : Color.white.opacity(0.1), lineWidth: 1)
                             )
                     )
                     .onDrop(of: [.fileURL], isTargeted: $isVideoTargeted) { providers in
@@ -81,7 +82,7 @@ public struct MediaDropZone: View {
             HStack(spacing: 12) {
                 // Reference Face Card
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Target Character Reference")
+                    Text(appState.localized("target_reference"))
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.secondary)
 
@@ -103,7 +104,7 @@ public struct MediaDropZone: View {
                         } else {
                             Image(systemName: "person.crop.circle.badge.plus")
                                 .font(.system(size: 20))
-                                .foregroundColor(.purple)
+                                .foregroundColor(appState.accentColor)
                                 .frame(width: 32)
                         }
 
@@ -117,7 +118,7 @@ public struct MediaDropZone: View {
                                     .font(.system(size: 12, weight: .medium))
                                     .lineLimit(1)
                             } else {
-                                Text("Drop face image or select from Gallery")
+                                Text(appState.localized("drop_image"))
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
@@ -132,12 +133,13 @@ public struct MediaDropZone: View {
                         .controlSize(.small)
                     }
                     .padding(8)
+                    .contentShape(Rectangle())
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(isImageTargeted ? Color.purple.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                            .fill(isImageTargeted ? appState.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.6))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isImageTargeted ? Color.purple : Color.white.opacity(0.1), lineWidth: 1)
+                                    .stroke(isImageTargeted ? appState.accentColor : Color.white.opacity(0.1), lineWidth: 1)
                             )
                     )
                     .onDrop(of: [.fileURL], isTargeted: $isImageTargeted) { providers in
@@ -147,14 +149,14 @@ public struct MediaDropZone: View {
 
                 // Output Destination Card
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Export Scenepack Save Location")
+                    Text(appState.localized("save_location"))
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 10) {
                         Image(systemName: "folder")
                             .font(.system(size: 18))
-                            .foregroundColor(.purple)
+                            .foregroundColor(appState.accentColor)
                             .frame(width: 32)
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -163,7 +165,7 @@ public struct MediaDropZone: View {
                                     .font(.system(size: 12, weight: .medium))
                                     .lineLimit(1)
                             } else {
-                                Text("Auto (Destination folder or Desktop)")
+                                Text(appState.localized("auto_desktop"))
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
@@ -178,6 +180,7 @@ public struct MediaDropZone: View {
                         .controlSize(.small)
                     }
                     .padding(8)
+                    .contentShape(Rectangle())
                     .background(
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))

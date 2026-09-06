@@ -10,7 +10,7 @@ public struct ReviewTableView: View {
     }
 
     public var body: some View {
-        GlassCard(title: "Review Detected Clips (\(appState.detectedClips.count) found)", icon: "checklist") {
+        GlassCard(title: "Review Detected Clips (\(appState.detectedClips.count) found)", icon: "checklist", iconColor: appState.accentColor) {
             VStack(spacing: 10) {
                 // Header action bar
                 HStack {
@@ -41,7 +41,7 @@ public struct ReviewTableView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.purple)
+                    .tint(appState.accentColor)
                     .controlSize(.small)
                     .disabled(appState.isProcessing || appState.detectedClips.filter { $0.isSelected }.isEmpty)
                 }
@@ -50,7 +50,7 @@ public struct ReviewTableView: View {
                 ScrollView {
                     LazyVStack(spacing: 6) {
                         ForEach($appState.detectedClips) { $clip in
-                            ClipRowView(clip: $clip) {
+                            ClipRowView(clip: $clip, accentColor: appState.accentColor) {
                                 appState.previewClip = clip
                             }
                         }
@@ -65,6 +65,7 @@ public struct ReviewTableView: View {
 
 struct ClipRowView: View {
     @Binding var clip: ClipInterval
+    let accentColor: Color
     let onPreview: () -> Void
 
     var body: some View {
@@ -109,7 +110,7 @@ struct ClipRowView: View {
 
             Text("\(String(format: "%.2fs", clip.duration))")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.purple)
+                .foregroundColor(accentColor)
                 .frame(width: 55, alignment: .trailing)
 
             Button("▶️ Preview") {
@@ -122,7 +123,7 @@ struct ClipRowView: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(clip.isSelected ? Color.purple.opacity(0.08) : Color.white.opacity(0.02))
+                .fill(clip.isSelected ? accentColor.opacity(0.08) : Color.white.opacity(0.02))
         )
     }
 }

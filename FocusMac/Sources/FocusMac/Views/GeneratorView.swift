@@ -9,23 +9,17 @@ public struct GeneratorView: View {
                 // Header: Dashboard Title & Mode Switcher
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Studio Dashboard")
+                        Text(appState.localized("studio_title"))
                             .font(.system(size: 20, weight: .bold))
-                        Text("High-performance character tracking & scenepack extractor")
+                        Text(appState.localized("studio_subtitle"))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
 
                     Spacer()
 
-                    // Mode Switcher Pills
-                    Picker("", selection: $appState.mode) {
-                        ForEach(DetectionMode.allCases) { m in
-                            Label(m.label, systemImage: m.icon).tag(m)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 320)
+                    // Native Mode Switch Toggle
+                    ModeSwitchView(appState: appState)
                 }
                 .padding(.horizontal, 4)
 

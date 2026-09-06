@@ -29,7 +29,7 @@ public struct CharacterGalleryView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.purple)
+                .tint(appState.accentColor)
                 .disabled(appState.selectedVideoURLs.isEmpty || appState.isProcessing)
             }
             .padding(.horizontal, 4)
@@ -53,7 +53,7 @@ public struct CharacterGalleryView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 14) {
                         ForEach(appState.galleryProfiles) { profile in
-                            CharacterCard(profile: profile) {
+                            CharacterCard(profile: profile, accentColor: appState.accentColor) {
                                 appState.selectedCharacterProfile = profile
                                 appState.referenceImageURL = nil
                                 appState.currentTab = .generator
@@ -113,6 +113,7 @@ public struct CharacterGalleryView: View {
 
 struct CharacterCard: View {
     let profile: CharacterProfile
+    let accentColor: Color
     let onSelect: () -> Void
 
     var body: some View {
@@ -142,7 +143,7 @@ struct CharacterCard: View {
                     onSelect()
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.purple)
+                .tint(accentColor)
                 .controlSize(.small)
             }
             .frame(maxWidth: .infinity)
