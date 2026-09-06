@@ -37,7 +37,7 @@ public struct MainWindowView: View {
                 }
             }
         }
-        .frame(minWidth: 900, minHeight: 650)
+        .frame(minWidth: 920, idealWidth: 1060, minHeight: 680, idealHeight: 800)
         .preferredColorScheme(appState.preferredColorScheme)
         .sheet(item: $appState.previewClip) { clip in
             if let video = appState.selectedVideoURLs.first {
