@@ -8,10 +8,10 @@ public struct ModeSwitchView: View {
     }
 
     public var body: some View {
-        HStack(spacing: 10) {
-            // Option 1: Live Action / Real Faces
+        HStack(spacing: 4) {
+            // Mode A: Live Action / Real Faces
             Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
                     appState.mode = .realFaces
                 }
             }) {
@@ -19,28 +19,22 @@ public struct ModeSwitchView: View {
                     Image(systemName: "person.crop.rectangle")
                         .font(.system(size: 11, weight: .semibold))
                     Text(appState.localized("mode_real_faces"))
-                        .font(.system(size: 11, weight: appState.mode == .realFaces ? .bold : .regular))
+                        .font(.system(size: 11, weight: appState.mode == .realFaces ? .bold : .medium))
                 }
                 .foregroundColor(appState.mode == .realFaces ? .white : .secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(appState.mode == .realFaces ? appState.accentColor : Color.clear)
+                )
             }
             .buttonStyle(.plain)
 
-            // Native Apple Switch Toggle
-            Toggle("", isOn: Binding(
-                get: { appState.mode == .anime },
-                set: { isAnime in
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                        appState.mode = isAnime ? .anime : .realFaces
-                    }
-                }
-            ))
-            .toggleStyle(.switch)
-            .tint(appState.accentColor)
-            .labelsHidden()
-
-            // Option 2: 2D Animation / Anime
+            // Mode B: 2D Animation / Anime
             Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
                     appState.mode = .anime
                 }
             }) {
@@ -48,21 +42,27 @@ public struct ModeSwitchView: View {
                     Image(systemName: "sparkles.tv")
                         .font(.system(size: 11, weight: .semibold))
                     Text(appState.localized("mode_anime"))
-                        .font(.system(size: 11, weight: appState.mode == .anime ? .bold : .regular))
+                        .font(.system(size: 11, weight: appState.mode == .anime ? .bold : .medium))
                 }
-                .foregroundColor(appState.mode == .anime ? appState.accentColor : .secondary)
+                .foregroundColor(appState.mode == .anime ? .white : .secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(appState.mode == .anime ? appState.accentColor : Color.clear)
+                )
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background {
-            Capsule(style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+        .padding(3)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
                 .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
                 )
-        }
+        )
     }
 }
