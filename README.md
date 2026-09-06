@@ -63,11 +63,11 @@ Focus automatically detects and utilizes hardware encoders available on your sys
 
 ---
 
-## 📥 Pre-Built Downloads
+## 📥 Pre-Built Downloads & Releases
 
-Pre-built binaries and version packages are published on GitHub:
+Pre-built binaries and releases are published on GitHub Releases:
 
-👉 **[Download Latest Packages (Windows & macOS)](https://github.com/Bartosz5500/Focus)**
+👉 **[Download Latest Releases (Windows & macOS)](https://github.com/Bartosz5500/Focus/releases)**
 
 * **Windows (`Focus.exe` / `Uruchom_Focus_Windows.bat`):** Standalone executable with pre-configured PySide6 Qt 6 and OpenCV dependencies.
 * **macOS (`Focus.app` / `Focus.command`):** Native macOS application bundle optimized for Apple Silicon (M1/M2/M3/M4) and Intel Macs.

@@ -564,7 +564,7 @@ TRANSLATIONS = {
             "• Standard 90s / Custom Duration: Fallback window for TV broadcast files without chapter markers.\n\n"
             "8. FRAMING FORMATS & ASPECT RATIOS\n"
             "• 16:9 Original: Preserves original cinematic widescreen source.\n"
-            "• 9:16 Vertical (Auto-Track Subject): Smoothly centers and tracks the character's face across the frame for TikTok and YouTube Shorts.\n"
+            "• 9:16 Vertical (Auto-Track Subject): Smoothly centers and tracks the character's face across the frame for TikTok, Reels, and YouTube Shorts.\n"
             "• 9:16 Vertical (Blurred Background): Centers the 16:9 video over a matching, blurred vertical backdrop.\n\n"
             "9. EXPORT QUALITY & HARDWARE ENCODERS\n"
             "• Auto (Match Source Bitrate): Analyzes source bitrate with ffprobe and exports with +15% quality headroom without file bloating.\n"
