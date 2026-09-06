@@ -16,6 +16,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for path in possiblePaths {
             if FileManager.default.fileExists(atPath: path), let img = NSImage(contentsOfFile: path) {
                 NSApplication.shared.applicationIconImage = img
+                let dockTile = NSApplication.shared.dockTile
+                let imageView = NSImageView(frame: NSRect(x: 0, y: 0, width: dockTile.size.width, height: dockTile.size.height))
+                imageView.image = img
+                imageView.imageScaling = .scaleProportionallyUpOrDown
+                dockTile.contentView = imageView
+                dockTile.display()
                 break
             }
         }
