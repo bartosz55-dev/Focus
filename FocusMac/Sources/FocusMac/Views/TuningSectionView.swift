@@ -201,7 +201,7 @@ public struct TuningSectionView: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                            .frame(maxWidth: 200)
+                            .frame(minWidth: 170, maxWidth: 280)
                         }
                     }
                 }

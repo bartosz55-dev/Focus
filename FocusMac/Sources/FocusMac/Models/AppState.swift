@@ -213,6 +213,21 @@ public final class AppState: ObservableObject {
                 self.outputURL = first.deletingLastPathComponent().appendingPathComponent("\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4")
             }
             showToast("Selected \(foundVideos.count) video(s)", icon: "film.stack")
+            if let first = foundVideos.first {
+                probeAudioTracks(for: first)
+            }
+        }
+    }
+
+    public func probeAudioTracks(for url: URL) {
+        Task { @MainActor in
+            let tracks = await ProcessBridge.shared.queryAudioTracks(for: url.path)
+            if !tracks.isEmpty {
+                self.audioTracks = tracks + [AudioTrackItem(index: -1, label: "Keep All Audio Tracks (Multi-Audio)")]
+                if !self.audioTracks.contains(where: { $0.index == self.settings.audioTrackIndex }) {
+                    self.settings.audioTrackIndex = 0
+                }
+            }
         }
     }
 
@@ -240,8 +255,10 @@ public final class AppState: ObservableObject {
             SleepManager.shared.preventSleep(reason: "Focus scanning video")
         }
 
+        let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
+
         var args: [String] = [
-            "-v", video.path,
+            "-v", videoArg,
             "--mode", mode.rawValue,
             "--pad-before", String(settings.padBefore),
             "--pad-after", String(settings.padAfter),
@@ -300,9 +317,10 @@ public final class AppState: ObservableObject {
         }
 
         let out = outputURL ?? video.deletingPathExtension().appendingPathExtension("scenepack.mp4")
+        let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
 
         var args: [String] = [
-            "-v", video.path,
+            "-v", videoArg,
             "-o", out.path,
             "--mode", mode.rawValue,
             "--aspect", settings.aspect.rawValue,

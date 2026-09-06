@@ -20,35 +20,99 @@ public actor ProcessBridge {
 
     private init() {}
 
-    public static func resolvePythonExecutable() -> String {
+    public static func resolveScriptPath() -> String {
+        var candidates: [String] = []
+
+        // 1. Check App Bundle Resources (bundled inside Focus.app/Contents/Resources/)
+        if let resPath = Bundle.main.resourcePath {
+            candidates.append((resPath as NSString).appendingPathComponent("scenepack_generator.py"))
+        }
+
+        // 2. Relative to Focus.app bundle location (e.g. dist_mac/Focus.app -> project root)
+        let bundleURL = Bundle.main.bundleURL
+        let appDir = bundleURL.deletingLastPathComponent().path
+        let projectDir = bundleURL.deletingLastPathComponent().deletingLastPathComponent().path
+        candidates.append((appDir as NSString).appendingPathComponent("scenepack_generator.py"))
+        candidates.append((projectDir as NSString).appendingPathComponent("scenepack_generator.py"))
+
+        // 3. Known repository directories
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/scenepack_generator.py")
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software/scenepack_generator.py")
+        candidates.append("/Users/bartosz5500/Antigravity/Kwiatson cliping software copy 2/scenepack_generator.py")
+
+        // 4. Current working directory (if executed from terminal, ignoring root "/")
         let currentDir = FileManager.default.currentDirectoryPath
-        let possibleVenvs = [
-            (currentDir as NSString).appendingPathComponent("venv/bin/python3"),
-            (currentDir as NSString).appendingPathComponent("../venv/bin/python3"),
-            "/opt/homebrew/bin/python3",
-            "/usr/local/bin/python3",
-            "/usr/bin/python3"
-        ]
-        for p in possibleVenvs {
+        if currentDir != "/" && !currentDir.isEmpty {
+            candidates.append((currentDir as NSString).appendingPathComponent("scenepack_generator.py"))
+            candidates.append((currentDir as NSString).appendingPathComponent("../scenepack_generator.py"))
+        }
+
+        for path in candidates {
+            if FileManager.default.fileExists(atPath: path) {
+                return (path as NSString).standardizingPath
+            }
+        }
+        return "scenepack_generator.py"
+    }
+
+    public static func resolvePythonExecutable(forScript scriptPath: String = "") -> String {
+        var candidates: [String] = []
+
+        // 1. Check venv adjacent to resolved script
+        if !scriptPath.isEmpty && scriptPath != "scenepack_generator.py" {
+            let scriptDir = (scriptPath as NSString).deletingLastPathComponent
+            if !scriptDir.isEmpty && scriptDir != "/" {
+                candidates.append((scriptDir as NSString).appendingPathComponent("venv/bin/python3"))
+                candidates.append((scriptDir as NSString).appendingPathComponent("venv/bin/python"))
+            }
+        }
+
+        // 2. Relative to Focus.app bundle location
+        let bundleURL = Bundle.main.bundleURL
+        let projectDir = bundleURL.deletingLastPathComponent().deletingLastPathComponent().path
+        candidates.append((projectDir as NSString).appendingPathComponent("venv/bin/python3"))
+        candidates.append((projectDir as NSString).appendingPathComponent("venv/bin/python"))
+
+        // 3. Known configured project venvs with cv2 and full AI dependencies
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/venv/bin/python3")
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/venv/bin/python")
+        candidates.append("/Users/bartosz5500/Antigravity/Kwiatson cliping software copy 2/venv/bin/python3")
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software/venv/bin/python3")
+        candidates.append("/Users/bartosz5500/venv/bin/python3")
+
+        // 4. Current working directory venv (if not root "/")
+        let currentDir = FileManager.default.currentDirectoryPath
+        if currentDir != "/" && !currentDir.isEmpty {
+            candidates.append((currentDir as NSString).appendingPathComponent("venv/bin/python3"))
+            candidates.append((currentDir as NSString).appendingPathComponent("venv/bin/python"))
+            candidates.append((currentDir as NSString).appendingPathComponent("../venv/bin/python3"))
+        }
+
+        // 5. System Python
+        candidates.append("/opt/homebrew/bin/python3")
+        candidates.append("/usr/local/bin/python3")
+        candidates.append("/usr/bin/python3")
+
+        for p in candidates {
             if FileManager.default.isExecutableFile(atPath: p) {
-                return p
+                return (p as NSString).standardizingPath
             }
         }
         return "python3"
     }
 
-    public static func resolveScriptPath() -> String {
-        let currentDir = FileManager.default.currentDirectoryPath
-        let possibleScripts = [
-            (currentDir as NSString).appendingPathComponent("scenepack_generator.py"),
-            (currentDir as NSString).appendingPathComponent("../scenepack_generator.py")
+    public static func resolveFFprobeExecutable() -> String? {
+        let candidates = [
+            "/opt/homebrew/bin/ffprobe",
+            "/usr/local/bin/ffprobe",
+            "/usr/bin/ffprobe"
         ]
-        for p in possibleScripts {
-            if FileManager.default.fileExists(atPath: p) {
+        for p in candidates {
+            if FileManager.default.isExecutableFile(atPath: p) {
                 return p
             }
         }
-        return "scenepack_generator.py"
+        return nil
     }
 
     public func cancel() {
@@ -62,18 +126,140 @@ public actor ProcessBridge {
         currentProcess = nil
     }
 
+    public func queryAudioTracks(for videoPath: String) async -> [AudioTrackItem] {
+        // Method 1: Fast direct ffprobe in ~15ms
+        if let ffprobe = Self.resolveFFprobeExecutable() {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: ffprobe)
+            proc.arguments = [
+                "-v", "error",
+                "-select_streams", "a",
+                "-show_entries", "stream=index,codec_name:stream_tags=language,title",
+                "-of", "json",
+                videoPath
+            ]
+            let stdoutPipe = Pipe()
+            proc.standardOutput = stdoutPipe
+            proc.standardError = Pipe()
+
+            do {
+                try proc.run()
+                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                proc.waitUntilExit()
+
+                if proc.terminationStatus == 0,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let streams = json["streams"] as? [[String: Any]], !streams.isEmpty {
+                    var items: [AudioTrackItem] = []
+                    for (idx, stream) in streams.enumerated() {
+                        let tags = stream["tags"] as? [String: Any] ?? [:]
+                        let lang = (tags["language"] as? String) ?? "und"
+                        let title = (tags["title"] as? String) ?? ""
+                        let codec = (stream["codec_name"] as? String) ?? "audio"
+
+                        var labelParts = ["Track \(idx + 1)"]
+                        if lang != "und" && !lang.isEmpty {
+                            labelParts.append("[\(lang.uppercased())]")
+                        }
+                        if !title.isEmpty {
+                            labelParts.append("- \(title)")
+                        }
+                        labelParts.append("(\(codec))")
+                        items.append(AudioTrackItem(index: idx, label: labelParts.joined(separator: " ")))
+                    }
+                    if !items.isEmpty {
+                        return items
+                    }
+                }
+            } catch {
+                print("ffprobe direct probe error: \(error)")
+            }
+        }
+
+        // Method 2: Fallback to Python backend bridge
+        let script = Self.resolveScriptPath()
+        let python = Self.resolvePythonExecutable(forScript: script)
+        let scriptURL = URL(fileURLWithPath: script)
+        let scriptDirURL = scriptURL.deletingLastPathComponent()
+
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: python)
+        if FileManager.default.fileExists(atPath: scriptDirURL.path) {
+            proc.currentDirectoryURL = scriptDirURL
+        }
+        proc.arguments = [script, "-v", videoPath, "--get-audio-tracks"]
+
+        var env = ProcessInfo.processInfo.environment
+        let extraPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        if let existing = env["PATH"] {
+            env["PATH"] = extraPaths + ":" + existing
+        } else {
+            env["PATH"] = extraPaths
+        }
+        env["PYTHONUNBUFFERED"] = "1"
+        proc.environment = env
+
+        let stdoutPipe = Pipe()
+        proc.standardOutput = stdoutPipe
+        proc.standardError = Pipe()
+
+        do {
+            try proc.run()
+            let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            proc.waitUntilExit()
+
+            if let str = String(data: data, encoding: .utf8) {
+                for line in str.components(separatedBy: .newlines) {
+                    let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard let lineData = trimmed.data(using: .utf8),
+                          let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                          let type = json["type"] as? String, type == "audio_tracks",
+                          let tracksData = json["tracks"] as? [[String: Any]] else { continue }
+
+                    let items = tracksData.compactMap { dict -> AudioTrackItem? in
+                        guard let idx = dict["index"] as? Int,
+                              let lbl = dict["label"] as? String else { return nil }
+                        return AudioTrackItem(index: idx, label: lbl)
+                    }
+                    if !items.isEmpty {
+                        return items
+                    }
+                }
+            }
+        } catch {
+            print("ProcessBridge queryAudioTracks fallback error: \(error)")
+        }
+
+        return []
+    }
+
     public func run(
         arguments: [String],
         onEvent: @escaping @Sendable (BridgeEvent) -> Void
     ) async throws {
         cancel()
 
-        let python = Self.resolvePythonExecutable()
         let script = Self.resolveScriptPath()
+        let python = Self.resolvePythonExecutable(forScript: script)
+        let scriptURL = URL(fileURLWithPath: script)
+        let scriptDirURL = scriptURL.deletingLastPathComponent()
 
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: python)
+        if FileManager.default.fileExists(atPath: scriptDirURL.path) {
+            proc.currentDirectoryURL = scriptDirURL
+        }
         proc.arguments = [script] + arguments + ["--json-stream"]
+
+        var env = ProcessInfo.processInfo.environment
+        let extraPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        if let existing = env["PATH"] {
+            env["PATH"] = extraPaths + ":" + existing
+        } else {
+            env["PATH"] = extraPaths
+        }
+        env["PYTHONUNBUFFERED"] = "1"
+        proc.environment = env
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()

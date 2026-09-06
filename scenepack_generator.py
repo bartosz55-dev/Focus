@@ -139,7 +139,7 @@ def main():
             print(json.dumps({"error": "Missing video path"}))
             sys.exit(1)
         gen = ScenePackGenerator()
-        tracks = gen.get_audio_tracks(Path(args.video))
+        tracks = gen.get_audio_tracks(args.video)
         out = [{"index": idx, "label": lbl} for idx, lbl in tracks]
         print(json.dumps({"type": "audio_tracks", "tracks": out}))
         sys.exit(0)
@@ -152,7 +152,7 @@ def main():
     generator = ScenePackGenerator(log_queue=queue, frame_skip=max(1, args.skip_frames), mode=args.mode)
 
     try:
-        video_path = Path(args.video).resolve()
+        video_path = args.video if (";" in args.video or "," in args.video) else Path(args.video).resolve()
         ref_image_path = Path(args.image).resolve()
 
         if args.scan_only:
