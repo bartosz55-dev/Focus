@@ -53,6 +53,27 @@ public final class AppState: ObservableObject {
     @Published public var toastIcon: String = "checkmark.circle"
     @Published public var previewClip: ClipInterval?
 
+    // Appearance & Localization
+    @Published public var accentColorHex: String = UserDefaults.standard.string(forKey: "accentColorHex") ?? "#8B5CF6" {
+        didSet {
+            UserDefaults.standard.set(accentColorHex, forKey: "accentColorHex")
+        }
+    }
+
+    @Published public var currentLanguage: String = UserDefaults.standard.string(forKey: "currentLanguage") ?? "English" {
+        didSet {
+            UserDefaults.standard.set(currentLanguage, forKey: "currentLanguage")
+        }
+    }
+
+    public var accentColor: Color {
+        Color(hex: accentColorHex)
+    }
+
+    public func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(for: key, language: currentLanguage)
+    }
+
     public init() {
         refreshPresets()
     }
@@ -270,5 +291,31 @@ public final class AppState: ObservableObject {
             SleepManager.shared.allowSleep()
             showToast("Error: \(msg)", icon: "xmark.octagon")
         }
+    }
+}
+
+public extension Color {
+    init(hex: String) {
+        let cleanHex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: cleanHex).scanHexInt64(&int)
+        let r, g, b: Double
+        switch cleanHex.count {
+        case 6:
+            r = Double((int >> 16) & 0xFF) / 255.0
+            g = Double((int >> 8) & 0xFF) / 255.0
+            b = Double(int & 0xFF) / 255.0
+        default:
+            r = 0.5; g = 0.5; b = 0.5
+        }
+        self.init(red: r, green: g, blue: b)
+    }
+
+    func toHex() -> String? {
+        guard let components = NSColor(self).usingColorSpace(.deviceRGB) else { return nil }
+        let r = Int(components.redComponent * 255.0)
+        let g = Int(components.greenComponent * 255.0)
+        let b = Int(components.blueComponent * 255.0)
+        return String(format: "#%02X%02X%02X", r, g, b)
     }
 }

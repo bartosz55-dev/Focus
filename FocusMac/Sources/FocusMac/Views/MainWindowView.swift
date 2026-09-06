@@ -29,7 +29,7 @@ public struct MainWindowView: View {
 
                 // Floating Toast Banner
                 if let msg = appState.toastMessage {
-                    ToastBanner(message: msg, icon: appState.toastIcon)
+                    ToastBanner(message: msg, icon: appState.toastIcon, accentColor: appState.accentColor)
                         .padding(.top, 16)
                 }
             }

@@ -46,10 +46,14 @@ mkdir -p "${APP_BUNDLE}/Contents/Resources"
 cp "${RELEASE_BIN}" "${APP_BUNDLE}/Contents/MacOS/Focus"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/Focus"
 
-# Copy App Icon if available
+# Copy App Icons if available
 if [ -f "${ROOT_DIR}/icon.icns" ]; then
     cp "${ROOT_DIR}/icon.icns" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
     echo "Copied icon.icns -> AppIcon.icns"
+fi
+if [ -f "${ROOT_DIR}/icon.png" ]; then
+    cp "${ROOT_DIR}/icon.png" "${APP_BUNDLE}/Contents/Resources/icon.png"
+    echo "Copied icon.png -> icon.png"
 fi
 
 # 4. Generate Info.plist

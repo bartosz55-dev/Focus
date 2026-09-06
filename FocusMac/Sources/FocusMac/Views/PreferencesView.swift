@@ -2,8 +2,6 @@ import SwiftUI
 
 public struct PreferencesView: View {
     @ObservedObject var appState: AppState
-    @AppStorage("accentColorHex") private var accentColorHex = "#8B5CF6"
-    @AppStorage("appLanguage") private var appLanguage = "English"
 
     private let standardSwatches = [
         ("Violet", "#8B5CF6"),
@@ -18,9 +16,9 @@ public struct PreferencesView: View {
 
     public var body: some View {
         Form {
-            Section("Appearance & Accent Theme") {
+            Section(appState.localized("appearance_theme")) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Select Accent Color")
+                    Text(appState.localized("select_accent"))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
 
@@ -31,19 +29,19 @@ public struct PreferencesView: View {
                                 .frame(width: 24, height: 24)
                                 .overlay(
                                     Circle()
-                                        .stroke(Color.white, lineWidth: accentColorHex.uppercased() == hex.uppercased() ? 2 : 0)
+                                        .stroke(Color.white, lineWidth: appState.accentColorHex.uppercased() == hex.uppercased() ? 2.5 : 0)
                                 )
                                 .onTapGesture {
-                                    accentColorHex = hex
+                                    appState.accentColorHex = hex
                                 }
                                 .help(name)
                         }
 
                         ColorPicker("", selection: Binding(
-                            get: { Color(hex: accentColorHex) },
+                            get: { appState.accentColor },
                             set: { col in
                                 if let hex = col.toHex() {
-                                    accentColorHex = hex
+                                    appState.accentColorHex = hex
                                 }
                             }
                         ))
@@ -53,15 +51,15 @@ public struct PreferencesView: View {
                 .padding(.vertical, 4)
             }
 
-            Section("Power & System Sleep") {
-                Toggle("Inhibit system & display sleep during active video jobs", isOn: $appState.settings.preventSleep)
-                Text("Keeps your Mac awake while scanning or rendering long video scenepacks.")
+            Section(appState.localized("power_sleep")) {
+                Toggle(appState.localized("sleep_toggle"), isOn: $appState.settings.preventSleep)
+                Text(appState.localized("sleep_desc"))
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
 
-            Section("Language & Localization") {
-                Picker("Interface Language", selection: $appLanguage) {
+            Section(appState.localized("lang_section")) {
+                Picker(appState.localized("interface_lang"), selection: $appState.currentLanguage) {
                     Text("English").tag("English")
                     Text("Polski").tag("Polski")
                     Text("Deutsch").tag("Deutsch")
@@ -71,14 +69,14 @@ public struct PreferencesView: View {
                 }
             }
 
-            Section("Diagnostics & Logs") {
+            Section(appState.localized("diagnostics_section")) {
                 HStack {
                     Text("Focus for Mac (SwiftUI Native Engine)")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Button("Copy Diagnostic Report") {
-                        let text = "Focus for Mac Diagnostic Report\nOS: macOS\nSelected: \(appState.selectedVideoURLs.count) videos"
+                    Button(appState.localized("copy_report")) {
+                        let text = "Focus for Mac Diagnostic Report\nOS: macOS\nLanguage: \(appState.currentLanguage)\nAccent: \(appState.accentColorHex)\nSelected: \(appState.selectedVideoURLs.count) videos"
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(text, forType: .string)
                         appState.showToast("Diagnostics copied to clipboard!", icon: "doc.on.doc")
@@ -90,31 +88,5 @@ public struct PreferencesView: View {
         .formStyle(.grouped)
         .padding(16)
         .frame(width: 480, height: 380)
-    }
-}
-
-extension Color {
-    init(hex: String) {
-        let cleanHex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: cleanHex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch cleanHex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255.0
-            g = Double((int >> 8) & 0xFF) / 255.0
-            b = Double(int & 0xFF) / 255.0
-        default:
-            r = 0.5; g = 0.5; b = 0.5
-        }
-        self.init(red: r, green: g, blue: b)
-    }
-
-    func toHex() -> String? {
-        guard let components = NSColor(self).usingColorSpace(.deviceRGB) else { return nil }
-        let r = Int(components.redComponent * 255.0)
-        let g = Int(components.greenComponent * 255.0)
-        let b = Int(components.blueComponent * 255.0)
-        return String(format: "#%02X%02X%02X", r, g, b)
     }
 }

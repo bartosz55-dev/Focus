@@ -15,7 +15,7 @@ public struct SidebarView: View {
                 Text("AI VIDEO STUDIO")
                     .font(.system(size: 9, weight: .bold))
                     .tracking(1.5)
-                    .foregroundColor(.purple)
+                    .foregroundColor(appState.accentColor)
             }
             .padding(.horizontal, 14)
             .padding(.top, 14)
@@ -25,23 +25,25 @@ public struct SidebarView: View {
 
             // Section 1: Workflow
             VStack(alignment: .leading, spacing: 4) {
-                Text("WORKFLOW")
+                Text(appState.localized("workflow"))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 14)
 
                 SidebarItem(
-                    title: "Generator",
+                    title: appState.localized("tab_generator"),
                     icon: "wand.and.stars",
-                    isSelected: appState.currentTab == .generator
+                    isSelected: appState.currentTab == .generator,
+                    accentColor: appState.accentColor
                 ) {
                     appState.currentTab = .generator
                 }
 
                 SidebarItem(
-                    title: "Character Gallery",
+                    title: appState.localized("tab_gallery"),
                     icon: "person.crop.artframe",
-                    isSelected: appState.currentTab == .gallery
+                    isSelected: appState.currentTab == .gallery,
+                    accentColor: appState.accentColor
                 ) {
                     appState.currentTab = .gallery
                 }
@@ -49,23 +51,25 @@ public struct SidebarView: View {
 
             // Section 2: Resources
             VStack(alignment: .leading, spacing: 4) {
-                Text("RESOURCES")
+                Text(appState.localized("resources"))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 14)
 
                 SidebarItem(
-                    title: "Preferences",
+                    title: appState.localized("tab_preferences"),
                     icon: "gearshape.2",
-                    isSelected: appState.currentTab == .settings
+                    isSelected: appState.currentTab == .settings,
+                    accentColor: appState.accentColor
                 ) {
                     appState.currentTab = .settings
                 }
 
                 SidebarItem(
-                    title: "Diagnostics & Logs",
+                    title: appState.localized("tab_logs"),
                     icon: "terminal",
-                    isSelected: appState.currentTab == .logs
+                    isSelected: appState.currentTab == .logs,
+                    accentColor: appState.accentColor
                 ) {
                     appState.currentTab = .logs
                 }
@@ -75,7 +79,7 @@ public struct SidebarView: View {
 
             // Version Badge Footer
             HStack {
-                Text("v1.43 (macOS Native)")
+                Text("v2.0.0 (macOS Native)")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -95,14 +99,16 @@ struct SidebarItem: View {
     let title: String
     let icon: String
     let isSelected: Bool
+    let accentColor: Color
     let action: () -> Void
+    @State private var isHovered: Bool = false
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .secondary)
+                    .foregroundColor(isSelected ? .white : (isHovered ? .primary : .secondary))
                     .frame(width: 18)
 
                 Text(title)
@@ -112,13 +118,17 @@ struct SidebarItem: View {
                 Spacer()
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 7)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle()) // Makes the entire row hit-testable
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.purple : Color.clear)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isSelected ? accentColor : (isHovered ? Color.white.opacity(0.08) : Color.clear))
             )
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 8)
+        .onHover { h in
+            isHovered = h
+        }
     }
 }
