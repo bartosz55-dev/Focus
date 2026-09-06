@@ -2988,7 +2988,7 @@ def main():
     if sys.platform == "win32":
         try:
             import ctypes
-            myappid = 'bartosz55dev.focus.ai'
+            myappid = 'bartosz5500.focus.ai'
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
         except Exception:
             pass

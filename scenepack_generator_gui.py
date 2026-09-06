@@ -285,7 +285,7 @@ class FocusApp(ctk.CTk if ctk else object):
             self.frame_top_settings,
             values=[
                 "✨ Auto-Tune (Recommended)",
-                "⚡ Fast / Short Edits (TikTok/Reels)",
+                "⚡ Fast / Short Edits (TikTok/Shorts)",
                 "🎬 Cinematic / Long Scenes",
                 "🚀 Ultra-Fast Scan (Draft)"
             ],

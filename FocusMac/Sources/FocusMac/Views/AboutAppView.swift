@@ -85,23 +85,23 @@ public struct AboutAppView: View {
 
             // Credits & Links
             VStack(spacing: 8) {
-                Text("Designed & Engineered by Bartosz Kwiatkowski")
+                Text("Engineered by Bartosz5500")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.primary)
 
-                Text("© 2026 Bartosz Kwiatkowski. All rights reserved.")
+                Text("© 2026 Bartosz5500. All rights reserved.")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
 
                 HStack(spacing: 12) {
                     Button(action: {
-                        if let url = URL(string: "https://github.com/bartosz55-dev/Focus") {
+                        if let url = URL(string: "https://github.com/Bartosz5500/Focus") {
                             NSWorkspace.shared.open(url)
                         }
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "link")
-                            Text("GitHub Repository")
+                            Text("GitHub: Bartosz5500")
                         }
                         .font(.system(size: 11, weight: .medium))
                     }
