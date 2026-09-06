@@ -77,14 +77,20 @@ fi
 
 # 6. Launch Application
 echo ""
-echo "[INFO] Uruchamianie nowoczesnego interfejsu Focus (Qt 6 / PySide6)..."
-"$DIR/venv/bin/python" "$DIR/scenepack_generator_gui_qt.py"
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "[BŁĄD] Aplikacja zakończyła działanie z błędem!"
-    echo "Przeczytaj komunikat powyżej przed zamknięciem okna."
-    read -p "Naciśnij dowolny klawisz, aby zamknąć..." -n1 -s
-    exit 1
+if [ -d "$DIR/dist_mac/Focus.app" ]; then
+    echo "[INFO] Wykryto natywną aplikację macOS (SwiftUI): dist_mac/Focus.app"
+    echo "[INFO] Uruchamianie natywnej aplikacji Focus..."
+    open "$DIR/dist_mac/Focus.app"
+else
+    echo "[INFO] Uruchamianie interfejsu Focus (Qt 6 / PySide6)..."
+    "$DIR/venv/bin/python" "$DIR/scenepack_generator_gui_qt.py"
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "[BŁĄD] Aplikacja zakończyła działanie z błędem!"
+        echo "Przeczytaj komunikat powyżej przed zamknięciem okna."
+        read -p "Naciśnij dowolny klawisz, aby zamknąć..." -n1 -s
+        exit 1
+    fi
 fi
 
 echo "[INFO] Dziękujemy za korzystanie z Focus!"

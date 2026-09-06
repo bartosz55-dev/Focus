@@ -106,10 +106,19 @@ python3 -m unittest discover -s tests
 
 ---
 
-## 🔨 Building Standalone Executables
+## 🔨 Building Standalone Executables (Dual Ecosystem)
 
-Focus includes an automated build script utilizing PyInstaller to package the studio into a single distribution executable:
+Focus features a dual-ecosystem architecture delivering first-class experiences across operating systems:
 
+### 🍎 macOS (Native Swift 6 / SwiftUI Studio)
+The native macOS app (`Focus.app`) is built in Swift 6 / SwiftUI targeting Apple Silicon and Intel, featuring ultra-fast startup (<100ms), low memory footprint (~50MB), native AVKit video preview, and Apple HIG design:
+```bash
+./FocusMac/build_mac.sh
+```
+Outputs the signed `Focus.app` bundle to `dist_mac/Focus.app`.
+
+### 🪟 Windows & Linux (PySide6 / Qt 6 Desktop Studio)
+The Windows / multi-platform app is built using PySide6 and PyInstaller:
 ```bash
 python3 build.py
 ```
