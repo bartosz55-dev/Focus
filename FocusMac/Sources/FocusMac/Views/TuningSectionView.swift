@@ -113,35 +113,41 @@ public struct TuningSectionView: View {
                             .foregroundColor(.primary)
                     }
 
-                    HStack(spacing: 12) {
-                        Toggle(appState.localized("vad_speech"), isOn: $appState.settings.vadEnabled)
-                            .toggleStyle(.checkbox)
-                            .font(.system(size: 11, weight: .medium))
-
-                        if appState.settings.vadEnabled {
-                            HStack(spacing: 4) {
-                                Text(appState.localized("buffer"))
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.secondary)
-                                TextField("", value: $appState.settings.vadBuffer, formatter: NumberFormatter())
-                                    .textFieldStyle(.roundedBorder)
-                                    .frame(width: 48)
-                                Text("ms")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(appState.accentColor)
-                            }
-
-                            Toggle(appState.localized("voice_similarity"), isOn: $appState.settings.vadSpeakerEnabled)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 12) {
+                            Toggle(appState.localized("vad_speech"), isOn: $appState.settings.vadEnabled)
                                 .toggleStyle(.checkbox)
                                 .font(.system(size: 11, weight: .medium))
 
-                            if appState.settings.vadSpeakerEnabled {
+                            if appState.settings.vadEnabled {
                                 HStack(spacing: 4) {
-                                    Slider(value: $appState.settings.vadSpeakerThreshold, in: 0.3...0.95, step: 0.01)
-                                        .frame(width: 70)
-                                    Text("\(Int(appState.settings.vadSpeakerThreshold * 100))%")
+                                    Text(appState.localized("buffer"))
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    TextField("", value: $appState.settings.vadBuffer, formatter: NumberFormatter())
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 46)
+                                    Text("ms")
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundColor(appState.accentColor)
+                                }
+                            }
+                        }
+
+                        if appState.settings.vadEnabled {
+                            HStack(spacing: 10) {
+                                Toggle(appState.localized("voice_similarity"), isOn: $appState.settings.vadSpeakerEnabled)
+                                    .toggleStyle(.checkbox)
+                                    .font(.system(size: 11, weight: .medium))
+
+                                if appState.settings.vadSpeakerEnabled {
+                                    HStack(spacing: 6) {
+                                        Slider(value: $appState.settings.vadSpeakerThreshold, in: 0.3...0.95, step: 0.01)
+                                            .frame(width: 75)
+                                        Text("\(Int(appState.settings.vadSpeakerThreshold * 100))%")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(appState.accentColor)
+                                    }
                                 }
                             }
                         }
@@ -169,23 +175,23 @@ public struct TuningSectionView: View {
                             .foregroundColor(.primary)
                     }
 
-                    HStack(spacing: 12) {
-                        Toggle(appState.localized("skip_intro"), isOn: $appState.settings.skipIntro)
-                            .toggleStyle(.checkbox)
-                            .font(.system(size: 11, weight: .medium))
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 12) {
+                            Toggle(appState.localized("skip_intro"), isOn: $appState.settings.skipIntro)
+                                .toggleStyle(.checkbox)
+                                .font(.system(size: 11, weight: .medium))
 
-                        Toggle(appState.localized("skip_outro"), isOn: $appState.settings.skipOutro)
-                            .toggleStyle(.checkbox)
-                            .font(.system(size: 11, weight: .medium))
+                            Toggle(appState.localized("skip_outro"), isOn: $appState.settings.skipOutro)
+                                .toggleStyle(.checkbox)
+                                .font(.system(size: 11, weight: .medium))
 
-                        Toggle(appState.localized("auto_render"), isOn: $appState.settings.autoRender)
-                            .toggleStyle(.checkbox)
-                            .font(.system(size: 11, weight: .bold))
-                            .tint(appState.accentColor)
+                            Toggle(appState.localized("auto_render"), isOn: $appState.settings.autoRender)
+                                .toggleStyle(.checkbox)
+                                .font(.system(size: 11, weight: .bold))
+                                .tint(appState.accentColor)
+                        }
 
-                        Spacer()
-
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Text(appState.localized("audio_track"))
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.secondary)
@@ -195,7 +201,7 @@ public struct TuningSectionView: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                            .frame(maxWidth: 160)
+                            .frame(maxWidth: 200)
                         }
                     }
                 }

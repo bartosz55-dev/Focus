@@ -34,7 +34,8 @@ public struct SidebarView: View {
                     title: appState.localized("tab_generator"),
                     icon: "wand.and.stars",
                     isSelected: appState.currentTab == .generator,
-                    accentColor: appState.accentColor
+                    accentColor: appState.accentColor,
+                    shortcut: "1"
                 ) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         appState.currentTab = .generator
@@ -45,7 +46,8 @@ public struct SidebarView: View {
                     title: appState.localized("tab_gallery"),
                     icon: "person.crop.artframe",
                     isSelected: appState.currentTab == .gallery,
-                    accentColor: appState.accentColor
+                    accentColor: appState.accentColor,
+                    shortcut: "2"
                 ) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         appState.currentTab = .gallery
@@ -64,7 +66,8 @@ public struct SidebarView: View {
                     title: appState.currentLanguage == "Polski" ? "Ustawienia" : "Settings",
                     icon: "gearshape.2",
                     isSelected: appState.currentTab == .settings,
-                    accentColor: appState.accentColor
+                    accentColor: appState.accentColor,
+                    shortcut: ","
                 ) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         appState.currentTab = .settings
@@ -125,10 +128,23 @@ struct SidebarItem: View {
     let icon: String
     let isSelected: Bool
     let accentColor: Color
+    var shortcut: KeyEquivalent? = nil
     let action: () -> Void
     @State private var isHovered: Bool = false
 
     var body: some View {
+        Group {
+            if let shortcut {
+                itemButton
+                    .keyboardShortcut(shortcut, modifiers: .command)
+            } else {
+                itemButton
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+
+    private var itemButton: some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
@@ -151,7 +167,6 @@ struct SidebarItem: View {
             )
         }
         .buttonStyle(AppleSpringButtonStyle())
-        .padding(.horizontal, 8)
         .onHover { h in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = h

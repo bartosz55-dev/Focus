@@ -26,7 +26,7 @@ public struct SettingsView: View {
         VStack(spacing: 0) {
             // Top Liquid Glass Sub-Navigation Bar
             HStack {
-                Text(appState.localized("tab_preferences"))
+                Text(appState.currentLanguage == "Polski" ? "Ustawienia i Preferencje" : "Settings & Preferences")
                     .font(.system(size: 20, weight: .bold))
 
                 Spacer()
@@ -48,6 +48,7 @@ public struct SettingsView: View {
                         }
                     }
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 24)
             .padding(.top, 18)

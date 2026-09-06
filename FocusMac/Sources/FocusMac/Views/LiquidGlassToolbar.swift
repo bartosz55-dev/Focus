@@ -84,6 +84,8 @@ public struct LiquidGlassButton: View {
                     Text(title)
                         .font(.system(size: 11, weight: isActive ? .semibold : .medium))
                         .foregroundColor(isActive ? .white : (isHovered ? .primary : .secondary))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
             .padding(.horizontal, title != nil ? 10 : 8)
