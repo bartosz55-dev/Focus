@@ -20,17 +20,33 @@ public struct CharacterGalleryView: View {
 
                 Spacer()
 
-                Button(action: {
-                    startGalleryScan()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "person.2.crop.square.stack")
-                        Text(appState.isProcessing ? "Scanning Video..." : "Pre-Scan Characters")
+                LiquidGlassCapsule {
+                    HStack(spacing: 4) {
+                        LiquidGlassButton(
+                            icon: "person.2.crop.square.stack",
+                            title: appState.isProcessing ? "Scanning..." : "Pre-Scan Characters",
+                            tooltip: "Discover and cluster all character faces",
+                            isActive: false,
+                            accentColor: appState.accentColor
+                        ) {
+                            startGalleryScan()
+                        }
+
+                        if !appState.galleryProfiles.isEmpty {
+                            LiquidGlassButton(
+                                icon: "trash",
+                                title: nil,
+                                tooltip: "Clear gallery",
+                                isActive: false,
+                                accentColor: appState.accentColor
+                            ) {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                                    appState.galleryProfiles.removeAll()
+                                }
+                            }
+                        }
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(appState.accentColor)
-                .disabled(appState.selectedVideoURLs.isEmpty || appState.isProcessing)
             }
             .padding(.horizontal, 4)
 

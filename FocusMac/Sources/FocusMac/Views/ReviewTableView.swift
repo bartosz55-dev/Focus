@@ -12,19 +12,18 @@ public struct ReviewTableView: View {
     public var body: some View {
         GlassCard(title: "Review Detected Clips (\(appState.detectedClips.count) found)", icon: "checklist", iconColor: appState.accentColor) {
             VStack(spacing: 10) {
-                // Header action bar
+                // Header action bar with Liquid Glass Capsule
                 HStack {
-                    Button("Select All") {
-                        appState.selectAllClips(true)
+                    LiquidGlassCapsule {
+                        HStack(spacing: 4) {
+                            LiquidGlassButton(icon: "checkmark.circle", title: "Select All", tooltip: "Select all detected clips", isActive: false, accentColor: appState.accentColor) {
+                                appState.selectAllClips(true)
+                            }
+                            LiquidGlassButton(icon: "xmark.circle", title: "Deselect All", tooltip: "Deselect all clips", isActive: false, accentColor: appState.accentColor) {
+                                appState.selectAllClips(false)
+                            }
+                        }
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                    Button("Deselect All") {
-                        appState.selectAllClips(false)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
 
                     Spacer()
 
@@ -39,10 +38,15 @@ public struct ReviewTableView: View {
                             Image(systemName: "film.fill")
                             Text("Render Selected Clips")
                         }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .foregroundColor(.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(appState.accentColor)
+                        )
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(appState.accentColor)
-                    .controlSize(.small)
+                    .buttonStyle(AppleSpringButtonStyle())
                     .disabled(appState.isProcessing || appState.detectedClips.filter { $0.isSelected }.isEmpty)
                 }
 

@@ -5,7 +5,7 @@ public struct SidebarView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Brand Logo Header (Clean bold typography, no emoji)
+            // Brand Logo Header
             VStack(alignment: .leading, spacing: 2) {
                 Text("FOCUS")
                     .font(.system(size: 22, weight: .heavy, design: .rounded))
@@ -36,7 +36,9 @@ public struct SidebarView: View {
                     isSelected: appState.currentTab == .generator,
                     accentColor: appState.accentColor
                 ) {
-                    appState.currentTab = .generator
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        appState.currentTab = .generator
+                    }
                 }
 
                 SidebarItem(
@@ -45,47 +47,70 @@ public struct SidebarView: View {
                     isSelected: appState.currentTab == .gallery,
                     accentColor: appState.accentColor
                 ) {
-                    appState.currentTab = .gallery
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        appState.currentTab = .gallery
+                    }
                 }
             }
 
-            // Section 2: Resources
+            // Section 2: Configuration
             VStack(alignment: .leading, spacing: 4) {
-                Text(appState.localized("resources"))
+                Text(appState.currentLanguage == "Polski" ? "KONFIGURACJA" : "PREFERENCES")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 14)
 
                 SidebarItem(
-                    title: appState.localized("tab_preferences"),
+                    title: appState.currentLanguage == "Polski" ? "Ustawienia" : "Settings",
                     icon: "gearshape.2",
                     isSelected: appState.currentTab == .settings,
                     accentColor: appState.accentColor
                 ) {
-                    appState.currentTab = .settings
-                }
-
-                SidebarItem(
-                    title: appState.localized("tab_logs"),
-                    icon: "terminal",
-                    isSelected: appState.currentTab == .logs,
-                    accentColor: appState.accentColor
-                ) {
-                    appState.currentTab = .logs
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        appState.currentTab = .settings
+                    }
                 }
             }
 
             Spacer()
 
-            // Version Badge Footer
-            HStack {
-                Text("v2.0.0 (macOS Native)")
-                    .font(.system(size: 10, weight: .semibold))
+            Divider()
+                .padding(.horizontal, 10)
+
+            // About Focus Quick Action & Status Footer
+            VStack(spacing: 8) {
+                Button(action: {
+                    appState.showAboutSheet = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 12, weight: .medium))
+                        Text(appState.currentLanguage == "Polski" ? "O programie Focus" : "About Focus")
+                            .font(.system(size: 11, weight: .medium))
+                        Spacer()
+                    }
                     .foregroundColor(.secondary)
-                Spacer()
-                Circle()
-                    .fill(appState.isProcessing ? Color.orange : Color.green)
-                    .frame(width: 8, height: 8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color.white.opacity(0.04))
+                    )
+                }
+                .buttonStyle(AppleSpringButtonStyle())
+
+                HStack {
+                    Text("v2.0.0 (macOS Native)")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Circle()
+                        .fill(appState.isProcessing ? Color.orange : Color.green)
+                        .frame(width: 8, height: 8)
+                        .shadow(color: (appState.isProcessing ? Color.orange : Color.green).opacity(0.6), radius: 4)
+                }
+                .padding(.horizontal, 4)
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 12)
@@ -119,16 +144,18 @@ struct SidebarItem: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .contentShape(Rectangle()) // Makes the entire row hit-testable
+            .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(isSelected ? accentColor : (isHovered ? Color.white.opacity(0.08) : Color.clear))
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AppleSpringButtonStyle())
         .padding(.horizontal, 8)
         .onHover { h in
-            isHovered = h
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = h
+            }
         }
     }
 }
