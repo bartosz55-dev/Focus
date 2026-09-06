@@ -99,22 +99,86 @@ public final class AppState: ObservableObject {
 
     public func applyPreset(name: String) {
         let p = PresetManager.loadPresets()
-        guard let data = p[name] else { return }
-        if let pb = data["pad_before"] as? Double { settings.padBefore = pb }
-        if let pa = data["pad_after"] as? Double { settings.padAfter = pa }
-        if let mg = data["max_gap"] as? Double { settings.maxGap = mg }
-        if let ms = data["min_scene"] as? Double { settings.minScene = ms }
-        if let fs = data["frame_skip"] as? Int { settings.frameSkip = fs }
-        if let ve = data["vad_enabled"] as? Bool { settings.vadEnabled = ve }
-        if let vb = data["vad_buffer"] as? Int { settings.vadBuffer = vb }
-        if let vs = data["vad_speaker"] as? Bool { settings.vadSpeakerEnabled = vs }
-        if let vt = data["vad_threshold"] as? Int { settings.vadSpeakerThreshold = Double(vt) / 100.0 }
-        if let si = data["skip_intro"] as? Bool { settings.skipIntro = si }
-        if let so = data["skip_outro"] as? Bool { settings.skipOutro = so }
+        guard let data = p[name] else {
+            showToast("Preset '\(name)' not found", icon: "exclamationmark.triangle")
+            return
+        }
+
+        func numDouble(_ val: Any?) -> Double? {
+            if let d = val as? Double { return d }
+            if let n = val as? NSNumber { return n.doubleValue }
+            if let s = val as? String, let d = Double(s) { return d }
+            return nil
+        }
+
+        func numInt(_ val: Any?) -> Int? {
+            if let i = val as? Int { return i }
+            if let n = val as? NSNumber { return n.intValue }
+            if let s = val as? String, let i = Int(s) { return i }
+            return nil
+        }
+
+        func boolVal(_ val: Any?) -> Bool? {
+            if let b = val as? Bool { return b }
+            if let n = val as? NSNumber { return n.boolValue }
+            return nil
+        }
+
+        if let pb = numDouble(data["pad_before"]) { settings.padBefore = pb }
+        if let pa = numDouble(data["pad_after"]) { settings.padAfter = pa }
+        if let mg = numDouble(data["max_gap"]) { settings.maxGap = mg }
+        if let ms = numDouble(data["min_scene"]) { settings.minScene = ms }
+        if let fs = numInt(data["frame_skip"]) { settings.frameSkip = fs }
+        if let ve = boolVal(data["vad_enabled"]) { settings.vadEnabled = ve }
+        if let vb = numInt(data["vad_buffer"]) { settings.vadBuffer = vb }
+        if let vs = boolVal(data["vad_speaker"]) { settings.vadSpeakerEnabled = vs }
+        if let vt = numDouble(data["vad_threshold"]) {
+            settings.vadSpeakerThreshold = vt > 1.0 ? vt / 100.0 : vt
+        }
+        if let si = boolVal(data["skip_intro"]) { settings.skipIntro = si }
+        if let so = boolVal(data["skip_outro"]) { settings.skipOutro = so }
         if let im = data["intro_mode"] as? String { settings.introMode = im }
-        if let id = data["intro_dur"] as? Double { settings.introDuration = id }
-        if let ar = data["auto_render"] as? Bool { settings.autoRender = ar }
+        if let id = numDouble(data["intro_dur"]) { settings.introDuration = id }
+        if let ar = boolVal(data["auto_render"]) { settings.autoRender = ar }
+        if let aspStr = data["aspect"] as? String, let asp = AspectRatioOption(rawValue: aspStr) {
+            settings.aspect = asp
+        }
+        if let qStr = data["quality"] as? String, let q = ExportQualityOption(rawValue: qStr) {
+            settings.quality = q
+        }
         showToast("Applied preset: \(name)", icon: "sparkles")
+    }
+
+    public func addVideoURLs(_ urls: [URL]) {
+        var foundVideos: [URL] = []
+        let videoExtensions = Set(["mp4", "mkv", "avi", "mov", "webm", "flv", "m4v", "ts"])
+
+        for url in urls {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) {
+                if isDir.boolValue {
+                    if let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
+                        for case let fileURL as URL in enumerator {
+                            if videoExtensions.contains(fileURL.pathExtension.lowercased()) {
+                                foundVideos.append(fileURL)
+                            }
+                        }
+                    }
+                } else if videoExtensions.contains(url.pathExtension.lowercased()) {
+                    foundVideos.append(url)
+                }
+            }
+        }
+
+        foundVideos.sort { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+
+        if !foundVideos.isEmpty {
+            self.selectedVideoURLs = foundVideos
+            if self.outputURL == nil, let first = foundVideos.first {
+                self.outputURL = first.deletingLastPathComponent().appendingPathComponent("\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4")
+            }
+            showToast("Selected \(foundVideos.count) video(s)", icon: "film.stack")
+        }
     }
 
     public func selectAllClips(_ select: Bool) {

@@ -1,13 +1,11 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import AppKit
 
 public struct MediaDropZone: View {
     @ObservedObject var appState: AppState
     @State private var isVideoTargeted = false
     @State private var isImageTargeted = false
-    @State private var showVideoPicker = false
-    @State private var showImagePicker = false
-    @State private var showSavePicker = false
 
     public var body: some View {
         VStack(spacing: 12) {
@@ -49,7 +47,7 @@ public struct MediaDropZone: View {
                         Spacer()
 
                         Button("Browse...") {
-                            showVideoPicker = true
+                            chooseVideoSource()
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
@@ -72,6 +70,9 @@ public struct MediaDropZone: View {
                                     .stroke(isVideoTargeted ? appState.accentColor : Color.white.opacity(0.1), lineWidth: 1)
                             )
                     )
+                    .onTapGesture {
+                        chooseVideoSource()
+                    }
                     .onDrop(of: [.fileURL], isTargeted: $isVideoTargeted) { providers in
                         handleDrop(providers: providers, isVideo: true)
                     }
@@ -127,7 +128,7 @@ public struct MediaDropZone: View {
                         Spacer()
 
                         Button("Select...") {
-                            showImagePicker = true
+                            chooseReferenceImage()
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -142,6 +143,9 @@ public struct MediaDropZone: View {
                                     .stroke(isImageTargeted ? appState.accentColor : Color.white.opacity(0.1), lineWidth: 1)
                             )
                     )
+                    .onTapGesture {
+                        chooseReferenceImage()
+                    }
                     .onDrop(of: [.fileURL], isTargeted: $isImageTargeted) { providers in
                         handleDrop(providers: providers, isVideo: false)
                     }
@@ -174,7 +178,7 @@ public struct MediaDropZone: View {
                         Spacer()
 
                         Button("Set...") {
-                            showSavePicker = true
+                            chooseSaveLocation()
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -189,30 +193,57 @@ public struct MediaDropZone: View {
                                     .stroke(Color.white.opacity(0.1), lineWidth: 1)
                             )
                     )
+                    .onTapGesture {
+                        chooseSaveLocation()
+                    }
                 }
             }
         }
-        .fileImporter(
-            isPresented: $showVideoPicker,
-            allowedContentTypes: [.movie, .video, .quickTimeMovie, .mpeg4Movie],
-            allowsMultipleSelection: true
-        ) { result in
-            if case .success(let urls) = result {
-                appState.selectedVideoURLs = urls
-                if let first = urls.first {
-                    appState.outputURL = first.deletingLastPathComponent().appendingPathComponent("\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4")
-                }
-            }
+    }
+
+    private func chooseVideoSource() {
+        let panel = NSOpenPanel()
+        panel.title = "Select Video Files or Season Folder"
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        if panel.runModal() == .OK {
+            appState.addVideoURLs(panel.urls)
         }
-        .fileImporter(
-            isPresented: $showImagePicker,
-            allowedContentTypes: [.image],
-            allowsMultipleSelection: false
-        ) { result in
-            if case .success(let urls) = result, let first = urls.first {
-                appState.referenceImageURL = first
-                appState.selectedCharacterProfile = nil
-            }
+    }
+
+    private func chooseReferenceImage() {
+        let panel = NSOpenPanel()
+        panel.title = "Select Character Reference Image"
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.image]
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.referenceImageURL = url
+            appState.selectedCharacterProfile = nil
+            appState.showToast("Reference face selected: \(url.lastPathComponent)", icon: "person.crop.circle.badge.checkmark")
+        }
+    }
+
+    private func chooseSaveLocation() {
+        let panel = NSSavePanel()
+        panel.title = "Select Export Scenepack Location"
+        panel.allowedContentTypes = [.mpeg4Movie]
+        panel.canCreateDirectories = true
+        if let current = appState.outputURL {
+            panel.directoryURL = current.deletingLastPathComponent()
+            panel.nameFieldStringValue = current.lastPathComponent
+        } else if let first = appState.selectedVideoURLs.first {
+            panel.directoryURL = first.deletingLastPathComponent()
+            panel.nameFieldStringValue = "\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4"
+        } else {
+            panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
+            panel.nameFieldStringValue = "scenepack.mp4"
+        }
+        if panel.runModal() == .OK, let targetURL = panel.url {
+            appState.outputURL = targetURL
+            appState.showToast("Save location set: \(targetURL.lastPathComponent)", icon: "folder.badge.gearshape")
         }
     }
 
@@ -223,15 +254,11 @@ public struct MediaDropZone: View {
                       let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
                 DispatchQueue.main.async {
                     if isVideo {
-                        if !self.appState.selectedVideoURLs.contains(url) {
-                            self.appState.selectedVideoURLs.append(url)
-                            if self.appState.outputURL == nil {
-                                self.appState.outputURL = url.deletingLastPathComponent().appendingPathComponent("\(url.deletingPathExtension().lastPathComponent)_scenepack.mp4")
-                            }
-                        }
+                        self.appState.addVideoURLs([url])
                     } else {
                         self.appState.referenceImageURL = url
                         self.appState.selectedCharacterProfile = nil
+                        self.appState.showToast("Reference face selected: \(url.lastPathComponent)", icon: "person.crop.circle.badge.checkmark")
                     }
                 }
             }

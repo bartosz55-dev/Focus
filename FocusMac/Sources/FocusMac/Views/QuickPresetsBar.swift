@@ -34,20 +34,36 @@ public struct QuickPresetsBar: View {
             Divider()
                 .frame(height: 16)
 
-            // Custom user presets picker
-            Picker("", selection: $selectedPreset) {
-                Text(appState.localized("custom_presets")).tag("Presets...")
-                ForEach(appState.customPresets, id: \.self) { name in
-                    Text("👤 \(name)").tag(name)
+            // Custom user presets menu
+            Menu {
+                if appState.customPresets.isEmpty {
+                    Text("No custom presets saved")
+                } else {
+                    ForEach(appState.customPresets, id: \.self) { name in
+                        Button("👤 \(name)") {
+                            selectedPreset = name
+                            appState.applyPreset(name: name)
+                        }
+                    }
                 }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(selectedPreset == "Presets..." ? appState.localized("custom_presets") : "👤 \(selectedPreset)")
+                        .font(.system(size: 11, weight: .medium))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
             }
-            .pickerStyle(.menu)
-            .frame(width: 140)
+            .menuStyle(.borderlessButton)
             .controlSize(.small)
-            .onChange(of: selectedPreset) { name in
-                if name != "Presets..." {
-                    appState.applyPreset(name: name)
-                }
+            .onAppear {
+                appState.refreshPresets()
             }
 
             // Save new preset button
