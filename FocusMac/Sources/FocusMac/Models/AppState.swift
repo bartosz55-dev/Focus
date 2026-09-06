@@ -5,8 +5,7 @@ import Combine
 public enum SidebarTab: String, CaseIterable, Identifiable, Sendable {
     case generator = "Generator"
     case gallery = "Character Gallery"
-    case settings = "Preferences"
-    case logs = "Diagnostics"
+    case settings = "Settings"
 
     public var id: String { rawValue }
     
@@ -15,7 +14,26 @@ public enum SidebarTab: String, CaseIterable, Identifiable, Sendable {
         case .generator: return "wand.and.stars"
         case .gallery: return "person.crop.artframe"
         case .settings: return "gearshape.2"
-        case .logs: return "terminal"
+        }
+    }
+}
+
+public enum SettingsSubTab: String, CaseIterable, Identifiable, Sendable {
+    case general = "General & Theme"
+    case manual = "User Manual"
+    case changelog = "Changelog"
+    case diagnostics = "Diagnostics & Logs"
+    case about = "About Focus"
+
+    public var id: String { rawValue }
+    
+    public var icon: String {
+        switch self {
+        case .general: return "slider.horizontal.3"
+        case .manual: return "book.pages"
+        case .changelog: return "clock.arrow.circlepath"
+        case .diagnostics: return "terminal"
+        case .about: return "info.circle"
         }
     }
 }
@@ -54,6 +72,23 @@ public final class AppState: ObservableObject {
     @Published public var previewClip: ClipInterval?
 
     // Appearance & Localization
+    @Published public var appearanceMode: String = UserDefaults.standard.string(forKey: "appearanceMode") ?? "Dark" {
+        didSet {
+            UserDefaults.standard.set(appearanceMode, forKey: "appearanceMode")
+        }
+    }
+
+    public var preferredColorScheme: ColorScheme? {
+        switch appearanceMode {
+        case "Light": return .light
+        case "Dark": return .dark
+        default: return nil // Auto / System
+        }
+    }
+
+    @Published public var settingsSubTab: SettingsSubTab = .general
+    @Published public var showAboutSheet: Bool = false
+
     @Published public var accentColorHex: String = UserDefaults.standard.string(forKey: "accentColorHex") ?? "#8B5CF6" {
         didSet {
             UserDefaults.standard.set(accentColorHex, forKey: "accentColorHex")
