@@ -1,6 +1,6 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v1.42)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v1.43)
 
-[![Version](https://img.shields.io/badge/version-v1.42-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
+[![Version](https://img.shields.io/badge/version-v1.43-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -16,26 +16,28 @@ By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Pe
 
 ---
 
-## ⚡ Key Features (v1.42)
+## ⚡ Key Features (v1.43)
 
-* **⚙️ Dedicated Modern Preferences & Settings Window:** Uncluttered studio sidebar with a dedicated Preferences modal for Appearance Mode (Dark, Light, System Auto), 8 circular accent color swatches, dynamic language selection, and audio notification controls.
+* **☕ Anti-Sleep Power Lock:** Automatically inhibits OS sleep, display sleep, and screen turn-off on macOS (`caffeinate`) and Windows (`SetThreadExecutionState`) while active scans or render jobs run.
+* **🎵 Multi-Audio Stream Preservation:** New option to keep all audio channels (`-map 0:a?` / `-map 0`), letting video editors choose or mix Japanese, English dub, and commentary tracks in Premiere / After Effects / DaVinci Resolve.
+* **⚡ Quick Presets & Custom Preset Manager:** Save and load personalized tuning profiles stored in `~/.focus_presets.json` with quick access directly from the generator header.
+* **🎨 Custom Accent Color Picker & Modern Scrollbars:** Pick any custom `#HEX` accent color via native color picker. Features Apple-style floating 8px minimalist scrollbars with transparent tracks and responsive hover glow.
+* **⏩ Auto-Render & Bulk Review Controls:** Automatically render all detected clips without waiting, plus convenient **Select All** and **Deselect All** buttons in the review checklist.
+* **🎯 Reorganized Scene & Detection Tuning Hub:** Clean 4-column layout categorized into *Timing & Scene Margins*, *Scan Speed & Framing*, *Dialogue & Audio Protection*, and *Intro/Outro Automation* with explicit unit badges (`s`, `frames`, `ms`).
+* **💎 Unified Obsidian Glass Studio Icons:** Matching high-resolution macOS HIG dark squircle viewfinder icons across Windows (`.ico`), macOS (`.icns`), and Linux (`.png`).
+* **⚙️ Dedicated Modern Preferences & Settings Window:** Uncluttered studio sidebar with a dedicated Preferences modal for Appearance Mode (Dark, Light, System Auto), 8 circular accent color swatches + custom picker, dynamic language selection, and audio notification controls.
 * **☀️ Full Light & Dark Mode Engine:** Complete high-contrast design system with crisp typography, elevated cards, and responsive palette switching across all dialogs and cards.
-* **🎬 Multi-Season & Multi-Title Chronological Media Ordering (`S01E01 ➔ S01E12 ➔ S02E01 ➔ S02E12`):** Hierarchical metadata parser accurately detects and sorts files by Season and Episode first, even when seasons have different title conventions (e.g. *Sono Bisque Doll S01* before *KiseKoi S02*).
+* **🎬 Multi-Season & Multi-Title Chronological Media Ordering (`S01E01 ➔ S01E12 ➔ S02E01 ➔ S02E12`):** Hierarchical metadata parser accurately detects and sorts files by Season and Episode first, even when seasons have different title conventions.
 * **✨ Intelligent Auto-Matching Source Bitrate:** Automatically inspects input stream bitrates using `ffprobe` to match source quality (+15% headroom). Keeps scenepack file sizes perfectly proportional without quality loss or file bloating.
 * **💎 Crystal Clear / Master Quality Video Rendering Engine:** Hardware-accelerated Apple Silicon VideoToolbox, NVENC, and QSV encoders configured with adaptive quality factors (`-q:v 72-85` / `CRF 14-17`) and high bitrate headroom (20M-35M). Eliminates all macroblocking and pixelation.
 * **🚀 PySide6 / Qt 6 Modern Studio Interface:** Built with a responsive, high-DPI studio layout with fluid animations, native system typography (`.AppleSystemUIFont` on macOS, `Segoe UI` on Windows), and zero visual lag.
-* **🛡️ Intelligent Intro & Outro Removal (Skip Opening/Ending):** Excludes opening themes and credits from scenepacks via automated MKV/MP4 chapter marker inspection (`Opening`, `Intro`, `OP`, `NCOP`, `Credits`, `Ending`, `ED`) with fallback to standard 90s anime OP windows or custom durations. Bypasses frame decoding inside intro ranges for 15% faster video scans.
-* **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, multi-region hair/face NumPy HSV color histograms, and perceptual dHash correlation. Scans crowd scenes in milliseconds without locking CPU threads.
+* **🛡️ Intelligent Intro & Outro Removal (Skip Opening/Ending):** Excludes opening themes and credits from scenepacks via automated MKV/MP4 chapter marker inspection with fallback to standard anime OP windows or custom durations.
+* **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, multi-region hair/face NumPy HSV color histograms, and perceptual dHash correlation.
 * **🎯 Real Faces Deep Learning Detector:** Powered by 68-point facial landmark and deep CNN embeddings for human facial recognition in films and series.
-* **🎬 Natural Chronological Episode Ordering (`S01E01 ➔ S01E02 ➔ ... ➔ S01E24`):** Automatically sorts multi-video selections and full folder imports into natural human episode order, rendering the master scenepack in exact storyline sequence.
-* **🛡️ Strict Shot Cut Boundary Bounding (Zero Scene Leakage):** Integrates automated FFmpeg camera shot detection (`scene_cuts`) to ensure clips never cross angle changes into scenes where other characters speak.
 * **🎙️ Bounded Lip-Sync & Sentence Protection (VAD):** Voice Activity Detection (VAD) with maximum 2.5s sentence bounds prevents dialog from being chopped mid-word while completely preventing multi-minute scene bloating.
-* **📊 Multi-Episode Live Progress Tracker & Dual Progress Bars:** Displays live episode counters (e.g. `🎬 Episode [2/24]: ...`), current episode percentage, overall queue percentage, and real-time ETA.
 * **📱 9:16 Vertical Cropping & Blurred Backgrounds:** Built for TikTok, Instagram Reels, and YouTube Shorts. Automatically tracks subjects in vertical 9:16 aspect ratio or fills background borders with blurred video.
-* **🗂️ Unified Media & Reference Hub:** Drag & drop single files, multi-select episodes, or import entire directories of video files in one click.
 * **✨ Character Discovery Gallery:** Automatically pre-scans and clusters unique characters across video files. Click any card to track that character.
-* **🎧 Multi-Audio Stream Selector:** Easily switch between audio tracks (e.g., English Dub, Japanese Original, Commentary) in MKV/MP4 files.
-* **🎨 8 Studio Accent Themes & 8 Languages:** Fully localized in **Polski, English, Deutsch, Español, Français, Русский, Українська, 日本語** with 8 customizable accent themes (*Violet, Blue, Emerald, Indigo, Rose, Orange, Crimson, Amber*).
+* **🎨 8 Studio Accent Themes & 8 Languages:** Fully localized in **Polski, English, Deutsch, Español, Français, Русский, Українська, 日本語** with custom accent theming.
 
 ---
 

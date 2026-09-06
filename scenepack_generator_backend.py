@@ -272,7 +272,105 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.42"
+APP_VERSION = "v1.43"
+
+
+class SleepInhibitor:
+    """
+    Cross-platform utility to prevent OS sleep / screen power-off while background jobs run.
+    Uses native caffeinate on macOS and SetThreadExecutionState on Windows.
+    """
+    _caffeinate_proc = None
+
+    @classmethod
+    def prevent_sleep(cls):
+        try:
+            if sys.platform == "darwin":
+                if cls._caffeinate_proc is None or cls._caffeinate_proc.poll() is not None:
+                    cls._caffeinate_proc = subprocess.Popen(
+                        ["caffeinate", "-dimsu", "-w", str(os.getpid())],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    logging.info("[SleepInhibitor] macOS sleep prevention activated (caffeinate).")
+            elif sys.platform == "win32":
+                import ctypes
+                ES_CONTINUOUS = 0x80000000
+                ES_SYSTEM_REQUIRED = 0x00000001
+                ES_DISPLAY_REQUIRED = 0x00000002
+                ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+                logging.info("[SleepInhibitor] Windows sleep prevention activated (SetThreadExecutionState).")
+        except Exception as e:
+            logging.debug(f"[SleepInhibitor] Could not activate sleep prevention: {e}")
+
+    @classmethod
+    def allow_sleep(cls):
+        try:
+            if sys.platform == "darwin":
+                if cls._caffeinate_proc is not None:
+                    try:
+                        cls._caffeinate_proc.terminate()
+                        cls._caffeinate_proc.wait(timeout=1.0)
+                    except Exception:
+                        pass
+                    cls._caffeinate_proc = None
+                    logging.info("[SleepInhibitor] macOS sleep prevention deactivated.")
+            elif sys.platform == "win32":
+                import ctypes
+                ES_CONTINUOUS = 0x80000000
+                ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
+                logging.info("[SleepInhibitor] Windows sleep prevention deactivated.")
+        except Exception as e:
+            logging.debug(f"[SleepInhibitor] Could not deactivate sleep prevention: {e}")
+
+
+class PresetManager:
+    """
+    Manages custom user tuning presets stored in ~/.focus_presets.json.
+    Allows saving, retrieving, and deleting personalized configuration profiles.
+    """
+    PRESETS_FILE = Path.home() / ".focus_presets.json"
+
+    @classmethod
+    def load_presets(cls) -> Dict[str, dict]:
+        if cls.PRESETS_FILE.exists():
+            try:
+                with open(cls.PRESETS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return data
+            except Exception as e:
+                logging.warning(f"Failed to load custom presets: {e}")
+        return {}
+
+    @classmethod
+    def save_preset(cls, name: str, preset_data: dict) -> bool:
+        if not name or not name.strip():
+            return False
+        clean_name = name.strip()
+        presets = cls.load_presets()
+        presets[clean_name] = preset_data
+        try:
+            with open(cls.PRESETS_FILE, "w", encoding="utf-8") as f:
+                json.dump(presets, f, indent=4)
+            return True
+        except Exception as e:
+            logging.error(f"Failed to save preset '{clean_name}': {e}")
+            return False
+
+    @classmethod
+    def delete_preset(cls, name: str) -> bool:
+        presets = cls.load_presets()
+        if name in presets:
+            del presets[name]
+            try:
+                with open(cls.PRESETS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(presets, f, indent=4)
+                return True
+            except Exception as e:
+                logging.error(f"Failed to delete preset '{name}': {e}")
+                return False
+        return False
 
 
 class PlatformManager:
@@ -409,26 +507,73 @@ TRANSLATIONS = {
         "th_start": "Start Time",
         "th_end": "End Time",
         "th_duration": "Duration (s)",
-        "tutorial_title": "How to Use Focus",
+        "audio_all_tracks": "Keep All Audio Tracks (Multi/Dual Audio)",
+        "auto_render_enable": "Auto-Render all clips (Skip review)",
+        "prevent_sleep_enable": "Prevent computer from sleeping during processing",
+        "custom_color_btn": "Custom Color...",
+        "preset_save_btn": "Save Preset...",
+        "preset_delete_btn": "Delete Preset",
+        "preset_name_prompt": "Enter a name for this custom preset:",
+        "preset_saved_toast": "Preset '{name}' saved successfully!",
+        "preset_deleted_toast": "Preset '{name}' deleted.",
+        "select_all": "Select All",
+        "deselect_all": "Deselect All",
+        "scanning_analyzing": "Scanning and Analyzing... (Please Wait)",
+        "tutorial_title": "How to Use Focus — Complete User Manual",
         "tutorial_close": "Got it!",
         "tutorial_body": (
-            "• Supported Formats:\n"
-            "  • Video: MP4, MKV, MOV, AVI, WEBM, FLV, M4V, TS, WMV\n"
-            "  • Images: PNG, JPG, JPEG, WEBP, BMP, TIFF\n\n"
-            "• Workflow 1 (Auto-Gallery Beta):\n"
-            "  1. Open the 'Beta / Character Gallery' tab.\n"
-            "  2. Click 'Scan Video for Characters' to auto-discover unique faces.\n"
-            "  3. Click any character card to set it as your target reference face!\n\n"
-            "• Workflow 2 (Manual Selection):\n"
-            "  1. Select your input video file(s) or folder.\n"
-            "  2. Choose a clear reference face image.\n"
-            "  3. Choose the output save location.\n"
-            "  4. Click 'Step 1: Start Scan & Analyze Video'.\n"
-            "  5. Review detected clips in Step 2 and click 'Render & Export'!\n\n"
-            "• Framing Formats:\n"
-            "  • 16:9 Original: Preserves original widescreen source.\n"
-            "  • 9:16 Vertical (Auto-Track): Auto-centers and tracks face for TikTok/Shorts.\n"
-            "  • 9:16 Blurred Background: Overlays 16:9 video onto blurred vertical canvas."
+            "Focus — Comprehensive User Guide & Feature Manual\n\n"
+            "1. DETECTION ENGINES (MODES)\n"
+            "• Real Faces (Live-Action / 3D):\n"
+            "  - Uses 68-point facial landmark geometry and 128-dimensional deep neural embeddings.\n"
+            "  - Best for real actors, movies, TV series, interviews, and realistic 3D CGI.\n"
+            "• 2D Animation / Anime:\n"
+            "  - Custom ultra-fast Zero-Lock engine powered by OpenCV cascades, multi-region hair/face HSV color histograms, and 256-bit perceptual dHash.\n"
+            "  - Over 4,000x faster than neural networks, immune to CPU freezing, specifically tuned for stylized anime characters.\n\n"
+            "2. WORKFLOWS\n"
+            "• Workflow 1: Interactive Character Auto-Gallery (Recommended)\n"
+            "  1. Switch to the 'Beta / Character Gallery' tab in the sidebar.\n"
+            "  2. Click 'Scan Video for Characters'. Focus automatically scans and clusters all unique faces found in the video.\n"
+            "  3. Click any character card to instantly set them as your target reference face!\n"
+            "• Workflow 2: Manual Reference Selection\n"
+            "  1. Select input video(s) or add an entire directory/season.\n"
+            "  2. Choose a clean reference face portrait, screenshot, or character poster.\n"
+            "  3. Choose an output destination and click 'Step 1: Start Scan & Analyze Video'.\n"
+            "  4. Review detected clips in the table and click 'Step 2: Render & Export' (or enable Auto-Render)!\n\n"
+            "3. BATCH & MULTI-EPISODE PROCESSING\n"
+            "• Chronological Natural Ordering:\n"
+            "  - Automatically parses season and episode identifiers (e.g., S01E01 -> S01E12 -> S02E01), rendering scenes in true storyline sequence.\n"
+            "• Output Modes:\n"
+            "  - Master Scenepack (Single Video): Stitches all character appearances across all episodes into one unified, seamless master video.\n"
+            "  - Separate Episode Files: Exports an individual scenepack file for each input episode.\n\n"
+            "4. AUDIO STREAMS & MULTI-AUDIO\n"
+            "• Single Audio Track: Pick specific Japanese, English, commentary, or localized dub audio.\n"
+            "• Keep All Audio Tracks (Multi-Audio): Preserves all audio streams in the exported file, allowing editors to toggle between original dialogue and dubbing inside Premiere Pro, After Effects, or DaVinci Resolve.\n\n"
+            "5. SCENE & DETECTION TUNING PARAMETERS\n"
+            "• Padding Before / After (s): Extra pre-roll and post-roll headroom added to each scene so character appearances aren't cut too abruptly.\n"
+            "• Max Gap / Blink Tolerance (s): Bridges small pauses when a character looks away, blinks, or turns their head, keeping the edit continuous.\n"
+            "• Min Scene Length (s): Discards accidental crowd flashes or micro-glimpses shorter than this duration.\n"
+            "• Frame Skip Interval: Frame sampling rate (e.g. 5 for high-speed dynamic edits, 15 for standard analysis, 25 for fast draft).\n"
+            "• Face Distance Tolerance: Similarity threshold. Lower is stricter (exact match); higher is more inclusive.\n\n"
+            "6. DIALOGUE PROTECTION (VAD) & SPEAKER MATCHING\n"
+            "• Smart Dialogue Protection (VAD): Snaps clip boundaries to the nearest natural pause in speech so characters are never cut off mid-word.\n"
+            "• Silence Snapping Buffer (ms): Margin of breathing room around spoken sentences.\n"
+            "• Target Speaker Voice Matching: Enrolls the target character's vocal frequency (MFCC print) from their face-on scenes, filtering out scenes where only a background narrator or bystander is talking.\n\n"
+            "7. INTRO & OUTRO REMOVAL (SKIP OP/ED)\n"
+            "• Auto Chapters (MKV/MP4): Inspects internal chapter markers ('Opening', 'Ending', 'OP', 'ED', 'Credits') and skips decoding during those intervals (15% faster scan).\n"
+            "• Standard 90s / Custom Duration: Fallback window for TV broadcast files without chapter markers.\n\n"
+            "8. FRAMING FORMATS & ASPECT RATIOS\n"
+            "• 16:9 Original: Preserves original cinematic widescreen source.\n"
+            "• 9:16 Vertical (Auto-Track Subject): Smoothly centers and tracks the character's face across the frame for TikTok, Reels, and YouTube Shorts.\n"
+            "• 9:16 Vertical (Blurred Background): Centers the 16:9 video over a matching, blurred vertical backdrop.\n\n"
+            "9. EXPORT QUALITY & HARDWARE ENCODERS\n"
+            "• Auto (Match Source Bitrate): Analyzes source bitrate with ffprobe and exports with +15% quality headroom without file bloating.\n"
+            "• Maximum (Master / CRF 14 / 35 Mbps): Visually lossless master export with zero macroblocking.\n"
+            "• Automatic hardware acceleration: Apple Silicon VideoToolbox, NVIDIA NVENC, and Intel QSV.\n\n"
+            "10. AUTOMATION, SLEEP PREVENTION & CUSTOM PRESETS\n"
+            "• Prevent System Sleep: Prevents computer sleep, screen turn-off, and app suspension during heavy scans or overnight batch runs.\n"
+            "• Auto-Render All Clips: Automatically accepts all detected clips and starts rendering immediately after scan completion.\n"
+            "• Custom Presets: Save, load, and manage your own tuning configurations directly from the preset bar!"
         ),
         "changelog_title": "Project History & Changelog",
         "changelog_close": "Close"
@@ -493,20 +638,20 @@ TRANSLATIONS = {
         "intro_mode_90s": "Pierwsze 90s (Standard Anime OP)",
         "intro_mode_custom": "Własny Czas Trwania",
         "intro_duration_lbl": "Czas Trwania (s):",
-        "generate": "Krok 1: Rozpocznij Skanowanie & Analizę Wideo",
+        "generate": "Krok 1: Rozpocznij Skanowanie i Analizę Wideo",
         "review_title": "Krok 2: Przegląd i Wybór Wykrytych Scen",
         "btn_render": "Krok 2: Wyrenderuj Wybrane Klipy",
-        "logs_title": "Dziennik Zdarzeń & Diagnostyka:",
+        "logs_title": "Dziennik Zdarzeń i Diagnostyka:",
         "play_orig": "Odtwórz Oryginał",
         "play_result": "Odtwórz Wynik",
         "no_video": "Nie wybrano wideo",
-        "no_image": "Nie wybrano zdjęcia referencyjnego",
-        "no_output": "Nie wybrano miejsca zapisu",
-        "err_no_human_face": "Nie znaleziono ludzkiej twarzy w zdjęciu referencyjnym '{name}'. Jeśli wybrałeś postać z Anime (np. Marin Kitagawa), przełącz tryb detekcji na 'Anime'!",
+        "no_image": "Nie wybrano obrazu",
+        "no_output": "Nie wybrano lokalizacji zapisu",
+        "err_no_human_face": "Nie znaleziono ludzkiej twarzy w obrazie referencyjnym '{name}'. Jeśli wybrałeś postać z anime, przełącz tryb detekcji na 'Anime'!",
         "ready": "Gotowy do generowania",
-        "real_faces": "Prawdziwe Twarze (Filmy / Seriale)",
-        "anime": "Anime / Animacja 2D",
-        "aspect_16_9": "16:9 Oryginalny (Szeroki Ekran)",
+        "real_faces": "Real Faces (Film Aktorski / 3D)",
+        "anime": "2D Animation / Anime",
+        "aspect_16_9": "16:9 Oryginalny (Panorama)",
         "aspect_9_16_vert": "9:16 Pionowy (Śledzenie Postaci)",
         "aspect_9_16_blur": "9:16 Pionowy (Rozmyte Tło)",
         "th_include": "Dołącz",
@@ -514,26 +659,73 @@ TRANSLATIONS = {
         "th_start": "Początek",
         "th_end": "Koniec",
         "th_duration": "Długość (s)",
-        "tutorial_title": "Instrukcja Obsługi Focus",
+        "audio_all_tracks": "Zachowaj Obie / Wszystkie Ścieżki Audio (Multi-Audio)",
+        "auto_render_enable": "Automatycznie renderuj wszystkie klipy (Pomiń weryfikację)",
+        "prevent_sleep_enable": "Blokuj uśpienie i wygaszanie komputera podczas pracy",
+        "custom_color_btn": "Własny Kolor...",
+        "preset_save_btn": "Zapisz Preset...",
+        "preset_delete_btn": "Usuń Preset",
+        "preset_name_prompt": "Podaj nazwę dla nowego profilu parametrów:",
+        "preset_saved_toast": "Profil '{name}' został pomyślnie zapisany!",
+        "preset_deleted_toast": "Profil '{name}' został usunięty.",
+        "select_all": "Zaznacz Wszystko",
+        "deselect_all": "Odznacz Wszystko",
+        "scanning_analyzing": "Skanowanie i analiza wideo... (Proszę czekać)",
+        "tutorial_title": "Instrukcja Obsługi Focus — Kompletny Podręcznik",
         "tutorial_close": "Zrozumiałem!",
         "tutorial_body": (
-            "• Obsługiwane Formaty:\n"
-            "  • Wideo: MP4, MKV, MOV, AVI, WEBM, FLV, M4V, TS, WMV\n"
-            "  • Obrazy: PNG, JPG, JPEG, WEBP, BMP, TIFF\n\n"
-            "• Metoda 1 (Automatyczna Galeria Beta):\n"
-            "  1. Przejdź do zakładki 'Galeria Postaci (Beta)'.\n"
-            "  2. Kliknij 'Skanuj Wideo w Poszukiwaniu Postaci', aby automatycznie wykryć twarze.\n"
-            "  3. Kliknij dowolną postać, aby ustawić ją jako cel generowania!\n\n"
-            "• Metoda 2 (Ręczny Wybór):\n"
-            "  1. Wybierz plik(i) wideo wejściowego lub cały folder.\n"
-            "  2. Wybierz wyraźne zdjęcie referencyjne twarzy postaci.\n"
-            "  3. Wskaż miejsce zapisu scenepacka.\n"
-            "  4. Kliknij 'Krok 1: Rozpocznij Skanowanie i Analizę'.\n"
-            "  5. Przejrzyj wykryte sceny w tabeli i kliknij 'Krok 2: Wyrenderuj Wybrane Klipy'!\n\n"
-            "• Formaty Obrazu:\n"
-            "  • 16:9 Oryginalny: Wyciąga sceny w pełnym, oryginalnym kadrze wideo.\n"
-            "  • 9:16 Pionowy (Śledzenie): Dynamicznie podąża za twarzą postaci (TikTok/Reels/Shorts).\n"
-            "  • 9:16 Rozmyte Tło: Wyśrodkowane wideo 16:9 nałożone na estetycznie rozmyte tło."
+            "Focus — Kompletny Podręcznik i Instrukcja Obsługi\n\n"
+            "1. TRYBY DETEKCJI\n"
+            "• Real Faces (Film Aktorski / 3D):\n"
+            "  - Wykorzystuje 68-punktowe landmarki twarzy i 128-wymiarowe wektory sieci neuronowej.\n"
+            "  - Idealne do filmów fabularnych, seriali, wywiadów i realistycznego renderu 3D CGI.\n"
+            "• 2D Animation / Anime:\n"
+            "  - Autorski, ultraszybki silnik Zero-Lock oparty na kaskadach OpenCV, wieloregionowych histogramach HSV włosów i twarzy oraz 256-bitowym haszowaniu percepcyjnym dHash.\n"
+            "  - Ponad 4000x szybszy niż sieci neuronowe, nie zamraża procesora i jest stworzony specjalnie dla stylizowanych postaci anime.\n\n"
+            "2. ŚCIEŻKI PRACY (WORKFLOWS)\n"
+            "• Metoda 1: Interaktywna Galeria Postaci (Zalecane)\n"
+            "  1. Przejdź do zakładki 'Galeria Postaci (Beta)' w pasku bocznym.\n"
+            "  2. Kliknij 'Skanuj Wideo w Poszukiwaniu Postaci'. Focus zbada wideo i pogrupuje unikalne twarze.\n"
+            "  3. Kliknij dowolną kartę postaci, aby natychmiast wybrać ją jako cel generowania!\n"
+            "• Metoda 2: Ręczny Wybór Celu\n"
+            "  1. Wybierz plik(i) wideo wejściowego lub cały folder z sezonem.\n"
+            "  2. Wskaż wyraźne zdjęcie, kadr lub plakat poszukiwanej postaci.\n"
+            "  3. Wskaż miejsce zapisu i kliknij 'Krok 1: Rozpocznij Skanowanie i Analizę'.\n"
+            "  4. Przejrzyj wykryte sceny w tabeli i kliknij 'Krok 2: Wyrenderuj Wybrane Klipy' (lub włącz Auto-Render)!\n\n"
+            "3. PRZETWARZANIE WIELU ODCINKÓW I SEZONÓW (BATCH)\n"
+            "• Naturalne Sortowanie Odcinków:\n"
+            "  - Automatycznie rozpoznaje oznaczenia Sezonów i Odcinków (np. S01E01 -> S01E12 -> S02E01), układając sceny w prawdziwej chronologii fabuły.\n"
+            "• Tryby Wyjściowe:\n"
+            "  - Master Scenepack (Pojedyncze Wideo): Łączy wszystkie sceny postaci z całego sezonu w jeden spójny plik master.\n"
+            "  - Osobne Odcinki: Generuje niezależne pliki scenepacka dla każdego badanego odcinka z osobna.\n\n"
+            "4. ŚCIEŻKI DŹWIĘKOWE I MULTI-AUDIO\n"
+            "• Pojedyncza Ścieżka Audio: Wybór konkretnego strumienia (np. japoński dubbing, polski lektor, komentarz reżyserski).\n"
+            "• Zachowaj Obie / Wszystkie Ścieżki (Multi-Audio): Zachowuje wszystkie strumienie audio w pliku wynikowym, umożliwiając montażyście płynne przełączanie między japońskim a angielskim audio bezpośrednio w Premiere Pro / After Effects.\n\n"
+            "5. PARAMETRY DOSTRAJANIA (TUNING)\n"
+            "• Margines Przed / Po Scenie (s): Dodatkowy czas przed i po pojawieniu się postaci, zapewniający płynność montażu.\n"
+            "• Tolerancja Przerw / Mrugnięć (s): Łączy ujęcia, gdy postać na 1-2 sekundy odwróci wzrok lub mrugnie, chroniąc scenę przed poszatkowaniem.\n"
+            "• Min. Długość Sceny (s): Odrzuca mikroujęcia i przypadkowe błyśnięcia twarzy w tłumie krótsze niż zadany czas.\n"
+            "• Krok Analizy Klatek (Frame Skip): Większy krok przyspiesza analizę; mniejszy daje maksymalną precyzję klatkową.\n"
+            "• Tolerancja Podobieństwa: Niższa wartość oznacza restrykcyjne dopasowanie; wyższa wyłapuje postać pod trudniejszymi kątami.\n\n"
+            "6. OCHRONA DIALOGÓW (VAD) I WERYFIKACJA GŁOSU\n"
+            "• Inteligentna Ochrona Dialogów (VAD): Przyciąga cięcia do naturalnych pauz w mowie, zapobiegając ucinaniu postaci w pół słowa.\n"
+            "• Bufor Ciszy (ms): Margines bezpieczeństwa wokół wypowiadanych zdań.\n"
+            "• Dopasowanie Głosu Postaci: Uczy się barwy głosu postaci (wektor MFCC) ze scen gdzie twarz jest widoczna, odrzucając sceny gdzie mówi wyłącznie narrator z tła lub inna osoba.\n\n"
+            "7. POMIJANIE INTRO I OUTRO (OPENING & ENDING)\n"
+            "• Automatycznie z Rozdziałów: Bada znaczniki MKV/MP4 ('Opening', 'Ending', 'OP', 'ED') i omija je w skanowaniu, przyspieszając pracę o 15% i eliminując czołówki ze scenepacka.\n"
+            "• Pierwsze 90s / Własny Czas: Tryb awaryjny dla plików z telewizji bez rozdziałów.\n\n"
+            "8. FORMAT PŁÓTNA I KADROWANIE\n"
+            "• 16:9 Oryginalny: Zachowuje kinowy format panoramiczny źródła.\n"
+            "• 9:16 Pionowy (Śledzenie Postaci): Wykrywa i płynnie śledzi twarz postaci na środku pionowego kadru (TikTok, Rolki, YouTube Shorts).\n"
+            "• 9:16 Pionowy (Rozmyte Tło): Umieszcza oryginalne wideo 16:9 na estetycznym, rozmytym tle.\n\n"
+            "9. JAKOŚĆ I AKCELERACJA SPRZĘTOWA\n"
+            "• Auto (Dopasuj do Źródła): Bada plik wejściowy przez ffprobe i eksportuje scenepack z zapasem +15% bez sztucznego puchnięcia rozmiaru.\n"
+            "• Maximum (Master / CRF 14 / 35 Mbps): Krystalicznie ostry obraz bez widocznej kompresji makroblokowej.\n"
+            "• Pełna akceleracja sprzętowa Apple Silicon VideoToolbox, NVIDIA NVENC i Intel QSV.\n\n"
+            "10. BLOKADA USYPIANIA, AUTOMATYZACJA I WŁASNE PROFILE\n"
+            "• Blokuj Uśpienie: Zabezpiecza komputer przed uśpieniem ekranu i systemu podczas długich renderów nocnych.\n"
+            "• Auto-Render: Automatycznie zatwierdza wszystkie wykryte klipy i od razu rozpoczyna renderowanie bez czekania na weryfikację.\n"
+            "• Własne Profile (Presety): Możliwość zapisywania i błyskawicznego wczytywania ulubionych zestawów parametrów!"
         ),
         "changelog_title": "Historia Projektu i Zmiany",
         "changelog_close": "Zamknij"
@@ -705,6 +897,17 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v1.43 (Modernistyczny Design, Wielojęzyczne Audio, Blokada Usypiania i Nowy Szlif UI):\n"
+            "  - [IKONY] Wdrożono nowy, elegancki design ikony Dark Obsidian Glass Squircle w standardzie Apple macOS HIG oraz wygenerowano spójne zestawy ikon dla Windows (.ico z 8 rozmiarami) i macOS (.icns) — koniec z przestarzałą ikoną na Windowsie!\n"
+            "  - [UI/UX] Wyeliminowano ucinanie tekstu w przełączniku trybów ('2D Animation / Anime') oraz usunięto artefakt podkreślenia ('_Analyzing') z przycisku skanowania wywołany mnemonicznymi znacznikami Qt.\n"
+            "  - [BRANDING] Usunięto emotkę '🎯' z logo Focus na pasku bocznym, nadając aplikacji w pełni profesjonalny, minimalistyczny wygląd.\n"
+            "  - [SCROLLBARY] Wprowadzono nowoczesne, zaokrąglone paski przewijania (minimalistyczny pill, przezroczyste tło toru, brak archaicznych strzałek, akcent kolorystyczny motywu przy najechaniu).\n"
+            "  - [AUDIO] Dodano opcję zachowania wszystkich ścieżek dźwiękowych ('Zachowaj wszystkie ścieżki audio / Multi-Audio') w eksportowanych klipach z mapowaniem FFmpeg `-map 0:a?`.\n"
+            "  - [ZASILANIE] Zaimplementowano SleepInhibitor (caffeinate na macOS, SetThreadExecutionState na Windows) zapobiegający usypianiu systemu i blokowaniu ekranu podczas skanowania oraz renderowania wideo.\n"
+            "  - [AUTOMATYZACJA] Dodano opcję 'Automatyczny Render' pomijającą ręczną akceptację oraz przyciski 'Zaznacz wszystkie' / 'Odznacz wszystkie' w oknie przeglądu klipów (Review Checklist).\n"
+            "  - [TUNING] Całkowicie przebudowano sekcję 'Dostrajanie Scen i Detekcji' na czytelne, logiczne podsekcje z precyzyjnymi jednostkami miary (sekundy, klatki, milisekundy).\n"
+            "  - [PRESETY I KOLORY] Dodano menedżer własnych presetów użytkownika (~/.focus_presets.json) oraz zaawansowany próbnik kolorów akcentu z obsługą dowolnego kodu HEX.\n"
+            "  - [PODRĘCZNIK] Opracowano wyczerpujący, 10-rozdziałowy samouczek i instrukcję obsługi wyjaśniający działanie każdego parametru i algorytmu w językach polskim i angielskim.\n\n"
             "• v1.42 (Kompleksowy Audyt Kodu — 7 Naprawionych Błędów):\n"
             "  - [CRITICAL] Naprawiono losowe segfaulty/artefakty graficzne w podglądzie klipów i miniaturach Review Checklist — QImage z PySide6 nie kopiuje bufora pamięci, dodano .copy() aby wymusić bezpieczną kopię danych.\n"
             "  - [HIGH] Naprawiono pomijanie weryfikacji głosu mówcy (VAD Speaker) gdy wideo nie zawiera absolutnych cisz — blok weryfikacji był nieprawidłowo zagnieżdżony wewnątrz `if silences:`, przeniesiony na właściwy poziom.\n"
@@ -954,6 +1157,17 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v1.43 (Modern Obsidian Icons, Multi-Audio Track Support, Anti-Sleep Engine & UI Polish Pass):\n"
+            "  - [ICONS] Deployed modern Dark Obsidian Glass Squircle app icon aligning with Apple macOS HIG standards, paired with regenerated multi-resolution Windows .ico (8 resolutions from 16px to 256px) and macOS .icns — completely replacing outdated Windows icon assets.\n"
+            "  - [UI/UX] Resolved text truncation in the mode switcher ('2D Animation / Anime') and eliminated rogue underscore artifacts ('_Analyzing') on the primary scan button triggered by Qt accelerator mnemonic parsing.\n"
+            "  - [BRANDING] Removed the '🎯' emoji from the sidebar Focus brand title, establishing a refined and modern aesthetic.\n"
+            "  - [SCROLLBARS] Modernized application-wide scrollbars with sleek rounded pills, transparent tracks, arrow button suppression, and dynamic accent color glow on hover.\n"
+            "  - [AUDIO] Added full multi-audio stream retention ('Keep All Audio Tracks / Multi-Audio') using FFmpeg `-map 0:a?` to preserve secondary commentaries, dual audio, and alternate dubs.\n"
+            "  - [POWER] Integrated cross-platform SleepInhibitor (caffeinate on macOS, SetThreadExecutionState on Windows) preventing system sleep and screen blanking during active scanning and encoding.\n"
+            "  - [AUTOMATION] Added 'Auto-Render' setting to bypass manual review when desired, alongside convenient 'Select All' and 'Deselect All' bulk controls in the Review Checklist dialog.\n"
+            "  - [TUNING] Redesigned the 'Scene & Detection Tuning' panel into clean thematic sub-sections with explicit unit badges (seconds, frames, milliseconds).\n"
+            "  - [PRESETS & COLORS] Introduced custom user tuning preset management (~/.focus_presets.json) and an arbitrary HEX custom accent color picker dialog with dynamic palette calculation.\n"
+            "  - [MANUAL] Overhauled the tutorial dialog into a comprehensive 10-chapter user guide covering all modes, parameters, and algorithms in English and Polish.\n\n"
             "• v1.42 (Comprehensive Code Audit — 7 Bugs Fixed):\n"
             "  - [CRITICAL] Fixed random segfaults and green artifacts in clip previews and Review Checklist thumbnails — PySide6 QImage does not copy raw memory buffers, added .copy() to force safe deep copy.\n"
             "  - [HIGH] Fixed speaker voice verification (VAD Speaker) being silently skipped when videos contain no absolute silences — the verification block was incorrectly nested inside `if silences:`, moved to correct indentation level.\n"
@@ -2653,9 +2867,12 @@ class ScenePackGenerator:
                         rate_control_args = ['-b:v', b_val, '-maxrate', maxrate_val, '-bufsize', buf_val]
                 else:
                     rate_control_args = ['-b:v', b_val, '-maxrate', maxrate_val, '-bufsize', buf_val]
+                is_multi_audio = (audio_track_index in (-1, "-1", "all", "multi", "both"))
+                audio_map_args = ['-map', '0:a?'] if is_multi_audio else ['-map', f'0:a:{audio_track_index}?']
+
                 cmd.extend([
                     '-map', '0:v:0',
-                    '-map', f'0:a:{audio_track_index}?',
+                ] + audio_map_args + [
                     '-af', 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,aresample=async=1,apad',
                     '-c:v', codec,
                 ] + extra_args + rate_control_args + [
@@ -2724,6 +2941,7 @@ class ScenePackGenerator:
                 '-safe', '0',
                 '-i', str(concat_list_path),
                 '-c', 'copy',
+                '-map', '0',
                 '-bsf:a', 'aac_adtstoasc',
                 '-fflags', '+genpts+discardcorrupt',
                 '-movflags', '+faststart',
