@@ -1,6 +1,6 @@
 # Focus — AI-Powered Scenepack Generator & Video Studio (v1.43)
 
-[![Version](https://img.shields.io/badge/version-v1.43-blueviolet.svg?style=for-the-badge)](https://github.com/bartosz55-dev/Focus/releases)
+[![Version](https://img.shields.io/badge/version-v1.43-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -35,7 +35,7 @@ By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Pe
 * **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, multi-region hair/face NumPy HSV color histograms, and perceptual dHash correlation.
 * **🎯 Real Faces Deep Learning Detector:** Powered by 68-point facial landmark and deep CNN embeddings for human facial recognition in films and series.
 * **🎙️ Bounded Lip-Sync & Sentence Protection (VAD):** Voice Activity Detection (VAD) with maximum 2.5s sentence bounds prevents dialog from being chopped mid-word while completely preventing multi-minute scene bloating.
-* **📱 9:16 Vertical Cropping & Blurred Backgrounds:** Built for TikTok, Instagram Reels, and YouTube Shorts. Automatically tracks subjects in vertical 9:16 aspect ratio or fills background borders with blurred video.
+* **📱 9:16 Vertical Cropping & Blurred Backgrounds:** Built for TikTok and YouTube Shorts. Automatically tracks subjects in vertical 9:16 aspect ratio or fills background borders with blurred video.
 * **✨ Character Discovery Gallery:** Automatically pre-scans and clusters unique characters across video files. Click any card to track that character.
 * **🎨 8 Studio Accent Themes & 8 Languages:** Fully localized in **Polski, English, Deutsch, Español, Français, Русский, Українська, 日本語** with custom accent theming.
 
@@ -63,11 +63,11 @@ Focus automatically detects and utilizes hardware encoders available on your sys
 
 ---
 
-## 📥 Pre-Built Downloads & Releases
+## 📥 Pre-Built Downloads
 
-Pre-built binaries and version packages are published on GitHub Releases:
+Pre-built binaries and version packages are published on GitHub:
 
-👉 **[Download Latest Releases (Windows & macOS)](https://github.com/bartosz55-dev/Focus/releases)**
+👉 **[Download Latest Packages (Windows & macOS)](https://github.com/Bartosz5500/Focus)**
 
 * **Windows (`Focus.exe` / `Uruchom_Focus_Windows.bat`):** Standalone executable with pre-configured PySide6 Qt 6 and OpenCV dependencies.
 * **macOS (`Focus.app` / `Focus.command`):** Native macOS application bundle optimized for Apple Silicon (M1/M2/M3/M4) and Intel Macs.
@@ -85,7 +85,7 @@ We provide automated zero-terminal launchers:
 ### Manual Setup (CLI / Terminal)
 ```bash
 # 1. Clone the repository
-git clone https://github.com/bartosz55-dev/Focus.git
+git clone https://github.com/Bartosz5500/Focus.git
 cd Focus
 
 # 2. Create and activate virtual environment
