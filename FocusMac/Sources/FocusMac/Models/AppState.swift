@@ -111,6 +111,23 @@ public final class AppState: ObservableObject {
 
     public init() {
         refreshPresets()
+        loadPersistentLogs()
+    }
+
+    public func loadPersistentLogs() {
+        let logPath = ("~/Library/Logs/Focus/focus_debug.log" as NSString).expandingTildeInPath
+        if FileManager.default.fileExists(atPath: logPath),
+           let content = try? String(contentsOfFile: logPath, encoding: .utf8) {
+            let lines = content.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            let recent = Array(lines.suffix(150))
+            if !recent.isEmpty {
+                self.logLines = recent
+                return
+            }
+        }
+        if self.logLines.isEmpty {
+            self.logLines.append("[INFO] Focus v2.0.0 Diagnostic Engine ready. Awaiting scan or render events.")
+        }
     }
 
     public func showToast(_ msg: String, icon: String = "checkmark.circle") {
@@ -256,6 +273,7 @@ public final class AppState: ObservableObject {
         }
 
         let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
+        logLines.append("[INFO] Starting video analysis: \(video.lastPathComponent) [Mode: \(mode.rawValue)]")
 
         var args: [String] = [
             "-v", videoArg,
@@ -295,6 +313,7 @@ public final class AppState: ObservableObject {
             } catch {
                 self.isProcessing = false
                 self.processingStatus = "Error: \(error.localizedDescription)"
+                self.logLines.append("[ERROR] Scan execution failed: \(error.localizedDescription)")
                 SleepManager.shared.allowSleep()
                 self.showToast("Scan error: \(error.localizedDescription)", icon: "xmark.octagon")
             }
@@ -318,6 +337,7 @@ public final class AppState: ObservableObject {
 
         let out = outputURL ?? video.deletingPathExtension().appendingPathExtension("scenepack.mp4")
         let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
+        logLines.append("[INFO] Starting hardware-accelerated render of \(selected.count) clip(s) to: \(out.lastPathComponent)")
 
         var args: [String] = [
             "-v", videoArg,
@@ -333,6 +353,22 @@ public final class AppState: ObservableObject {
             args += ["-i", char.cropPath]
         }
 
+        // Export reviewed intervals to temporary JSON to eliminate redundant re-scanning!
+        let tempJsonURL = FileManager.default.temporaryDirectory.appendingPathComponent("focus_render_intervals_\(UUID().uuidString).json")
+        let clipsDicts: [[String: Any]] = selected.map { clip in
+            let src = clip.source.isEmpty ? video.path : clip.source
+            return [
+                "source": src,
+                "start": clip.start,
+                "end": clip.end,
+                "avg_x": clip.avgX
+            ]
+        }
+        if let jsonData = try? JSONSerialization.data(withJSONObject: clipsDicts) {
+            try? jsonData.write(to: tempJsonURL)
+            args += ["--intervals-json-file", tempJsonURL.path]
+        }
+
         Task {
             do {
                 try await ProcessBridge.shared.run(arguments: args) { [weak self] event in
@@ -344,6 +380,7 @@ public final class AppState: ObservableObject {
             } catch {
                 self.isProcessing = false
                 self.processingStatus = "Render error: \(error.localizedDescription)"
+                self.logLines.append("[ERROR] Render execution failed: \(error.localizedDescription)")
                 SleepManager.shared.allowSleep()
                 self.showToast("Render failed: \(error.localizedDescription)", icon: "xmark.octagon")
             }
@@ -385,6 +422,7 @@ public final class AppState: ObservableObject {
             self.detectedClips = clips
             self.isProcessing = false
             self.processingStatus = "Scan complete! Found \(clips.count) clip(s)."
+            self.logLines.append("[INFO] Scan finished successfully with \(clips.count) candidate clip(s).")
             SleepManager.shared.allowSleep()
             if settings.autoRender && !clips.isEmpty {
                 startRender()
@@ -393,6 +431,7 @@ public final class AppState: ObservableObject {
             self.isProcessing = false
             self.progressValue = 1.0
             self.processingStatus = "Render complete! Saved to \(URL(fileURLWithPath: out).lastPathComponent)"
+            self.logLines.append("[SUCCESS] Scenepack successfully rendered: \(out)")
             SleepManager.shared.allowSleep()
             NSSound(named: "Glass")?.play()
             showToast("Scenepack successfully rendered!", icon: "checkmark.seal.fill")

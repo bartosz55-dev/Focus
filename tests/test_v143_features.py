@@ -18,9 +18,9 @@ class TestFocusV143Features(unittest.TestCase):
     """Test suite verifying all v1.43 features and bugfixes."""
 
     def test_version_bump(self):
-        """Verify APP_VERSION is updated to v1.43 across backend and GUI."""
-        self.assertEqual(backend.APP_VERSION, "v1.43")
-        self.assertEqual(gui_qt.APP_VERSION, "v1.43")
+        """Verify APP_VERSION is updated to v2.0.0 across backend and GUI."""
+        self.assertEqual(backend.APP_VERSION, "v2.0.0")
+        self.assertEqual(gui_qt.APP_VERSION, "v2.0.0")
 
     def test_sidebar_logo_no_emoji(self):
         """Verify the 🎯 emoji has been removed from the logo header."""
