@@ -15,7 +15,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "FocusMac",
-            path: "Sources/FocusMac"
+            path: "Sources/FocusMac",
+            resources: [
+                .process("Resources")
+            ]
         )
     ]
 )

@@ -1,10 +1,11 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v1.43)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v2.0.0)
 
-[![Version](https://img.shields.io/badge/version-v1.43-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
+[![Version](https://img.shields.io/badge/version-v2.0.0-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
+[![Changelog](https://img.shields.io/badge/changelog-132%20releases-success.svg?style=for-the-badge)](CHANGELOG.md)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
+[![GUI Framework](https://img.shields.io/badge/GUI-SwiftUI%206%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%2011%20%7C%20macOS%20%28Apple%20Silicon%20%26%20Intel%29-orange.svg?style=for-the-badge)]()
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%2011-orange.svg?style=for-the-badge)]()
 
 ---
 
@@ -123,6 +124,14 @@ The Windows / multi-platform app is built using PySide6 and PyInstaller:
 python3 build.py
 ```
 Outputs compiled binaries to the `dist/` directory.
+
+---
+
+## 📜 Changelog & Version History
+
+Focus has evolved through 132 iterations from initial prototypes to a production dual-ecosystem studio. See the full version history and release notes:
+
+👉 **[Complete Project Changelog (v0.01 – v2.0.0)](CHANGELOG.md)**
 
 ---
 

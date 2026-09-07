@@ -1,0 +1,1680 @@
+{
+  "en": [
+    {
+      "version": "v2.0.0",
+      "date": "2026-09-07",
+      "title": "Native macOS SwiftUI 6 Engine, Liquid Glass UI & Unified Settings Hub",
+      "points": [
+        "[MACOS] Built from the ground up as a native macOS SwiftUI 6 application with instant sub-100ms startup and ~50MB RAM footprint.",
+        "[UI/UX] Unified Settings Hub with System, Light, and Dark appearance modes, 8 curated accent swatches, and custom HEX Color Picker.",
+        "[DESIGN] Apple HIG Liquid Glass floating pill toolbars and 120Hz ProMotion spring physics animations.",
+        "[AUDIO] Instant background audio stream detection with ffprobe (~15ms) and multi-audio stream retention (Keep All Audio Tracks).",
+        "[BATCH] Seamless multi-video and season batch scanning with zero-terminal launcher support.",
+        "[PRIVACY] Complete code privacy and author sanitization under Bartosz5500."
+      ]
+    },
+    {
+      "version": "v1.43",
+      "title": "Modern Obsidian Icons, Multi-Audio Track Support, Anti-Sleep Engine & UI Polish Pass",
+      "points": [
+        "[ICONS] Deployed modern Dark Obsidian Glass Squircle app icon aligning with Apple macOS HIG standards, paired with regenerated multi-resolution Windows .ico (8 resolutions from 16px to 256px) and macOS .icns — completely replacing outdated Windows icon assets.",
+        "[UI/UX] Resolved text truncation in the mode switcher ('2D Animation / Anime') and eliminated rogue underscore artifacts ('_Analyzing') on the primary scan button triggered by Qt accelerator mnemonic parsing.",
+        "[BRANDING] Removed the '🎯' emoji from the sidebar Focus brand title, establishing a refined and modern aesthetic.",
+        "[SCROLLBARS] Modernized application-wide scrollbars with sleek rounded pills, transparent tracks, arrow button suppression, and dynamic accent color glow on hover.",
+        "[AUDIO] Added full multi-audio stream retention ('Keep All Audio Tracks / Multi-Audio') using FFmpeg `-map 0:a?` to preserve secondary commentaries, dual audio, and alternate dubs.",
+        "[POWER] Integrated cross-platform SleepInhibitor (caffeinate on macOS, SetThreadExecutionState on Windows) preventing system sleep and screen blanking during active scanning and encoding.",
+        "[AUTOMATION] Added 'Auto-Render' setting to bypass manual review when desired, alongside convenient 'Select All' and 'Deselect All' bulk controls in the Review Checklist dialog.",
+        "[TUNING] Redesigned the 'Scene & Detection Tuning' panel into clean thematic sub-sections with explicit unit badges (seconds, frames, milliseconds).",
+        "[PRESETS & COLORS] Introduced custom user tuning preset management (~/.focus_presets.json) and an arbitrary HEX custom accent color picker dialog with dynamic palette calculation.",
+        "[MANUAL] Overhauled the tutorial dialog into a comprehensive 10-chapter user guide covering all modes, parameters, and algorithms in English and Polish."
+      ]
+    },
+    {
+      "version": "v1.42",
+      "title": "Comprehensive Code Audit — 7 Bugs Fixed",
+      "points": [
+        "[CRITICAL] Fixed random segfaults and green artifacts in clip previews and Review Checklist thumbnails — PySide6 QImage does not copy raw memory buffers, added .copy() to force safe deep copy.",
+        "[HIGH] Fixed speaker voice verification (VAD Speaker) being silently skipped when videos contain no absolute silences — the verification block was incorrectly nested inside `if silences:`, moved to correct indentation level.",
+        "[HIGH] Fixed batch mode crash (AttributeError) — batch processing methods referenced non-existent btn_run_batch widget, replaced with btn_generate.",
+        "[MEDIUM] Fixed inaccurate mini-clip preview positioning — replaced frame-number seeking (CAP_PROP_POS_FRAMES) with millisecond seeking (CAP_PROP_POS_MSEC) for correct VFR video handling.",
+        "[MEDIUM] Removed dead dependencies scipy and python_speech_features from requirements.txt — replaced by pure NumPy MFCC since v1.30, build.py actively excludes them.",
+        "[MEDIUM] Fixed false Python detection in Windows Launcher — added App Execution Alias filtering to prevent WindowsApps stub from masquerading as real Python.",
+        "[LOW] Added automatic .mp4 extension appending in fallback save dialog, preventing creation of extensionless output files."
+      ]
+    },
+    {
+      "version": "v1.41",
+      "title": "OpenCV Compatibility Fix, Symlink Dereferencing & Neural Face Fallback",
+      "points": [
+        "Pinned opencv-python (<5.0.0) in requirements.txt to prevent breaking changes from the newly uploaded OpenCV 5.0.0 preview on PyPI which stripped cv2.CascadeClassifier from the top-level module.",
+        "Hardened get_cascade_classifier with canonical symlink resolution (os.path.realpath) and multi-namespace support across cv2, cv2.objdetect, and cv2.cv2.",
+        "Enhanced lbpcascade_animeface.xml discovery in macOS .app bundles across Contents/Resources/models and canonical path resolution (.resolve()).",
+        "Added neural face recognition model fallback (safe_face_locations) in _process_single_frame so face detection never completely drops even if an offline cascade is unavailable.",
+        "Integrated RotatingFileHandler with 5MB ceiling preventing log inflation and suppressing historical crash noise."
+      ]
+    },
+    {
+      "version": "v1.40",
+      "title": "Precision VAD Speech Detection, Voice Filter Fallback & Bundled Anime Models",
+      "points": [
+        "Fixed FFmpeg silencedetect marker parsing in _detect_silences by switching from -loglevel error to -loglevel info, restoring full intelligent dialogue protection and boundary snapping.",
+        "Hardened tuple unpacking in _build_target_voice_print, preventing ValueError crashes when 2-tuple intervals are provided.",
+        "Implemented fail-fast scanning in scan_and_prepare, eliminating wasteful 30-second FFmpeg scene cut runs when zero character frames are detected.",
+        "Added graceful speaker verification fallback — when an overly strict threshold filters out all intervals, visual face detections are retained rather than raising false negative errors.",
+        "Bundled lbpcascade_animeface.xml directly inside the repository and PyInstaller distribution (models/ directory), guaranteeing 100% offline functionality without network downloads.",
+        "Improved anime reference face extraction with multi-scale cascades, auxiliary frontalface detection, and smart portrait cropping for landscape wallpapers/posters.",
+        "Constrained the GUI speaker voice threshold slider to safe bounds (0.30 - 0.85, default 0.65) with descriptive UX tooltips and wired tolerance into background scan workers."
+      ]
+    },
+    {
+      "version": "v1.39",
+      "title": "Cross-Platform Hardening, Native Exception Safety & GitHub Actions Node 24",
+      "points": [
+        "Upgraded GitHub Actions workflows to modern Node.js 24 actions (checkout@v7, setup-python@v7, upload-artifact@v7, download-artifact@v8, action-gh-release@v3), resolving Node 20 deprecation warnings.",
+        "Hardened facial recognition pipelines against native C++ dlib crashes with thread locks and input validation across safe_face_* functions.",
+        "Fixed missing shutil import in Qt GUI master scenepack export.",
+        "Added cross-platform system launchers and sound fallbacks for Linux, macOS, and Windows.",
+        "Implemented pre-build directory cleanup preventing PyInstaller locked file collisions."
+      ]
+    },
+    {
+      "version": "v1.38",
+      "title": "Clean Header & Standardized Decimal Versioning",
+      "points": [
+        "Removed redundant quick switcher controls from the top header bar, restoring a clean and minimal header layout (all themes, colors, and languages remain conveniently accessible in the dedicated Preferences modal via the sidebar).",
+        "Standardized strict two-decimal version numbering across all project components and changelog entries (e.g. v1.30 + 0.01 = v1.31 ... v1.99 + 0.01 = v2.00)."
+      ]
+    },
+    {
+      "version": "v1.37",
+      "title": "Quick Switchers & Dynamic Live Styling Architecture",
+      "points": [
+        "Enabled live application-wide dynamic theme, color, and stylesheet transitions without requiring application restarts."
+      ]
+    },
+    {
+      "version": "v1.36",
+      "title": "Default English Language & Dark Mode Theme",
+      "points": [
+        "Configured default visual appearance mode to Dark Mode and default interface language to English.",
+        "Synchronized default configuration profiles and desktop launch scripts."
+      ]
+    },
+    {
+      "version": "v1.35",
+      "title": "System-Detected Language & System Theme by Default",
+      "points": [
+        "Configured default appearance mode to 'System', automatically matching the operating system's Dark/Light mode theme.",
+        "Implemented automatic system language detection with graceful fallback to English across all platforms.",
+        "Synchronized default configuration profiles and Preferences modal."
+      ]
+    },
+    {
+      "version": "v1.34",
+      "title": "Comprehensive UI/UX Polish & Visual Bug-Fix Pass",
+      "points": [
+        "Resolved raw variable leaks (such as 'sec_workflow') and styled sidebar section headers with clean uppercase typography.",
+        "Expanded sidebar width to 240px with adjusted padding, eliminating all text truncation on '✨ Beta / Character Gallery'.",
+        "Deduplicated navigation by removing redundant header tab buttons, keeping the sidebar as the single source of navigation truth.",
+        "Re-engineered Scene & Detection Tuning into a strict 3-column QGridLayout with baseline-aligned labels and unified control heights.",
+        "Restructured audio & chapter detection controls into clean horizontal groups: VAD dialogue protection, target voice matching slider, and Intro/Outro skip engine.",
+        "Enhanced input path displays with increased padding, higher contrast, and modern text readout styling.",
+        "Fixed string typos and standardized action button labels across all localization dictionaries."
+      ]
+    },
+    {
+      "version": "v1.33",
+      "title": "Startup Hotfix",
+      "points": [
+        "Fixed NameError (missing 'Union' import from typing module) that caused application startup crashes on macOS and Windows.",
+        "Verified clean startup and runtime module compatibility across all platforms."
+      ]
+    },
+    {
+      "version": "v1.32",
+      "title": "UI/UX Overhaul, Dedicated Settings Window, Light/Dark Modes & Translation Polish",
+      "points": [
+        "Introduced modern Apple/macOS-styled Preferences Dialog with visual appearance picker, 8 vibrant accent colors, language switcher, and audio notification controls.",
+        "Added complete, responsive Light Mode, Dark Mode, and System Theme Auto-Sync with refined QSS stylesheets.",
+        "Decluttered sidebar navigation, eliminated horizontal text truncation, and fixed all double-ampersand display bugs.",
+        "Thoroughly overhauled and aligned all Polish and English localization strings."
+      ]
+    },
+    {
+      "version": "v1.31",
+      "title": "Multi-Season & Multi-Title Chronological Media Sorting",
+      "points": [
+        "Implemented hierarchical season/episode metadata parser (`extract_season_episode`): video files are strictly ordered by Season (S01 -> S02 -> S03 -> ...) and then Episode (E01 -> E02 -> ... -> E24).",
+        "Accurately sorts multi-season releases even with differing title conventions across seasons (e.g. 'Sono Bisque Doll wa Koi wo Suru S01' before 'KiseKoi S02')."
+      ]
+    },
+    {
+      "version": "v1.30",
+      "title": "Intelligent Auto-Matching Source Bitrate & Proportional File Sizes",
+      "points": [
+        "Added intelligent 'Auto (Match Source Bitrate)' mode: dynamically probes input stream bitrate via ffprobe and mirrors it with a +15% safety headroom.",
+        "Completely eliminated bloated file sizes (scenepacks from 300MB episodes now weigh ~60-80MB while perfectly preserving source quality).",
+        "Optimized quality presets in GUI: Auto (Match Source - default), Maximum (Master / 35M), High (Crystal Clear / 20M), Medium (10M), Draft (4M)."
+      ]
+    },
+    {
+      "version": "v1.29",
+      "title": "Crystal Clear / Master Quality Video Rendering & Bitrate Overhaul",
+      "points": [
+        "Completely eliminated macroblocking and pixelation artifacts: overhauled rate control and bitrate headroom for Apple Silicon VideoToolbox, NVENC, and QSV hardware encoders.",
+        "Upgraded default rendering profile to 25-35 Mbps with adaptive quality factor (-q:v 75-85 / CRF 14-17), delivering studio-grade crystal clear 1080p scenepacks even during fast motion and particle-heavy anime scenes.",
+        "Introduced new export quality profiles in GUI: Maximum (Master / 35M), High (Crystal Clear / 25M - default), Medium (Standard / 16M), Draft (8M)."
+      ]
+    },
+    {
+      "version": "v1.28",
+      "title": "Intelligent Intro & Outro Removal Engine / Skip Opening",
+      "points": [
+        "Added intelligent Intro (Opening / OP) and Outro (Ending / ED) skipping engine to exclude theme songs and credit sequences from scenepacks.",
+        "Dual-layer detector: reads MKV/MP4 embedded chapter markers via ffprobe ('Opening', 'Intro', 'OP', 'NCOP', 'Credits', 'Ending', etc.) with smart 90s fallback window (standard anime OP length).",
+        "Bypasses frame decoding inside intro ranges during the video scan pass (15% faster scan) and automatically prunes/trims overlapping clips.",
+        "Added settings card controls in the Qt GUI with auto chapter mode, fixed 90s mode, and custom duration options."
+      ]
+    },
+    {
+      "version": "v1.27",
+      "title": "Hair/Palette Multi-Region Anime Recognition & Avatar Reference Fallback",
+      "points": [
+        "Completely re-engineered anime character feature vectors: added upper hair/bangs region (45% height) and full head palette analysis, preventing character drop caused by discarding hair colors.",
+        "Scaled frame scan resolution to 640px in Anime mode and optimized cascade sensitivity (scaleFactor=1.06, minNeighbors=3, minSize=16px) to capture medium and profile shots.",
+        "Implemented automatic fallback when loading reference images (avatars/icons), eliminating false 'target face not found' errors."
+      ]
+    },
+    {
+      "version": "v1.26",
+      "title": "Natural Chronological Episode Sorting & Strict Scene Cut Boundary Protection",
+      "points": [
+        "Implemented human-intuitive natural episode sorting (S01E01 -> S01E02 -> ... -> S01E24) across multi-file and folder imports.",
+        "Protected scene boundaries against character leakage: VAD sentence extension is strictly capped to 2.5s and bounded by nearest shot cuts.",
+        "Prevented clips from bloating into multi-minute sequences during long dialogue of other characters or continuous background music."
+      ]
+    },
+    {
+      "version": "v1.25",
+      "title": "Zero-Lock Anime Recognition & Ultra-Fast FFmpeg Demuxing",
+      "points": [
+        "Eliminated dlib CNN lock bottleneck in Anime mode: character recognition now runs completely in parallel via pure NumPy histograms and OpenCV cascades (over 4,000x faster frame scan).",
+        "Integrated dynamic anime feature sensitivity (`is_anime_feature_match`) controlled by the Tolerance slider.",
+        "Optimized FFmpeg demuxing flags for VAD silence analysis (`-vn -sn -dn`) and scene cuts (`-an -sn -dn`)."
+      ]
+    },
+    {
+      "version": "v1.24",
+      "title": "Full In-App Changelog Synchronization & Native System Font Provider",
+      "points": [
+        "Updated complete in-app changelog dialog history from v1.13 through the latest release.",
+        "Implemented dynamic platform system fonts (.AppleSystemUIFont on macOS, Segoe UI on Windows)."
+      ]
+    },
+    {
+      "version": "v1.23",
+      "title": "UI Streamlining, Multi-Episode Progress Counter & VAD Acceleration",
+      "points": [
+        "Streamlined and decluttered user interface, removing static banners and redundant preset panels.",
+        "Introduced Unified Media & Reference Hub supporting single videos, multi-selection, and folder imports.",
+        "Added real-time multi-episode progress monitor (e.g. '🎬 Episode [2/24]: ...') with dual-tier progress bars.",
+        "Accelerated VAD silence detection 10x-20x per episode by skipping video decoding (-vn in FFmpeg).",
+        "Accelerated scene cut boundary detection 10x via frame downscaling filter (scale=320:-1).",
+        "Scaled parallel segment extraction workers dynamically up to min(6, cpu_count)."
+      ]
+    },
+    {
+      "version": "v1.22",
+      "title": "MasterConcatWorker Import Fix & Multi-Video Gallery/Audio Support",
+      "points": [
+        "Fixed `MasterConcatWorker` import in Qt GUI preventing potential NameError during master scenepack concatenation.",
+        "Added multi-video path normalization (`parse_video_paths`) to audio stream selector and gallery scan.",
+        "Fixed cancellation handling in `GalleryScanWorker.cancel()`."
+      ]
+    },
+    {
+      "version": "v1.21",
+      "title": "Scene Boundary Auto-Expansion & Quality Pass",
+      "points": [
+        "Implemented backward auto-expansion in `merge_intervals()` to guarantee `min_scene_duration` is always met."
+      ]
+    },
+    {
+      "version": "v1.20",
+      "title": "Windows Taskbar Icon & Exception Safety Pass",
+      "points": [
+        "Fixed Windows 11 taskbar icon registration via explicit AppUserModelID setup.",
+        "Hardened global exception handler and persistent crash logger."
+      ]
+    },
+    {
+      "version": "v1.19",
+      "title": "Aspect Ratio Smart Canvas & 9:16 Blurred Background",
+      "points": [
+        "Added support for 9:16 vertical crop with face auto-tracking and blurred background rendering."
+      ]
+    },
+    {
+      "version": "v1.18",
+      "title": "Lip-Sync VAD & Speaker Similarity Matching",
+      "points": [
+        "Implemented smart sentence boundary snapping (VAD) and MFCC speaker voice matching."
+      ]
+    },
+    {
+      "version": "v1.17",
+      "title": "Auto-Tune Preset Engine",
+      "points": [
+        "Introduced intelligent Auto-Tune engine for automatic parameter tuning across Anime and Real Faces modes."
+      ]
+    },
+    {
+      "version": "v1.16",
+      "title": "Multi-Audio Track Selector",
+      "points": [
+        "Added multi-audio stream detection and track selection for MKV/MP4 files."
+      ]
+    },
+    {
+      "version": "v1.15",
+      "title": "Automated Character Discovery Gallery",
+      "points": [
+        "Introduced automated background character discovery and facial clustering gallery."
+      ]
+    },
+    {
+      "version": "v1.14",
+      "title": "Modern Dark Studio UI Overhaul",
+      "points": [
+        "Overhauled UI styling with dark modern studio layout and non-blocking toast notifications."
+      ]
+    },
+    {
+      "version": "v1.13",
+      "title": "PySide6 / Qt 6 Engine Migration",
+      "points": [
+        "Migrated entire desktop UI to PySide6 (Qt 6) with asynchronous worker thread architecture."
+      ]
+    },
+    {
+      "version": "v1.12",
+      "title": "Batch Queue Engine Overhaul & Full Stability Fix",
+      "points": [
+        "Fixed Qt signal tag mismatch (`show_render_success` vs `render_complete`) that caused batch queue to halt after 1 episode.",
+        "Implemented missing `MiniPreviewDialog` class (fixed `NameError` crash when clicking Preview button).",
+        "Added auto-advancing non-blocking batch queue workflow on 0 clips detected or individual file errors.",
+        "Implemented robust re-encoding fallback for Master Concat when stream copy fails.",
+        "Hardened UI thread shutdown against unsafe C++ thread terminations."
+      ]
+    },
+    {
+      "version": "v1.11",
+      "title": "OOM & Memory Leak Fixes",
+      "points": [
+        "Fixed critical SIGSEGV (Out of Memory in dlib) when loading very large video assets.",
+        "Eliminated massive in-memory caching of PIL images during pre-scan phase.",
+        "Capped concurrent facial scanning threads and introduced periodic Garbage Collection."
+      ]
+    },
+    {
+      "version": "v1.10",
+      "title": "Major Stability & Backend Overhaul",
+      "points": [
+        "Eliminated 'Zombie Subprocess' memory leaks during interrupted hardware encoding.",
+        "Fixed VAD audio temp file leaks and tuple unpacking errors.",
+        "Refactored 'Master Scenepack' concatenation to asynchronous mode, unblocking the UI.",
+        "Added missing validations for reference images in Anime mode.",
+        "Hardened UI against destructive interactions during Batch Processing."
+      ]
+    },
+    {
+      "version": "v1.09",
+      "title": "SSL Download Fix & Export Quality Setting",
+      "points": [
+        "Fixed SSL CERTIFICATE_VERIFY_FAILED error when downloading Anime face detector from GitHub.",
+        "Added 'Export Quality' option allowing users to select High (CRF 16), Medium (CRF 20), or Low (CRF 24)."
+      ]
+    },
+    {
+      "version": "v1.08",
+      "title": "NumPy MFCC Rewrite",
+      "points": [
+        "Completely replaced `scipy` and `python_speech_features` dependencies with a pure NumPy MFCC extraction implementation."
+      ]
+    },
+    {
+      "version": "v1.07",
+      "title": "PyInstaller Symlinks Fix",
+      "points": [
+        "Fixed PyInstaller macOS zipping process (`zip -ry`) to preserve symlinks in the app bundle."
+      ]
+    },
+    {
+      "version": "v1.06",
+      "title": "Logs Relocation",
+      "points": [
+        "Relocated logs to `~/Library/Logs/Focus` to bypass macOS TCC restrictions."
+      ]
+    },
+    {
+      "version": "v1.05",
+      "title": "Gatekeeper Bypass",
+      "points": [
+        "Implemented silent Gatekeeper auto-unquarantining on macOS."
+      ]
+    },
+    {
+      "version": "v1.04",
+      "title": "Zero-Terminal Launch",
+      "points": [
+        "Implemented zero-terminal macOS launching."
+      ]
+    },
+    {
+      "version": "v1.03",
+      "title": "UI Text Clipping Fix",
+      "points": [
+        "Resolved UI layout text clipping bugs."
+      ]
+    },
+    {
+      "version": "v1.02",
+      "title": "Ampersand UI Fix",
+      "points": [
+        "Fixed ampersand mnemonics rendering bugs in profile names."
+      ]
+    },
+    {
+      "version": "v1.01",
+      "title": "Stability Improvements",
+      "points": [
+        "Applied general ECC stability patches across the codebase."
+      ]
+    },
+    {
+      "version": "v1.00",
+      "title": "Production Milestone",
+      "points": [
+        "Complete UI migration to PySide6 (Qt 6) with Modern Dark Studio interface.",
+        "Automated Zero-Terminal Setup & Launcher for Windows (.bat) and macOS (.sh).",
+        "Refined UI typography, professional labels, and polished layout.",
+        "Robust multi-language support (English, Polish, German, Spanish, French, Japanese, Russian, Ukrainian).",
+        "Hardware-accelerated FFmpeg scene extraction and concatenation.",
+        "Interactive Character Auto-Gallery (AI Detection) for face pre-scanning."
+      ]
+    },
+    {
+      "version": "v0.95",
+      "title": "Consolidated Windows build to a single standalone Focus.exe (--onefile mode) eliminating redundant launcher files and DLL clutter. Fixed UI color theme persistence across view navigation.",
+      "points": []
+    },
+    {
+      "version": "v0.94",
+      "title": "Fix OpenCV CascadeClassifier missing attribute error in PyInstaller builds and added Windows VBScript zero-console launcher.",
+      "points": []
+    },
+    {
+      "version": "v0.93",
+      "title": "Zero-Terminal Automated Launchers: added double-clickable Uruchom_Focus.command (macOS Gatekeeper auto-clear) and Uruchom_Focus.bat (Windows).",
+      "points": []
+    },
+    {
+      "version": "v0.92",
+      "title": "CI/CD Trigger Fix: restored tag trigger pattern in automated workflows.",
+      "points": []
+    },
+    {
+      "version": "v0.91",
+      "title": "Critical Windows Execution Fix: added explicit scipy requirement and PyInstaller hidden imports.",
+      "points": []
+    },
+    {
+      "version": "v0.90",
+      "title": "CI/CD GitHub Permissions Fix: added explicit write permissions for build notes generation.",
+      "points": []
+    },
+    {
+      "version": "v0.89",
+      "title": "Universal Hardware Acceleration Support: dynamic runtime probing for GPU video encoders across Windows (NVENC/QSV/AMF/MF) and macOS (VideoToolbox).",
+      "points": []
+    },
+    {
+      "version": "v0.88",
+      "title": "Full cross-platform port for Windows 10/11 & macOS with automated FFmpeg static binary downloading.",
+      "points": []
+    },
+    {
+      "version": "v0.87",
+      "title": "Prepared repository for open-source GitHub: sanitized local system paths and added comprehensive documentation.",
+      "points": []
+    },
+    {
+      "version": "v0.86",
+      "title": "Fixed FFmpeg sub-sampling rendering errors (black line artifacts) on 9:16 crops and unified interface color elements.",
+      "points": []
+    },
+    {
+      "version": "v0.85",
+      "title": "Implemented auto-scrolling log window and dynamic percent progress buttons.",
+      "points": []
+    },
+    {
+      "version": "v0.84",
+      "title": "Implemented Target Speaker Voice Fingerprinting: profiles character voice from verified face frames and filters out non-target speakers.",
+      "points": []
+    },
+    {
+      "version": "v0.83",
+      "title": "Complete UI/UX overhaul inspired by modern dark web dashboards with custom Tkinter animation loops.",
+      "points": []
+    },
+    {
+      "version": "v0.81",
+      "title": "Implemented thumbnail extraction via OpenCV to display video frame previews alongside the checklist.",
+      "points": []
+    },
+    {
+      "version": "v0.80",
+      "title": "Implemented 9:16 Vertical Cropping (Auto-Track & Blurred Background), FFmpeg Scene Cut Snapping, and two-phase Interactive Clip Review Checklist.",
+      "points": []
+    },
+    {
+      "version": "v0.79",
+      "title": "Implemented AI Voice Activity Detection (VAD) & Active Speaker Alignment to intelligently extend scenes to the nearest silence pause.",
+      "points": []
+    },
+    {
+      "version": "v0.74",
+      "title": "Fixed random audio truncation and dropouts by implementing Audio Frame Padding (apad) and 48kHz audio resampler alignment.",
+      "points": []
+    },
+    {
+      "version": "v0.72",
+      "title": "Added Smart Auto-Tune algorithm and dynamic Presets (Anime, Cinematic, Fast Edits).",
+      "points": []
+    },
+    {
+      "version": "v0.71",
+      "title": "Fixed video freezing & PTS desynchronization via constant frame rate resampling (-fps_mode cfr).",
+      "points": []
+    },
+    {
+      "version": "v0.70",
+      "title": "Internal stability updates and minor UI refinements.",
+      "points": []
+    },
+    {
+      "version": "v0.67",
+      "title": "Restored missing concurrent.futures import fixing NameError in parallel slicing.",
+      "points": []
+    },
+    {
+      "version": "v0.66",
+      "title": "Enhanced Anime face clustering with 1D Hue histograms and 256-bit dHash matching.",
+      "points": []
+    },
+    {
+      "version": "v0.65",
+      "title": "Added post-scan face clustering and deduplication with best thumbnail selection.",
+      "points": []
+    },
+    {
+      "version": "v0.64",
+      "title": "Fixed macOS Dock icon rendering and added elliptical Anime face masking.",
+      "points": []
+    },
+    {
+      "version": "v0.63",
+      "title": "Fixed missing PIL Image import in character gallery scanner.",
+      "points": []
+    },
+    {
+      "version": "v0.62",
+      "title": "Upgraded Anime Character Gallery using 2D HSV histograms and dHash features.",
+      "points": []
+    },
+    {
+      "version": "v0.61",
+      "title": "Implemented 2nd pass merge for duplicate characters in Beta Gallery.",
+      "points": []
+    },
+    {
+      "version": "v0.60",
+      "title": "Fixed Beta Gallery scanner freeze and connected event queue.",
+      "points": []
+    },
+    {
+      "version": "v0.59",
+      "title": "Fixed Beta Mode localization bug in non-English UI languages.",
+      "points": []
+    },
+    {
+      "version": "v0.58",
+      "title": "Moved character scanning to multi-threaded background worker (2.5s step).",
+      "points": []
+    },
+    {
+      "version": "v0.57",
+      "title": "Introduced Beta Character Gallery with auto-detection & 1-click selection.",
+      "points": []
+    },
+    {
+      "version": "v0.56",
+      "title": "Fixed startup crash by reordering variable initialization.",
+      "points": []
+    },
+    {
+      "version": "v0.55",
+      "title": "Fixed initial 5s video freeze via -accurate_seek buffers & min scene filter (1.0s).",
+      "points": []
+    },
+    {
+      "version": "v0.54",
+      "title": "Deep Code Audit: Dynamic tooltips & safe UI queues.",
+      "points": []
+    },
+    {
+      "version": "v0.53",
+      "title": "Fixed tooltip refresh & color theme name mappings.",
+      "points": []
+    },
+    {
+      "version": "v0.52",
+      "title": "Full code audit & refactor: enforced immutable settings & input validation.",
+      "points": []
+    },
+    {
+      "version": "v0.51",
+      "title": "Extracted clean camera vector symbol from ikonka.png for macOS Dock tiles.",
+      "points": []
+    },
+    {
+      "version": "v0.50",
+      "title": "Added dynamic macOS squircle icon generator for Dock & window header.",
+      "points": []
+    },
+    {
+      "version": "v0.49",
+      "title": "Updated icon asset source to ikonka.png and regenerated native icon.icns.",
+      "points": []
+    },
+    {
+      "version": "v0.48",
+      "title": "Added native macOS app icon support (icon.icns) in build script.",
+      "points": []
+    },
+    {
+      "version": "v0.47",
+      "title": "Fixed video freezing & audio drift on segment concatenation (closed GOPs, genpts, moov faststart).",
+      "points": []
+    },
+    {
+      "version": "v0.46",
+      "title": "Optimized build process: excluded unnecessary dependencies and reduced package size.",
+      "points": []
+    },
+    {
+      "version": "v0.45",
+      "title": "Fixed GUI layout regression by removing duplicate settings frame.",
+      "points": []
+    },
+    {
+      "version": "v0.44",
+      "title": "Comprehensive code audit (cv2.VideoCapture handle leak fixes, concat path escapes).",
+      "points": []
+    },
+    {
+      "version": "v0.43",
+      "title": "Added gap/blink tolerance (1.5s) to prevent premature cuts during head turning.",
+      "points": []
+    },
+    {
+      "version": "v0.42",
+      "title": "Fixed macOS CTkToplevel window rendering and styling issues.",
+      "points": []
+    },
+    {
+      "version": "v0.41",
+      "title": "Fixed segmented button state loss on language change.",
+      "points": []
+    },
+    {
+      "version": "v0.40",
+      "title": "Complete i18n UI translations (appearance modes, colors, tooltips, tutorial).",
+      "points": []
+    },
+    {
+      "version": "v0.39",
+      "title": "Added multi-language support (Polish, English, German, Russian, Ukrainian, Spanish, French, Japanese).",
+      "points": []
+    },
+    {
+      "version": "v0.38",
+      "title": "Enforced permanent versioning rule (+0.01 per prompt) & setpts/asetpts filter pipeline.",
+      "points": []
+    },
+    {
+      "version": "v0.37",
+      "title": "Hybrid Fast Seeking (-ss before -i) + PTS Reset Filters for perfect A/V sync.",
+      "points": []
+    },
+    {
+      "version": "v0.36",
+      "title": "Expanded detailed project release history tracking.",
+      "points": []
+    },
+    {
+      "version": "v0.35",
+      "title": "Centralized APP_VERSION variable across all windows and headers.",
+      "points": []
+    },
+    {
+      "version": "v0.34",
+      "title": "Added built-in Changelog window with initial change history.",
+      "points": []
+    },
+    {
+      "version": "v0.33",
+      "title": "Accurate frame seeking (-ss after -i) fixing MKV clip freezing.",
+      "points": []
+    },
+    {
+      "version": "v0.32",
+      "title": "Optimized FFmpeg fast seeking parameter positioning.",
+      "points": []
+    },
+    {
+      "version": "v0.31",
+      "title": "Parallel video slicing using ThreadPoolExecutor (5-10x faster render).",
+      "points": []
+    },
+    {
+      "version": "v0.30",
+      "title": "Added -start_at_zero flag and verified padding_after clip boundary logic.",
+      "points": []
+    },
+    {
+      "version": "v0.29",
+      "title": "Enforced Constant Frame Rate (CFR -r 24 -fps_mode cfr) & GOP keyframe alignment (-g 24).",
+      "points": []
+    },
+    {
+      "version": "v0.28",
+      "title": "Configured PyInstaller build.py with Focus bundle identifier (com.focus.app).",
+      "points": []
+    },
+    {
+      "version": "v0.27",
+      "title": "Converted How-to-Use guide to read-only CTkTextbox with word wrapping.",
+      "points": []
+    },
+    {
+      "version": "v0.26",
+      "title": "GitHub User-Agent header fix for XML downloads & size validation (>50KB check).",
+      "points": []
+    },
+    {
+      "version": "v0.25",
+      "title": "Added OpenCV cascade.empty() load validation.",
+      "points": []
+    },
+    {
+      "version": "v0.24",
+      "title": "Relocated external binaries and XML to ~/Library/Application Support/Focus for macOS bundle security.",
+      "points": []
+    },
+    {
+      "version": "v0.23",
+      "title": "Tooltip helpers for Real Faces vs Anime modes.",
+      "points": []
+    },
+    {
+      "version": "v0.22",
+      "title": "Added OpenCV Anime face detection mode using lbpcascade_animeface classifier.",
+      "points": []
+    },
+    {
+      "version": "v0.21",
+      "title": "Fixed GUI method scope AttributeError on application startup.",
+      "points": []
+    },
+    {
+      "version": "v0.20",
+      "title": "Added 'How to Use' tutorial Toplevel popup window.",
+      "points": []
+    },
+    {
+      "version": "v0.19",
+      "title": "Audio sync timestamp flags (-avoid_negative_ts make_zero, -fflags +genpts, -async 1).",
+      "points": []
+    },
+    {
+      "version": "v0.18",
+      "title": "Audio/Video duration drift fix using AAC re-encoding (-c:a aac -b:a 192k).",
+      "points": []
+    },
+    {
+      "version": "v0.17",
+      "title": "Official application rebranding to 'Focus'.",
+      "points": []
+    },
+    {
+      "version": "v0.16",
+      "title": "Persistent JSON settings storage (~/.scenepack_generator_settings.json).",
+      "points": []
+    },
+    {
+      "version": "v0.15",
+      "title": "Integrated macOS native completion audio notification (afplay).",
+      "points": []
+    },
+    {
+      "version": "v0.14",
+      "title": "Added custom color theme engine (generate_themes.py).",
+      "points": []
+    },
+    {
+      "version": "v0.13",
+      "title": "Fixed keyframe gray smearing artifacts by removing stream copying (-c copy).",
+      "points": []
+    },
+    {
+      "version": "v0.12",
+      "title": "VideoToolbox Apple Silicon GPU hardware acceleration (-c:v h264_videotoolbox).",
+      "points": []
+    },
+    {
+      "version": "v0.11",
+      "title": "Added stream concat demuxer logic.",
+      "points": []
+    },
+    {
+      "version": "v0.10",
+      "title": "Initial FFmpeg segment extraction logic.",
+      "points": []
+    },
+    {
+      "version": "v0.09",
+      "title": "Face Recognition tolerance adjustment parameter.",
+      "points": []
+    },
+    {
+      "version": "v0.08",
+      "title": "Frame Skip interval speed optimization control.",
+      "points": []
+    },
+    {
+      "version": "v0.07",
+      "title": "Padding Before & Padding After numerical configuration.",
+      "points": []
+    },
+    {
+      "version": "v0.06",
+      "title": "Progress bar and real-time scanning percentage ETA indicator.",
+      "points": []
+    },
+    {
+      "version": "v0.05",
+      "title": "Output save location selector & filename configuration.",
+      "points": []
+    },
+    {
+      "version": "v0.04",
+      "title": "Reference Image picker & preview integration.",
+      "points": []
+    },
+    {
+      "version": "v0.03",
+      "title": "Input Video file picker & path display integration.",
+      "points": []
+    },
+    {
+      "version": "v0.02",
+      "title": "Basic CustomTkinter GUI layout creation.",
+      "points": []
+    },
+    {
+      "version": "v0.01",
+      "title": "Initial CLI prototype for face recognition scenepack cutting.",
+      "points": []
+    }
+  ],
+  "pl": [
+    {
+      "version": "v2.0.0",
+      "date": "2026-09-07",
+      "title": "Natywny Silnik macOS SwiftUI 6, Interfejs Liquid Glass & Centrum Ustawień",
+      "points": [
+        "[MACOS] Natywna aplikacja macOS w czystym SwiftUI 6 z natychmiastowym startem sub-100ms i zużyciem pamięci RAM ~50 MB.",
+        "[UI/UX] Zunifikowane Centrum Ustawień (Settings Hub) z przełącznikiem motywów Ciemny/Jasny/Systemowy, 8 akcentami i próbnikiem HEX.",
+        "[DESIGN] Płynne animacje sprężyste w standardzie Apple HIG (120Hz ProMotion) oraz paski narzędzi Liquid Glass.",
+        "[AUDIO] Błyskawiczne wykrywanie strumieni dźwiękowych (ffprobe) i zachowywanie wielu ścieżek audio (Keep All Audio Tracks).",
+        "[BATCH] Wieloplatformowe przetwarzanie całych sezonów (Batch/Seasons) z automatycznym sortowaniem chronologicznym.",
+        "[PRIVACY] Pełna anonimizacja i prywatność kodu pod autorskim szyldem Bartosz5500."
+      ]
+    },
+    {
+      "version": "v1.43",
+      "title": "Modernistyczny Design, Wielojęzyczne Audio, Blokada Usypiania i Nowy Szlif UI",
+      "points": [
+        "[IKONY] Wdrożono nowy, elegancki design ikony Dark Obsidian Glass Squircle w standardzie Apple macOS HIG oraz wygenerowano spójne zestawy ikon dla Windows (.ico z 8 rozmiarami) i macOS (.icns) — koniec z przestarzałą ikoną na Windowsie!",
+        "[UI/UX] Wyeliminowano ucinanie tekstu w przełączniku trybów ('2D Animation / Anime') oraz usunięto artefakt podkreślenia ('_Analyzing') z przycisku skanowania wywołany mnemonicznymi znacznikami Qt.",
+        "[BRANDING] Usunięto emotkę '🎯' z logo Focus na pasku bocznym, nadając aplikacji w pełni profesjonalny, minimalistyczny wygląd.",
+        "[SCROLLBARY] Wprowadzono nowoczesne, zaokrąglone paski przewijania (minimalistyczny pill, przezroczyste tło toru, brak archaicznych strzałek, akcent kolorystyczny motywu przy najechaniu).",
+        "[AUDIO] Dodano opcję zachowania wszystkich ścieżek dźwiękowych ('Zachowaj wszystkie ścieżki audio / Multi-Audio') w eksportowanych klipach z mapowaniem FFmpeg `-map 0:a?`.",
+        "[ZASILANIE] Zaimplementowano SleepInhibitor (caffeinate na macOS, SetThreadExecutionState na Windows) zapobiegający usypianiu systemu i blokowaniu ekranu podczas skanowania oraz renderowania wideo.",
+        "[AUTOMATYZACJA] Dodano opcję 'Automatyczny Render' pomijającą ręczną akceptację oraz przyciski 'Zaznacz wszystkie' / 'Odznacz wszystkie' w oknie przeglądu klipów (Review Checklist).",
+        "[TUNING] Całkowicie przebudowano sekcję 'Dostrajanie Scen i Detekcji' na czytelne, logiczne podsekcje z precyzyjnymi jednostkami miary (sekundy, klatki, milisekundy).",
+        "[PRESETY I KOLORY] Dodano menedżer własnych presetów użytkownika (~/.focus_presets.json) oraz zaawansowany próbnik kolorów akcentu z obsługą dowolnego kodu HEX.",
+        "[PODRĘCZNIK] Opracowano wyczerpujący, 10-rozdziałowy samouczek i instrukcję obsługi wyjaśniający działanie każdego parametru i algorytmu w językach polskim i angielskim."
+      ]
+    },
+    {
+      "version": "v1.42",
+      "title": "Kompleksowy Audyt Kodu — 7 Naprawionych Błędów",
+      "points": [
+        "[CRITICAL] Naprawiono losowe segfaulty/artefakty graficzne w podglądzie klipów i miniaturach Review Checklist — QImage z PySide6 nie kopiuje bufora pamięci, dodano .copy() aby wymusić bezpieczną kopię danych.",
+        "[HIGH] Naprawiono pomijanie weryfikacji głosu mówcy (VAD Speaker) gdy wideo nie zawiera absolutnych cisz — blok weryfikacji był nieprawidłowo zagnieżdżony wewnątrz `if silences:`, przeniesiony na właściwy poziom.",
+        "[HIGH] Naprawiono crash batch mode (AttributeError) — metody przetwarzania wsadowego odwoływały się do nieistniejącego przycisku btn_run_batch, zamieniono na btn_generate.",
+        "[MEDIUM] Naprawiono niedokładne pozycjonowanie podglądu mini-klipów — zastąpiono szukanie po numerze klatki (CAP_PROP_POS_FRAMES) szukaniem po milisekundach (CAP_PROP_POS_MSEC) dla poprawnej obsługi VFR.",
+        "[MEDIUM] Usunięto martwe zależności scipy i python_speech_features z requirements.txt — zastąpione czystym NumPy MFCC od v1.30, build.py aktywnie je wyklucza.",
+        "[MEDIUM] Naprawiono fałszywe wykrywanie Pythona w Windows Launcher — dodano filtrowanie aliasów App Execution Alias z WindowsApps.",
+        "[LOW] Dodano automatyczne dopisywanie rozszerzenia .mp4 w zapasowym oknie zapisu, zapobiegając tworzeniu plików bez rozszerzenia."
+      ]
+    },
+    {
+      "version": "v1.41",
+      "title": "Naprawa Kompatybilności OpenCV, Rozwiązywanie Dowiązań Symbolicznych i Zapasowy Model Wizualny",
+      "points": [
+        "Zablokowano wersję opencv-python (<5.0.0) w requirements.txt, eliminując błędy wersji zapoznawczej OpenCV 5.0.0 z PyPI, która usunęła atrybut cv2.CascadeClassifier w module głównym.",
+        "Wzmocniono get_cascade_classifier o automatyczne rozwijanie dowiązań symbolicznych (os.path.realpath) oraz wielopoziomowe wsparcie dla przestrzeni nazw cv2, cv2.objdetect i cv2.cv2.",
+        "Rozbudowano wyszukiwanie wbudowanego modelu lbpcascade_animeface.xml w paczkach macOS (.app) o strukturę Contents/Resources/models i automatyczne rozwiązywanie ścieżek (.resolve()).",
+        "Zaimplementowano w _process_single_frame bezpośredni zapasowy model sieciowy (safe_face_locations), zapobiegając utracie detekcji nawet w przypadku braku lub uszkodzenia pliku kaskady.",
+        "Zastąpiono tradycyjny logger mechanizmem RotatingFileHandler z limitem 5 MB, zapobiegając rozrastaniu się pliku focus_debug.log i eliminując archiwalne komunikaty o błędach z poprzednich tygodni."
+      ]
+    },
+    {
+      "version": "v1.40",
+      "title": "Precyzyjna Detekcja Mowy VAD, Ochrona Scen Głosowych i Wbudowane Modele Anime",
+      "points": [
+        "Naprawiono przechwytywanie znaczników wyciszenia w FFmpeg VAD (_detect_silences) poprzez dostosowanie poziomu logowania do info, przywracając pełną funkcjonalność inteligentnej ochrony dialogów i przyciągania do ciszy.",
+        "Zabezpieczono rozpakowywanie krotek interwałów w _build_target_voice_print, eliminując błąd ValueError przy 2-elementowych krotkach.",
+        "Wprowadzono natychmiastowe zatrzymanie (fail-fast) w przypadku braku wykrytych klatek postaci, eliminując zbędne 30-sekundowe skanowanie cięć scen FFmpeg przy pustych wynikach.",
+        "Zaimplementowano bezpieczny fallback weryfikacji głosu (speaker verification) – przy zbyt restrykcyjnym progu aplikacja zachowuje wykryte wizualnie sceny zamiast błędnie zgłaszać brak postaci.",
+        "Wbudowano model lbpcascade_animeface.xml bezpośrednio do repozytorium i instalatora PyInstaller (katalog models/), gwarantując 100% działanie w trybie offline bez konieczności pobierania z sieci.",
+        "Ulepszono ekstrakcję twarzy referencyjnych w trybie Anime o multi-scale, kaskady pomocnicze i inteligentne kadrowanie plakatów.",
+        "Zoptymalizowano suwak progu głosu (zakres 0.30 - 0.85, domyślnie 0.65 z podpowiedziami w UI) oraz przekazywanie tolerancji do wątku skanującego."
+      ]
+    },
+    {
+      "version": "v1.39",
+      "title": "Audyt Wieloplatformowości, Zabezpieczenie Wyjątków i GitHub Actions Node 24",
+      "points": [
+        "Zaktualizowano workflow GitHub Actions do obsługi środowiska Node.js 24 (checkout@v7, setup-python@v7, upload-artifact@v7, download-artifact@v8, action-gh-release@v3), eliminując ostrzeżenia o przestarzałym Node 20.",
+        "Zabezpieczono metody detekcji twarzy (dlib) przed wyjątkami C++ i pustymi danymi w safe_face_locations, safe_face_encodings, safe_compare_faces i safe_face_distance.",
+        "Naprawiono brakujący import shutil w generatorze pojedynczego pliku master w GUI Qt.",
+        "Wprowadzono pełne wsparcie dla otwierania plików i powiadomień dźwiękowych na Linuxie, macOS i Windowsie.",
+        "Dodano automatyczne oczyszczanie katalogów budowania przed startem PyInstallera."
+      ]
+    },
+    {
+      "version": "v1.38",
+      "title": "Ujednolicenie Wersjonowania i Czysty Nagłówek / Clean Header & Standardized Decimal Versioning",
+      "points": [
+        "Usunięto zbędne kontrolki z górnego paska nawigacyjnego, przywracając czysty i minimalistyczny nagłówek (dostęp do wszystkich motywów, kolorów i języków odbywa się przez dedykowane okno Preferencji w pasku bocznym).",
+        "Wprowadzono precyzyjny, dwumiejscowy system numeracji wersji w całym projekcie i changelogu (np. v1.30 + 0.01 = v1.31 ... v1.99 + 0.01 = v2.00)."
+      ]
+    },
+    {
+      "version": "v1.37",
+      "title": "Szybkie Przełączniki i Płynne Style / Dynamic Live Styling Architecture",
+      "points": [
+        "Zapewniono natychmiastową, dynamiczną zmianę stylów i motywów dla całej aplikacji i otwartych okien dialogowych bez konieczności restartu."
+      ]
+    },
+    {
+      "version": "v1.36",
+      "title": "Domyślny Język Angielski i Tryb Ciemny / Default English & Dark Mode Theme",
+      "points": [
+        "Ustawiono domyślny motyw wizualny na 'Tryb Ciemny (Dark Mode)' oraz domyślny język interfejsu na angielski (English).",
+        "Zaktualizowano profile konfiguracyjne i skróty startowe."
+      ]
+    },
+    {
+      "version": "v1.35",
+      "title": "Domyślny Język Systemowy i Motyw Systemowy / System Locale & Auto Theme Sync",
+      "points": [
+        "Ustawiono domyślny motyw wizualny na 'Systemowy (System Auto-Sync)', automatycznie dostosowujący się do jasnego/ciemnego motywu macOS i Windows.",
+        "Wdrożono automatyczne wykrywanie języka systemowego z płynnym mapowaniem i bezpiecznym fallbackiem do języka angielskiego (English).",
+        "Zaktualizowano domyślne profile konfiguracji i dialog preferencji."
+      ]
+    },
+    {
+      "version": "v1.34",
+      "title": "Kompleksowy Szlif UI/UX i Poprawki Wizualne / Comprehensive UI/UX Polish Pass",
+      "points": [
+        "Wyeliminowano wycieki surowych nazw zmiennych (np. 'sec_workflow') oraz ujednolicono nagłówki sekcji paska bocznego (WORKFLOW / MATERIAŁY).",
+        "Poszerzono pasek boczny do 240px i zoptymalizowano marginesy, całkowicie eliminując ucinanie tekstu przycisku '✨ Galeria Postaci (Beta)'.",
+        "Zdeduplikowano nawigację: usunięto zbędne przyciski zakładek z nagłówka, czyniąc pasek boczny jedynym, spójnym źródłem nawigacji.",
+        "Przebudowano siatkę dostrajania scen i detekcji na precyzyjny 3-kolumnowy układ QGridLayout z idealnym wyrównaniem etykiet i pól tekstowych.",
+        "Uporządkowano kontrolki audio i rozdziałów: pogrupowano ochronę dialogów (VAD / Lip-Sync), filtr głosu oraz pomijanie Intro/Outro w estetyczne, zwarte wiersze.",
+        "Zwiększono kontrast i wysokość pasków podglądu ścieżek plików, nadając im nowoczesny wygląd czytelnych paneli.",
+        "Poprawiono literówki i ujednolicono teksty przycisków głównych akcji we wszystkich językach."
+      ]
+    },
+    {
+      "version": "v1.33",
+      "title": "Hotfix Startu / Startup Fix",
+      "points": [
+        "Naprawiono błąd NameError (brakujący import 'Union' z biblioteki typing), który powodował crash podczas uruchamiania skompilowanej aplikacji na macOS i Windows.",
+        "Zweryfikowano bezbłędny start GUI oraz zgodność modułów na wszystkich platformach."
+      ]
+    },
+    {
+      "version": "v1.32",
+      "title": "Nowe Okno Ustawień i Motywy / Dedicated Preferences Dialog & Theme System",
+      "points": [
+        "Dodano nowoczesne, dedykowane okno ustawień (Preferences Dialog) w stylu macOS/Apple HIG z wizualnym wyborem motywu, 8 kolorami akcentu, językiem i zachowaniem.",
+        "Wdrożono pełną obsługę Trybu Jasnego (Light Mode), Ciemnego (Dark Mode) oraz Automatycznego/Systemowego z dopracowanymi arkuszami stylów QSS.",
+        "Uporządkowano i odchudzono pasek boczny (Sidebar), usuwając przeładowane kontrolki i eliminując ucinanie tekstu.",
+        "Całkowicie przebudowano i uzupełniono słownik tłumaczeń w języku polskim i angielskim, usuwając nienaturalne zwroty i błędy podwójnych znaków ampersand."
+      ]
+    },
+    {
+      "version": "v1.31",
+      "title": "Sortowanie Chronologiczne Sezonów i Odcinków / Multi-Season Chronological Sorting",
+      "points": [
+        "Wprowadzono hierarchiczny analizator nazw i sezonów (`extract_season_episode`): pliki są teraz w pierwszej kolejności precyzyjnie grupowane według Sezonów (S01 -> S02 -> S03 -> ...), a wewnątrz sezonów według numerów odcinków (E01 -> E02 -> ... -> E24).",
+        "Prawidłowo sortuje odcinki nawet przy różnych tytułach w obrębie serii (np. 'Sono Bisque Doll wa Koi wo Suru S01' przed 'KiseKoi S02')."
+      ]
+    },
+    {
+      "version": "v1.30",
+      "title": "Inteligentne Dopasowanie Bitrate do Źródła / Auto Source Bitrate Matching",
+      "points": [
+        "Dodano inteligentny tryb 'Auto (Dopasuj do źródła / Match Source Bitrate)' – automatycznie bada strumień wideo (ffprobe) i dopasowuje docelowy bitrate do pliku wejściowego z bezpiecznym zapasem 15%.",
+        "Wyeliminowano niepotrzebne puchnięcie plików (zamiast 500 MB ze skompresowanego odcinka 300 MB, scenepack zajmuje teraz proporcjonalne ~60-80 MB przy zachowaniu idealnej ostrości źródła).",
+        "Uporządkowano i zoptymalizowano profile jakości: Auto (Match Source - domyślny), Maximum (Master / 35M), High (Crystal Clear / 20M), Medium (10M), Draft (4M)."
+      ]
+    },
+    {
+      "version": "v1.29",
+      "title": "Renderowanie Master Quality i Bitrate / Crystal Clear Master Rendering",
+      "points": [
+        "Całkowicie wyeliminowano pikselozę i kompresję makroblokową: przeprojektowano kontrolę bitrate sprzętowego akceleratora VideoToolbox (Apple Silicon), NVENC i QSV.",
+        "Zwiększono domyślny bitrate eksportu do 25-35 Mbps z adaptacyjnym współczynnikiem jakości (-q:v 75-85 / CRF 14-17), zapewniając krystalicznie ostry, bezstratny obraz w dynamicznych scenach i anime.",
+        "Wprowadzono nowe profile jakości w GUI: Maximum (Master / 35M), High (Crystal Clear / 25M - domyślny), Medium (Standard / 16M), Draft (8M)."
+      ]
+    },
+    {
+      "version": "v1.28",
+      "title": "Silnik Pomijania Intro i Outro / Skip Opening & Ending Engine",
+      "points": [
+        "Dodano zaawansowany przełącznik i silnik usuwania/pomijania Intro (Opening / OP) oraz Outro (Ending / ED).",
+        "Wdrożono dwuwarstwowy detektor: automatyczny odczyt metadanych rozdziałów MKV/MP4 przez ffprobe (tagi 'Opening', 'Intro', 'OP', 'NCOP', 'Credits', 'Ending', itp.) z inteligentnym fallbackiem na okno 90 sekund (standardowe anime OP).",
+        "Zintegrowano pomijanie dekodowania klatek w oknie Intro bezpośrednio w pętli skanera wideo (15% szybsza analiza odcinków) oraz automatyczne odcinanie nakładających się scen.",
+        "Dodano dedykowane kontrolki w karcie ustawień GUI oraz obsługę własnego czasu trwania w sekundach."
+      ]
+    },
+    {
+      "version": "v1.27",
+      "title": "Wieloregionowe Rozpoznawanie Anime / Multi-Region Anime Palette Matching",
+      "points": [
+        "Całkowicie przebudowano wektor cech anime: dodano analizę górnego obszaru fryzury/włosów (45% wysokości) oraz pełnej palety kolorystycznej głowy, eliminując gubienie postaci przez wycinanie wyłącznie wewnętrznego owalu skóry.",
+        "Zwiększono rozdzielczość skanowania klatek do 640px w trybie Anime oraz zoptymalizowano czułość detekcji kaskadowej (scaleFactor=1.06, minNeighbors=3, minSize=16px), wyłapując ujęcia średnie i z profilu.",
+        "Dodano automatyczny fallback przy ładowaniu obrazu referencyjnego (avatary/ikony), eliminując fałszywe błędy braku detekcji twarzy w obrazie wejściowym."
+      ]
+    },
+    {
+      "version": "v1.26",
+      "title": "Naturalne Sortowanie Odcinków i Ochrona Cięć / Natural Episode Sorting",
+      "points": [
+        "Wprowadzono naturalne sortowanie odcinków (Human/Episode Natural Order S01E01 -> S01E02 -> ... -> S01E24) przy wyborze wielu plików i całych folderów.",
+        "Zabezpieczono granice scen przed wyciekaniem do innych postaci: rozszerzanie VAD zostało ściśle ograniczone do maksymalnie 2.5s oraz zablokowane na najbliższych cięciach montażowych kamery (Scene Cuts).",
+        "Wyeliminowano niekontrolowane kilkuminutowe wydłużanie klipów podczas ciągłych dialogów innych postaci lub muzyki w tle."
+      ]
+    },
+    {
+      "version": "v1.25",
+      "title": "Szybka Detekcja Anime i FFmpeg Demux / Zero-Lock Anime Recognition",
+      "points": [
+        "Wyeliminowano wąskie gardło dlib CNN w trybie Anime: detekcja postaci anime odbywa się teraz w pełni równolegle przez czysty NumPy i kaskady OpenCV (ponad 4000x szybsza analiza klatek anime).",
+        "Dodano precyzyjne dopasowanie cech anime (`is_anime_feature_match`) powiązane z suwakiem czułości Tolerance.",
+        "Zoptymalizowano flagi FFmpeg dla analizy ciszy (`-vn -sn -dn`) i cięć scen (`-an -sn -dn`), eliminując wszelkie niepotrzebne strumienie."
+      ]
+    },
+    {
+      "version": "v1.24",
+      "title": "Synchronizacja Changelogu i Czcionki Systemowe / In-App Changelog Sync",
+      "points": [
+        "Uzupełniono pełną historię wersji w oknie Changelog aplikacji od v1.13 do najnowszej.",
+        "Wdrożono dynamiczny dobór czcionki systemowej (San Francisco na macOS, Segoe UI na Windows)."
+      ]
+    },
+    {
+      "version": "v1.23",
+      "title": "Optymalizacja UI i Licznik Postępu Wsadowego / Unified Media Hub",
+      "points": [
+        "Uporządkowano i odchudzono interfejs użytkownika, usuwając zbędne banery i duplikujące się panele.",
+        "Wdrożono jedno zintegrowane centrum zarządzania plikami (Unified Media Hub) dla pojedynczych plików, wielu odcinków i całych folderów.",
+        "Dodano wskaźnik i licznik postępu wielu odcinków (np. '🎬 Episode [2/24]: ...') oraz dwuwarstwowy pasek postępu.",
+        "Przyspieszono analizę ciszy VAD o 10x-20x na odcinek dzięki pomijaniu dekodowania wideo (-vn w FFmpeg).",
+        "Przyspieszono wykrywanie cięć scen o 10x dzięki filtrowi wstępnego skalowania klatek (scale=320:-1).",
+        "Zwiększono liczbę wątków równoległego renderowania do min(6, cpu_count) z bieżącym podglądem postępu."
+      ]
+    },
+    {
+      "version": "v1.22",
+      "title": "Bezpieczne Wątki i Wsparcie Wielu Wideo / Master Concat Safety",
+      "points": [
+        "Naprawiono import `MasterConcatWorker` w GUI Qt eliminując potencjalny błąd NameError podczas scalania scenepacka.",
+        "Wprowadzono bezpieczne parsowanie wielu ścieżek wideo (`parse_video_paths`) w selektorze audio i galerii postaci.",
+        "Naprawiono anulowanie skanowania galerii (`GalleryScanWorker.cancel`)."
+      ]
+    },
+    {
+      "version": "v1.21",
+      "title": "Automatyczne Rozszerzanie Granic Scen / Scene Boundary Auto-Expansion",
+      "points": [
+        "Zaimplementowano automatyczne rozszerzanie granic sceny wstecz (`start = max(0.0, start - needed)`) przy końcu filmu, gwarantując spełnienie minimalnego czasu trwania sceny."
+      ]
+    },
+    {
+      "version": "v1.20",
+      "title": "Ikona Paska Zadań Windows i Obsługa Błędów / Windows Taskbar Icon",
+      "points": [
+        "Naprawiono rejestrację ikony aplikacji na pasku zadań systemu Windows 11 (AppUserModelID).",
+        "Zabezpieczono globalną obsługę wyjątków i logowanie awarii w GUI Qt."
+      ]
+    },
+    {
+      "version": "v1.19",
+      "title": "Kadrowanie Pionowe 9:16 i Rozmyte Tło / Aspect Ratio Smart Canvas",
+      "points": [
+        "Dodano obsługę proporcji pionowych 9:16 z inteligentnym śledzeniem twarzy i rozmyciem tła."
+      ]
+    },
+    {
+      "version": "v1.18",
+      "title": "Ochrona Dialogów Lip-Sync VAD i Głos / VAD & Voice Matching",
+      "points": [
+        "Wdrożono inteligentną ochronę zdań (VAD) oraz dopasowywanie głosu wybranej postaci (MFCC Voice Print)."
+      ]
+    },
+    {
+      "version": "v1.17",
+      "title": "Silnik Profili Auto-Tune / Auto-Tune Preset Engine",
+      "points": [
+        "Dodano silnik automatycznego doboru optymalnych parametrów wykrywania dla trybów Anime oraz Real Faces."
+      ]
+    },
+    {
+      "version": "v1.16",
+      "title": "Wybór Ścieżek Audio / Multi-Audio Track Selector",
+      "points": [
+        "Dodano wybór ścieżek dźwiękowych w plikach MKV/MP4 z wieloma strumieniami audio."
+      ]
+    },
+    {
+      "version": "v1.15",
+      "title": "Automatyczna Galeria Postaci / Character Discovery Gallery",
+      "points": [
+        "Wprowadzono galerię automatycznego wykrywania i klastrowania unikalnych postaci z filmu."
+      ]
+    },
+    {
+      "version": "v1.14",
+      "title": "Nowoczesny Ciemny Interfejs Studio / Modern Dark Studio UI",
+      "points": [
+        "Wdrożono nowoczesny, ciemny styl interfejsu (Modern Studio Layout) z powiadomieniami Toast."
+      ]
+    },
+    {
+      "version": "v1.13",
+      "title": "Migracja na PySide6 Qt 6 / Qt 6 Engine Migration",
+      "points": [
+        "Przepisano cały interfejs graficzny na framework Qt 6 (PySide6) z architekturą asynchronicznych workerów."
+      ]
+    },
+    {
+      "version": "v1.12",
+      "title": "Przebudowa Przetwarzania Wsadowego / Batch Queue Engine Overhaul",
+      "points": [
+        "Naprawiono błąd 'Tag Mismatch' w sygnałach Qt (`show_render_success` vs `render_complete`), który powodował zatrzymanie przetwarzania wsadowego po 1 odcinku.",
+        "Zaimplementowano brakującą klasę `MiniPreviewDialog` (eliminacja błędu `NameError` przy kliknięciu przycisku Podgląd).",
+        "Zezwolono na automatyczne kontynuowanie kolejki wsadowej w przypadku braku wykrytych twarzy lub błędu w konkretnym pliku wideo.",
+        "Dodano automatyczne rozszerzenie kodowania w scalaniu głównym (Master Concat Fallback), gdy połączenie bezprzetwarzaniowe nie powiedzie się.",
+        "Zabezpieczono zamykanie aplikacji przed wymuszonym killowaniem wątków C++ (`QThread.terminate()`)."
+      ]
+    },
+    {
+      "version": "v1.11",
+      "title": "Poprawki Wycieków Pamięci i OOM / Memory Leak Fixes",
+      "points": [
+        "Naprawiono błąd SIGSEGV (brak pamięci w dlib) podczas ładowania bardzo dużych materiałów wideo.",
+        "Usunięto przetrzymywanie ogromnych obrazów w pamięci podręcznej podczas wstępnego skanowania twarzy.",
+        "Zredukowano liczbę równoległych wątków skanujących i wdrożono Garbage Collection."
+      ]
+    },
+    {
+      "version": "v1.10",
+      "title": "Stabilność Procesów w Tle / Subprocess Stability Overhaul",
+      "points": [
+        "Rozwiązano problem z procesami potomnymi i zwalnianiem zasobów przy przerwaniu kodowania sprzętowego.",
+        "Naprawiono wycieki plików tymczasowych VAD audio.",
+        "Przebudowano asynchroniczne scalanie 'Master Scenepack', odblokowując GUI."
+      ]
+    },
+    {
+      "version": "v1.09",
+      "title": "Pobieranie Kaskad SSL i Profile Jakości / SSL Download & Quality Settings",
+      "points": [
+        "Naprawiono błąd SSL (CERTIFICATE_VERIFY_FAILED) podczas pobierania detektora twarzy Anime z GitHuba.",
+        "Dodano opcję 'Jakość eksportu' pozwalającą na wybór High (CRF 16), Medium (CRF 20) lub Low (CRF 24)."
+      ]
+    },
+    {
+      "version": "v1.08",
+      "title": "Przepisanie MFCC na Czysty NumPy / Pure NumPy MFCC Rewrite",
+      "points": [
+        "Zastąpiono `scipy` i `python_speech_features` przez czysty NumPy dla uniknięcia błędów dyld na macOS."
+      ]
+    },
+    {
+      "version": "v1.07",
+      "title": "Zachowanie Dowiązań Symbolicznych / PyInstaller Symlinks Fix",
+      "points": [
+        "Naprawiono tworzenie archiwów .zip dla macOS (zachowanie symlinków w paczce .app)."
+      ]
+    },
+    {
+      "version": "v1.06",
+      "title": "Lokalizacja Logów w ~/Library/Logs / Logs Relocation",
+      "points": [
+        "Przeniesiono logi do ~/Library/Logs/Focus by spełniać wymagania restrykcji TCC."
+      ]
+    },
+    {
+      "version": "v1.05",
+      "title": "Odblokowanie Kwarantanny macOS / Gatekeeper Auto-Unquarantine",
+      "points": [
+        "Dodano system auto-unquarantine (odblokowanie z kwarantanny) na macOS."
+      ]
+    },
+    {
+      "version": "v1.04",
+      "title": "Uruchamianie Bezkonsolowe / Zero-Terminal Launch",
+      "points": [
+        "Wdrożono uruchamianie aplikacji bez otwierania okna terminala w tle."
+      ]
+    },
+    {
+      "version": "v1.03",
+      "title": "Poprawka Obcinania Etykiet UI / UI Text Clipping Fix",
+      "points": [
+        "Naprawiono ucięte etykiety tekstu w interfejsie graficznym."
+      ]
+    },
+    {
+      "version": "v1.02",
+      "title": "Poprawka Znaku & w Profilach / Ampersand UI Fix",
+      "points": [
+        "Naprawiono błąd wyświetlania znaku '&' w nazwach profili szybkościowych."
+      ]
+    },
+    {
+      "version": "v1.01",
+      "title": "Łatki Bezpieczeństwa / Stability & Security Fixes",
+      "points": [
+        "Aplikacja otrzymała ogólne łatki stabilności i bezpieczeństwa ECC."
+      ]
+    },
+    {
+      "version": "v1.00",
+      "title": "Wydanie Główne PySide6 Studio / Production Milestone",
+      "points": [
+        "Kompleksowa migracja interfejsu do nowoczesnego środowiska PySide6 (Qt 6) Studio.",
+        "Bezobsługowe skrypty startowe dla systemów Windows (.bat) i macOS (.command).",
+        "Wyrafinowana typografia UI, czytelne etykiety oraz ulepszony układ elementów.",
+        "Wzbogacone wsparcie wielojęzyczne (polski, angielski, niemiecki, hiszpański, francuski, japoński, rosyjski, ukraiński).",
+        "Sprzętowo akcelerowane wycinanie i scalanie fragmentów wideo przez FFmpeg.",
+        "Interaktywna Galeria Postaci (AI Detection) umożliwiająca automatyczne wstępne skanowanie twarzy."
+      ]
+    },
+    {
+      "version": "v0.95",
+      "title": "Skonsolidowano kompilację Windows do pojedynczego pliku Focus.exe (--onefile) i naprawiono motywy kolorystyczne.",
+      "points": []
+    },
+    {
+      "version": "v0.94",
+      "title": "Naprawiono błąd CascadeClassifier w PyInstaller i dodano bezkonsolowy launcher VBScript dla Windows.",
+      "points": []
+    },
+    {
+      "version": "v0.93",
+      "title": "Automatyczne bezobsługowe launchery: dodano Uruchom_Focus.command (macOS) oraz Uruchom_Focus.bat (Windows).",
+      "points": []
+    },
+    {
+      "version": "v0.92",
+      "title": "Naprawa reguł wyzwalania wydań CI/CD GitHub.",
+      "points": []
+    },
+    {
+      "version": "v0.91",
+      "title": "Krytyczna poprawka uruchamiania na Windows: dodano wymaganie scipy i ukryte importy PyInstaller.",
+      "points": []
+    },
+    {
+      "version": "v0.90",
+      "title": "Poprawka uprawnień wydań GitHub CI/CD: dodano uprawnienia zapisu dla generowania informacji o wydaniu.",
+      "points": []
+    },
+    {
+      "version": "v0.89",
+      "title": "Uniwersalna akceleracja sprzętowa: dynamiczne wykrywanie GPU (NVENC/QSV/AMF/MF oraz VideoToolbox).",
+      "points": []
+    },
+    {
+      "version": "v0.88",
+      "title": "Pełny port wieloplatformowy Windows 10/11 & macOS z automatycznym pobieraniem FFmpeg.",
+      "points": []
+    },
+    {
+      "version": "v0.87",
+      "title": "Przygotowanie repozytorium do otwartego wydania open-source GitHub.",
+      "points": []
+    },
+    {
+      "version": "v0.86",
+      "title": "Naprawiono błędy podpróbkowania obrazu (czarne linie) przy kadrowaniu 9:16 w FFmpeg.",
+      "points": []
+    },
+    {
+      "version": "v0.85",
+      "title": "Wdrożono automatycznie przewijane okno logów oraz dynamiczne przyciski postępu.",
+      "points": []
+    },
+    {
+      "version": "v0.84",
+      "title": "Wdrożono odciski głosowe postaci (Target Speaker Voice Fingerprinting) filtrujące osoby spoza kadru.",
+      "points": []
+    },
+    {
+      "version": "v0.83",
+      "title": "Kompleksowa przebudowa UI/UX inspirowana nowoczesnymi ciemnymi pulpitami nawigacyjnymi.",
+      "points": []
+    },
+    {
+      "version": "v0.81",
+      "title": "Wdrożono ekstrakcję miniaturek klatek wideo przez OpenCV w liście podglądu scen.",
+      "points": []
+    },
+    {
+      "version": "v0.80",
+      "title": "Wdrożono pionowe kadrowanie 9:16 (Auto-Track i rozmyte tło) oraz dwufazową listę weryfikacji.",
+      "points": []
+    },
+    {
+      "version": "v0.79",
+      "title": "Wdrożono detekcję aktywności głosowej AI (VAD) i przyciąganie cięć do pauz w wypowiedziach.",
+      "points": []
+    },
+    {
+      "version": "v0.74",
+      "title": "Naprawiono obcinanie dźwięku i zaniki audio przez wyrównanie bufora apad i resamplera 48kHz.",
+      "points": []
+    },
+    {
+      "version": "v0.72",
+      "title": "Dodano algorytm Smart Auto-Tune i dynamiczne profile (Anime, Cinematic, Fast Edits).",
+      "points": []
+    },
+    {
+      "version": "v0.71",
+      "title": "Naprawiono zamrażanie klatek wideo i brak synchronizacji przez stałe resamplowanie PTS (-fps_mode cfr).",
+      "points": []
+    },
+    {
+      "version": "v0.70",
+      "title": "Wewnętrzne aktualizacje stabilności oraz drobne szlify interfejsu.",
+      "points": []
+    },
+    {
+      "version": "v0.67",
+      "title": "Przywrócono brakujący import concurrent.futures rozwiązujący NameError w równoległym wycinaniu.",
+      "points": []
+    },
+    {
+      "version": "v0.66",
+      "title": "Udoskonalono grupowanie twarzy Anime z histogramem 1D Hue i 256-bitowym dopasowaniem dHash.",
+      "points": []
+    },
+    {
+      "version": "v0.65",
+      "title": "Dodano etap grupowania i deduplikacji twarzy po skanowaniu z wyborem najlepszej miniaturki.",
+      "points": []
+    },
+    {
+      "version": "v0.64",
+      "title": "Naprawiono renderowanie ikony aplikacji w macOS Dock oraz dodano eliptyczne maskowanie twarzy Anime.",
+      "points": []
+    },
+    {
+      "version": "v0.63",
+      "title": "Naprawiono brakujący import PIL Image w skanerze galerii postaci.",
+      "points": []
+    },
+    {
+      "version": "v0.62",
+      "title": "Udoskonalono Galerię Postaci Anime z użyciem histogramów 2D HSV i cech dHash.",
+      "points": []
+    },
+    {
+      "version": "v0.61",
+      "title": "Wdrożono drugi przebieg scalania dla deduplikacji postaci w Galerii Beta.",
+      "points": []
+    },
+    {
+      "version": "v0.60",
+      "title": "Naprawiono zawieszanie skanera w Galerii Beta i podłączono kolejkę zdarzeń.",
+      "points": []
+    },
+    {
+      "version": "v0.59",
+      "title": "Naprawiono błąd lokalizacji trybu Beta w nieangielskich wersjach językowych UI.",
+      "points": []
+    },
+    {
+      "version": "v0.58",
+      "title": "Przeniesiono skanowanie postaci do wielowątkowego pracownika w tle (krok 2.5s).",
+      "points": []
+    },
+    {
+      "version": "v0.57",
+      "title": "Wprowadzono Galerię Postaci Beta z automatycznym wykrywaniem i wyborem postaci jednym kliknięciem.",
+      "points": []
+    },
+    {
+      "version": "v0.56",
+      "title": "Naprawiono awarię podczas uruchamiania aplikacji przez zmianę kolejności inicjalizacji zmiennych.",
+      "points": []
+    },
+    {
+      "version": "v0.55",
+      "title": "Naprawiono początkowe zamrażanie strumienia wideo (5s) przez bufory -accurate_seek i filtr min. czasu (1.0s).",
+      "points": []
+    },
+    {
+      "version": "v0.54",
+      "title": "Głęboki audyt kodu: dynamiczne podpowiedzi (tooltips) i bezpieczne kolejki UI.",
+      "points": []
+    },
+    {
+      "version": "v0.53",
+      "title": "Naprawiono odświeżanie tekstów podpowiedzi oraz mapowanie nazw motywów koloristycznych.",
+      "points": []
+    },
+    {
+      "version": "v0.52",
+      "title": "Pełny audyt kodu i refaktoryzacja: wymuszenie niemutowalności ustawień i walidacji wejścia.",
+      "points": []
+    },
+    {
+      "version": "v0.51",
+      "title": "Wyodrębniono czysty wektorowy symbol aparatu z ikonka.png dla kafli macOS Dock.",
+      "points": []
+    },
+    {
+      "version": "v0.50",
+      "title": "Dodano dynamiczny generator ikon macOS squircle dla Docka i nagłówka okna.",
+      "points": []
+    },
+    {
+      "version": "v0.49",
+      "title": "Zaktualizowano źródło ikon do ikonka.png i zregenerowano natywne zasoby icon.icns.",
+      "points": []
+    },
+    {
+      "version": "v0.48",
+      "title": "Dodano wsparcie dla natywnych ikon aplikacji macOS (icon.icns) w skrypcie budowania.",
+      "points": []
+    },
+    {
+      "version": "v0.47",
+      "title": "Wyeliminowano zacięcia wideo i rozjazd audio przy łączeniu fragmentów (zamknięte GOPy, genpts, moov faststart).",
+      "points": []
+    },
+    {
+      "version": "v0.46",
+      "title": "Zoptymalizowano proces budowania aplikacji: wykluczono zbędne zależności i zmniejszono rozmiar paczki.",
+      "points": []
+    },
+    {
+      "version": "v0.45",
+      "title": "Naprawiono regresję układu GUI przez usunięcie zduplikowanej ramki ustawień.",
+      "points": []
+    },
+    {
+      "version": "v0.44",
+      "title": "Kompleksowy audyt kodu (poprawki wycieków uchwytów cv2.VideoCapture, ucieczki ścieżek concat).",
+      "points": []
+    },
+    {
+      "version": "v0.43",
+      "title": "Dodano tolerancję przerw / mrugnięć (1.5s) zapobiegającą zbyt wczesnym cięciom przy obracaniu głowy.",
+      "points": []
+    },
+    {
+      "version": "v0.42",
+      "title": "Naprawiono problemy z renderowaniem i stylami okien CTkToplevel na macOS.",
+      "points": []
+    },
+    {
+      "version": "v0.41",
+      "title": "Naprawiono utratę stanu przycisków segmentowanych przy zmianie języka.",
+      "points": []
+    },
+    {
+      "version": "v0.40",
+      "title": "Pełne tłumaczenia i18n interfejsu (tryby wyglądu, kolory, podpowiedzi, samouczek).",
+      "points": []
+    },
+    {
+      "version": "v0.39",
+      "title": "Dodano obsługę wielu języków (polski, angielski, niemiecki, rosyjski, ukraiński, hiszpański, francuski, japoński).",
+      "points": []
+    },
+    {
+      "version": "v0.38",
+      "title": "Wymuszono regułę wersjonowania (+0.01 per prompt) oraz potok filtrów setpts/asetpts.",
+      "points": []
+    },
+    {
+      "version": "v0.37",
+      "title": "Hybrydowe szybkie wyszukiwanie (-ss przed -i) + filtry resetujące PTS dla idealnej synchronizacji A/V.",
+      "points": []
+    },
+    {
+      "version": "v0.36",
+      "title": "Rozszerzono szczegółowe śledzenie historii wydań projektu.",
+      "points": []
+    },
+    {
+      "version": "v0.35",
+      "title": "Zcentralizowano zmienną APP_VERSION we wszystkich oknach i nagłówkach.",
+      "points": []
+    },
+    {
+      "version": "v0.34",
+      "title": "Dodano wbudowane okno Changelogu z początkową historią zmian.",
+      "points": []
+    },
+    {
+      "version": "v0.33",
+      "title": "Dokładne wyszukiwanie klatek (-ss po -i) naprawiające zawieszanie klipów MKV.",
+      "points": []
+    },
+    {
+      "version": "v0.32",
+      "title": "Zoptymalizowano pozycjonowanie parametrów szybkiego wyszukiwania w FFmpeg.",
+      "points": []
+    },
+    {
+      "version": "v0.31",
+      "title": "Równoległe wycinanie fragmentów wideo z użyciem ThreadPoolExecutor (5-10x szybsze renderowanie).",
+      "points": []
+    },
+    {
+      "version": "v0.30",
+      "title": "Dodano flagę -start_at_zero i zweryfikowano granice marginesu padding_after.",
+      "points": []
+    },
+    {
+      "version": "v0.29",
+      "title": "Wymuszono stałą liczbę klatek na sekundę (CFR -r 24 -fps_mode cfr) i wyrównanie kluczowych klatek GOP.",
+      "points": []
+    },
+    {
+      "version": "v0.28",
+      "title": "Skonfigurowano identyfikator pakietu Focus (com.focus.app) w PyInstaller build.py.",
+      "points": []
+    },
+    {
+      "version": "v0.27",
+      "title": "Konwersja przewodnika obsługi do czytelnego CTkTextbox z zawijaniem wierszy.",
+      "points": []
+    },
+    {
+      "version": "v0.26",
+      "title": "Nagłówek User-Agent GitHub dla pobierania klasyfikatorów XML oraz walidacja rozmiaru (>50KB).",
+      "points": []
+    },
+    {
+      "version": "v0.25",
+      "title": "Dodano walidację ładowania kaskad OpenCV cascade.empty().",
+      "points": []
+    },
+    {
+      "version": "v0.24",
+      "title": "Przeniesiono pliki wykonywalne i XML do ~/Library/Application Support/Focus dla bezpieczeństwa macOS.",
+      "points": []
+    },
+    {
+      "version": "v0.23",
+      "title": "Dodano podpowiedzi dla trybów Real Faces i Anime.",
+      "points": []
+    },
+    {
+      "version": "v0.22",
+      "title": "Dodano tryb detekcji twarzy Anime w OpenCV z użyciem lbpcascade_animeface.",
+      "points": []
+    },
+    {
+      "version": "v0.21",
+      "title": "Naprawiono błąd AttributeError zakresu metod GUI przy uruchamianiu.",
+      "points": []
+    },
+    {
+      "version": "v0.20",
+      "title": "Dodano wyskakujące okno samouczka 'How to Use'.",
+      "points": []
+    },
+    {
+      "version": "v0.19",
+      "title": "Dodano flagi synchronizacji czasu audio (-avoid_negative_ts make_zero, -fflags +genpts, -async 1).",
+      "points": []
+    },
+    {
+      "version": "v0.18",
+      "title": "Poprawka rozsynchronizowania długości wideo/audio przez ponowne kodowanie AAC.",
+      "points": []
+    },
+    {
+      "version": "v0.17",
+      "title": "Oficjalny rebranding aplikacji na 'Focus'.",
+      "points": []
+    },
+    {
+      "version": "v0.16",
+      "title": "Trwały zapis ustawień w pliku JSON (~/.scenepack_generator_settings.json).",
+      "points": []
+    },
+    {
+      "version": "v0.15",
+      "title": "Zintegrowano natywne powiadomienie dźwiękowe po zakończeniu w macOS (afplay).",
+      "points": []
+    },
+    {
+      "version": "v0.14",
+      "title": "Dodano własny silnik motywów kolorystycznych (generate_themes.py).",
+      "points": []
+    },
+    {
+      "version": "v0.13",
+      "title": "Naprawiono artefakty szarych klatek kluczowych przez usunięcie kopiowania strumieni (-c copy).",
+      "points": []
+    },
+    {
+      "version": "v0.12",
+      "title": "Sprzętowa akceleracja GPU Apple Silicon VideoToolbox (-c:v h264_videotoolbox).",
+      "points": []
+    },
+    {
+      "version": "v0.11",
+      "title": "Dodano logikę łączenia strumieni wideo (concat demuxer).",
+      "points": []
+    },
+    {
+      "version": "v0.10",
+      "title": "Początkowa logika wycinania fragmentów wideo przez FFmpeg.",
+      "points": []
+    },
+    {
+      "version": "v0.09",
+      "title": "Parametr regulacji tolerancji rozpoznawania twarzy.",
+      "points": []
+    },
+    {
+      "version": "v0.08",
+      "title": "Kontrola interwału pomijania klatek (Frame Skip) dla optymalizacji prędkości.",
+      "points": []
+    },
+    {
+      "version": "v0.07",
+      "title": "Numeryczna konfiguracja marginesów przed i po scenie (Padding Before/After).",
+      "points": []
+    },
+    {
+      "version": "v0.06",
+      "title": "Pasek postępu i wskaźnik procentowy w czasie rzeczywistym z szacowanym czasem ETA.",
+      "points": []
+    },
+    {
+      "version": "v0.05",
+      "title": "Wybór lokalizacji zapisu pliku wyjściowego i konfiguracja nazwy.",
+      "points": []
+    },
+    {
+      "version": "v0.04",
+      "title": "Wybór obrazu referencyjnego i podgląd miniaturki.",
+      "points": []
+    },
+    {
+      "version": "v0.03",
+      "title": "Wybór pliku wideo wejściowego i wyświetlanie ścieżki.",
+      "points": []
+    },
+    {
+      "version": "v0.02",
+      "title": "Utworzenie podstawowego układu graficznego w CustomTkinter.",
+      "points": []
+    },
+    {
+      "version": "v0.01",
+      "title": "Początkowy prototyp CLI do wycinania scen wideo na podstawie rozpoznawania twarzy.",
+      "points": []
+    }
+  ]
+}

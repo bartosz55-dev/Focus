@@ -6,6 +6,8 @@ public struct SettingsView: View {
 
     @State private var manualSearch: String = ""
     @State private var logFilter: String = "ALL"
+    @State private var changelogSearch: String = ""
+    @State private var selectedVersionMilestone: String = "ALL"
 
     private let standardSwatches = [
         ("Violet", "#8B5CF6"),
@@ -281,55 +283,178 @@ public struct SettingsView: View {
     // MARK: - 3. Changelog Section
     private var changelogSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(appState.currentLanguage == "Polski" ? "Kronika Rozwoju Projektu" : "Project Version History")
-                .font(.system(size: 16, weight: .bold))
+            HStack {
+                Text(appState.currentLanguage == "Polski" ? "Kronika Rozwoju Projektu" : "Project Version History")
+                    .font(.system(size: 16, weight: .bold))
 
-            ForEach(changelogEntries, id: \.version) { item in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(item.version)
-                            .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule().fill(appState.accentColor.opacity(0.2))
-                            )
-                            .foregroundColor(appState.accentColor)
+                Spacer()
 
-                        Text(item.date)
-                            .font(.system(size: 11))
+                Text(appState.currentLanguage == "Polski" ? "\(filteredChangelogEntries.count) wersji" : "\(filteredChangelogEntries.count) versions")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(appState.accentColor.opacity(0.15)))
+                    .foregroundColor(appState.accentColor)
+            }
+
+            // Search Bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField(appState.currentLanguage == "Polski" ? "Szukaj w historii wersji (np. audio, ffmpeg, anime)..." : "Search changelog (e.g. audio, ffmpeg, anime)...", text: $changelogSearch)
+                    .textFieldStyle(.plain)
+                if !changelogSearch.isEmpty {
+                    Button(action: { changelogSearch = "" }) {
+                        Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.secondary)
-
-                        Spacer()
                     }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+            )
 
-                    Text(item.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(item.points, id: \.self) { pt in
-                            HStack(alignment: .top, spacing: 6) {
-                                Text("•")
-                                    .foregroundColor(appState.accentColor)
-                                Text(pt)
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
+            // Milestone Filter Chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(milestoneFilters, id: \.tag) { mf in
+                        Button(action: {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                selectedVersionMilestone = mf.tag
                             }
+                        }) {
+                            Text(mf.title)
+                                .font(.system(size: 11, weight: selectedVersionMilestone == mf.tag ? .bold : .medium))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(
+                                    Capsule().fill(selectedVersionMilestone == mf.tag ? appState.accentColor : Color.white.opacity(0.06))
+                                )
+                                .foregroundColor(selectedVersionMilestone == mf.tag ? .white : .secondary)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
-                        .overlay(
+                .padding(.vertical, 2)
+            }
+
+            // Version Cards
+            LazyVStack(alignment: .leading, spacing: 10) {
+                if filteredChangelogEntries.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 28))
+                            .foregroundColor(.secondary)
+                        Text(appState.currentLanguage == "Polski" ? "Brak wersji pasujących do wyszukiwania" : "No version entries matching search")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(30)
+                } else {
+                    ForEach(filteredChangelogEntries) { item in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .center, spacing: 8) {
+                                Text(item.version)
+                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule().fill(appState.accentColor.opacity(0.2))
+                                    )
+                                    .foregroundColor(appState.accentColor)
+
+                                if !item.date.isEmpty {
+                                    Text(item.date)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+                            }
+
+                            Text(item.title)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
+
+                            if !item.points.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ForEach(item.points, id: \.self) { pt in
+                                        HStack(alignment: .top, spacing: 6) {
+                                            Text("•")
+                                                .foregroundColor(appState.accentColor)
+                                            Text(pt)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(14)
+                        .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                )
                         )
-                )
+                    }
+                }
             }
         }
+    }
+
+    private var milestoneFilters: [(tag: String, title: String)] {
+        if appState.currentLanguage == "Polski" {
+            return [
+                ("ALL", "Wszystkie"),
+                ("v2.0", "v2.0 Native"),
+                ("v1.4", "v1.4x Szlif UI"),
+                ("v1.3", "v1.3x Jakość"),
+                ("v1.", "v1.0x-v1.2x"),
+                ("v0.", "v0.x Początki")
+            ]
+        } else {
+            return [
+                ("ALL", "All Versions"),
+                ("v2.0", "v2.0 Native"),
+                ("v1.4", "v1.4x Polish"),
+                ("v1.3", "v1.3x Quality"),
+                ("v1.", "v1.0x-v1.2x"),
+                ("v0.", "v0.x Foundations")
+            ]
+        }
+    }
+
+    private var filteredChangelogEntries: [ChangelogItem] {
+        let all = loadAllChangelog(lang: appState.currentLanguage)
+        var list = all
+
+        if selectedVersionMilestone != "ALL" {
+            list = list.filter { item in
+                if selectedVersionMilestone == "v1." {
+                    return item.version.hasPrefix("v1.0") || item.version.hasPrefix("v1.1") || item.version.hasPrefix("v1.2")
+                }
+                return item.version.hasPrefix(selectedVersionMilestone)
+            }
+        }
+
+        if !changelogSearch.isEmpty {
+            let q = changelogSearch.lowercased()
+            list = list.filter { item in
+                item.version.lowercased().contains(q) ||
+                item.title.lowercased().contains(q) ||
+                item.points.contains(where: { $0.lowercased().contains(q) })
+            }
+        }
+
+        return list
     }
 
     // MARK: - 4. Diagnostics & Logs Section
@@ -500,24 +625,17 @@ private struct ManualChapter: Identifiable {
     let content: String
 }
 
-private struct ChangelogItem {
-    let version: String
-    let date: String
-    let title: String
-    let points: [String]
-}
-
 private func manualChapters(lang: String) -> [ManualChapter] {
     if lang == "Polski" {
         return [
-            ManualChapter(id: 1, icon: "person.crop.rectangle.stack", title: "1. Wprowadzenie i Wybór Trybu (Live Action vs 2D Anime)", content: "Focus oferuje dwa niezależne silniki detekcji twarzy:\n• Live Action / Real Faces: Wykorzystuje głębokie modele neuronowe (68 punktów charakterystycznych dlib), rozpoznając aktorów i ludzi pod trudnymi kątami oraz w dynamicznym oświetleniu.\n• 2D Animation / Anime: Dedykowany klasyfikator kaskadowy LBP wytrenowany pod kątem rysunku ręcznego, oczu i konturów postaci anime."),
-            ManualChapter(id: 2, icon: "wand.and.stars", title: "2. Wskazanie Celu i Skanowanie Materiału", content: "Możesz wybrać pojedynczy odcinek lub CAŁY folder sezonu jednym kliknięciem (Browse...). Następnie wskaż wyraźne zdjęcie referencyjne twarzy postaci lub wybierz profil z Galerii Postaci. Kliknij 'Scan and Analyze Video', aby uruchomić automatyczne wykrywanie."),
+            ManualChapter(id: 1, icon: "person.crop.rectangle.stack", title: "1. Wprowadzenie i Tryby Detekcji (Ludzie vs Anime)", content: "Focus wyposażony jest w dwa dedykowane silniki śledzenia:\n• Live Action / Prawdziwe twarze: Wykorzystuje głębokie modele neuronowe (dlib 68 punktów kluczowych) precyzyjnie śledzące aktorów nawet przy dynamicznych obrotach głowy i zmiennym oświetleniu.\n• Animacja 2D / Postacie Anime: Dedykowany klasyfikator kaskadowy Haar/LBP zoptymalizowany pod rysunkowe kontury, oczy i styl mangowy."),
+            ManualChapter(id: 2, icon: "wand.and.stars", title: "2. Wybór Celu i Wskazywanie Materiału", content: "Wybierz pojedynczy plik wideo lub cały folder z odcinkami za pomocą jednego kliknięcia (Przeglądaj...). Następnie wskaż kadr referencyjny twarzy lub skorzystaj z Galerii Znanych Postaci. Po ustawieniu kliknij 'Rozpocznij Skanowanie i Analizę'."),
             ManualChapter(id: 3, icon: "folder.badge.gearshape", title: "3. Przetwarzanie Wielu Odcinków (Batch & Seasons)", content: "Aplikacja automatycznie rozpoznaje konwencje nazewnictwa S01E01, S01E02, sortując pliki w idealnej kolejności fabularnej. Możesz połączyć wszystkie sceny w jeden zbiorczy Master Scenepack."),
             ManualChapter(id: 4, icon: "speaker.wave.3", title: "4. Ścieżki Dźwiękowe i Zachowanie Wielu Audio", content: "Wybierz konkretny strumień audio (np. oryginalny japoński dubbing) LUB wybierz opcję 'Keep All Audio Tracks (Multi-Audio)'. Opcja multi-audio zachowuje wszystkie ścieżki w wyeksportowanym pliku, pozwalając na przełączanie lektora bezpośrednio w programie montażowym (Premiere Pro / After Effects)."),
             ManualChapter(id: 5, icon: "slider.horizontal.3", title: "5. Parametry Strojenia (Margins, Frame Skip, Gap Bridge)", content: "• Pad Before / Pad After: Margines bezpieczeństwa przed i po ujęciu postaci.\n• Gap Bridge: Łączy ujęcia, gdy postać mrugnie lub odwróci wzrok na 1-2 sekundy.\n• Min Scene: Odrzuca przypadkowe mikroujęcia krótsze niż zadany próg.\n• Frame Skip: Przyspiesza analizę klatek wideo."),
             ManualChapter(id: 6, icon: "waveform.badge.mic", title: "6. Ochrona Dialogów (VAD) i Weryfikacja Głosu (MFCC)", content: "Inteligentne VAD (Voice Activity Detection) przyciąga punkty cięcia do naturalnych przerw w mowie, eliminując ucinanie wypowiedzi w pół słowa. Weryfikacja głosu dopasowuje tembr postaci, odrzucając sceny, w których mówi wyłącznie narrator z tła."),
             ManualChapter(id: 7, icon: "forward.frame", title: "7. Pomijanie Czołówek (Intro i Outro)", content: "Bada metadane rozdziałów MKV/MP4 (Opening, Ending, OP, ED) i automatycznie pomija je podczas skanowania, przyspieszając pracę o 15% i eliminując czołówki z gotowego scenepacka."),
-            ManualChapter(id: 8, icon: "aspectratio", title: "8. Format Płótna i Kadrowanie (16:9 / 9:16)", content: "• 16:9 Original: Oryginalny format kinowy.\n• 9:16 Vertical (Character Tracking): Śledzi twarz postaci w pionowym kadrze do formatów wertykalnych (Shorts / TikTok).\n• 9:16 Vertical (Blurred Background): Wideo z estetycznym rozmytym tłem."),
+            ManualChapter(id: 8, icon: "aspectratio", title: "8. Format Płótna i Kadrowanie (16:9 / 9:16)", content: "• 16:9 Original: Oryginalny format kinowy.\n• 9:16 Vertical (Character Tracking): Śledzi twarz postaci w pionowym kadrze do rolek i TikToków.\n• 9:16 Vertical (Blurred Background): Wideo z estetycznym rozmytym tłem."),
             ManualChapter(id: 9, icon: "bolt.fill", title: "9. Jakość Eksportu i Akceleracja Apple Silicon", content: "Domyślnie silnik wykorzystuje sprzętowe kodowanie Apple VideoToolbox (h264_videotoolbox). Tryb Auto dobiera optymalny bitrate z zapasem +15%, a tryb Maximum zapewnia krystaliczną jakość studyjną."),
             ManualChapter(id: 10, icon: "power", title: "10. Blokada Uśpienia i Automatyzacja", content: "Funkcja Inhibit Sleep blokuje usypianie systemu macOS (poprzez asercję IOKit), zapewniając nieprzerwane działanie podczas długich nocnych eksportów. Funkcja Auto-Render pozwala na natychmiastowe generowanie scenepacka bez oczekiwania na akceptację klipów.")
         ]
@@ -530,17 +648,65 @@ private func manualChapters(lang: String) -> [ManualChapter] {
             ManualChapter(id: 5, icon: "slider.horizontal.3", title: "5. Detection Tuning (Margins, Frame Skip, Gap Bridge)", content: "• Pad Before / Pad After: Safety margin padding before and after character appearance.\n• Gap Bridge: Bridges gaps when the character blinks or looks away.\n• Min Scene: Filters out micro-shots shorter than the threshold.\n• Frame Skip: Speeds up analysis."),
             ManualChapter(id: 6, icon: "waveform.badge.mic", title: "6. Dialogue Protection (VAD) & Speaker Verification", content: "Voice Activity Detection snaps cut points to natural silence gaps so dialogue is never cut in half. MFCC voice verification matches vocal timbre to reject narrator-only audio."),
             ManualChapter(id: 7, icon: "forward.frame", title: "7. Intro & Outro Skipping (Opening & Ending)", content: "Reads MKV/MP4 chapter markers (Opening, Ending, OP, ED) to skip intros during scanning, saving 15% scan time."),
-            ManualChapter(id: 8, icon: "aspectratio", title: "8. Canvas Framing (16:9 / 9:16 Vertical)", content: "• 16:9 Original: Cinema widescreen format.\n• 9:16 Vertical (Character Tracking): Smoothly centers character face in portrait mode for TikTok/Shorts.\n• 9:16 Vertical (Blurred Background): Padded portrait layout with blurred background."),
+            ManualChapter(id: 8, icon: "aspectratio", title: "8. Canvas Framing (16:9 / 9:16 Vertical)", content: "• 16:9 Original: Cinema widescreen format.\n• 9:16 Vertical (Character Tracking): Smoothly centers character face in portrait mode for TikTok/Shorts/Reels.\n• 9:16 Vertical (Blurred Background): Padded portrait layout with blurred background."),
             ManualChapter(id: 9, icon: "bolt.fill", title: "9. Export Quality & Hardware Acceleration", content: "Powered by Apple VideoToolbox hardware encoding. Auto mode matches source bitrate with +15% quality headroom; Maximum mode delivers master-grade CRF 14 exports."),
             ManualChapter(id: 10, icon: "power", title: "10. System Sleep Inhibition & Auto-Render", content: "Native IOKit power assertion prevents macOS from sleeping during long processing sessions. Auto-Render immediately exports clips after analysis.")
         ]
     }
 }
 
-private let changelogEntries: [ChangelogItem] = [
+private struct ChangelogItem: Identifiable {
+    let version: String
+    let date: String
+    let title: String
+    let points: [String]
+
+    var id: String { version }
+}
+
+private var cachedChangelogPL: [ChangelogItem]?
+private var cachedChangelogEN: [ChangelogItem]?
+
+private func loadAllChangelog(lang: String) -> [ChangelogItem] {
+    let isPolish = (lang == "Polski")
+    if isPolish, let cached = cachedChangelogPL { return cached }
+    if !isPolish, let cached = cachedChangelogEN { return cached }
+
+    var urlsToTry: [URL] = []
+    if let resURL = Bundle.main.resourceURL {
+        urlsToTry.append(resURL.appendingPathComponent("changelog.json"))
+    }
+    let bundleURL = Bundle.main.bundleURL
+    let projectDir = bundleURL.deletingLastPathComponent().deletingLastPathComponent()
+    urlsToTry.append(projectDir.appendingPathComponent("FocusMac/Sources/FocusMac/Resources/changelog.json"))
+    urlsToTry.append(URL(fileURLWithPath: "/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/FocusMac/Sources/FocusMac/Resources/changelog.json"))
+    urlsToTry.append(URL(fileURLWithPath: "/Users/bartosz5500/Antigravity/Kwiatson cliping software copy 2/FocusMac/Sources/FocusMac/Resources/changelog.json"))
+
+    for url in urlsToTry {
+        if let data = try? Data(contentsOf: url),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let rawList = (isPolish ? json["pl"] : json["en"]) as? [[String: Any]] {
+            let items = rawList.compactMap { dict -> ChangelogItem? in
+                guard let v = dict["version"] as? String,
+                      let t = dict["title"] as? String else { return nil }
+                let d = (dict["date"] as? String) ?? ""
+                let pts = (dict["points"] as? [String]) ?? []
+                return ChangelogItem(version: v, date: d, title: t, points: pts)
+            }
+            if !items.isEmpty {
+                if isPolish { cachedChangelogPL = items } else { cachedChangelogEN = items }
+                return items
+            }
+        }
+    }
+
+    return fallbackChangelogEntries
+}
+
+private let fallbackChangelogEntries: [ChangelogItem] = [
     ChangelogItem(
         version: "v2.0.0",
-        date: "2026-09-06",
+        date: "2026-09-07",
         title: "Native macOS SwiftUI 6 Engine & Dual Ecosystem",
         points: [
             "Native macOS app written in pure SwiftUI 6 with instant sub-100ms startup and ~50MB RAM footprint.",
