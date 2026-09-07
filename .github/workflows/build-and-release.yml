@@ -95,6 +95,24 @@ jobs:
       with:
         files: |
           artifacts/**/*.zip
-        generate_release_notes: true
+        name: Focus ${{ github.ref_name }}
+        body: |
+          # Focus ${{ github.ref_name }} — Production Release
+
+          High-performance AI-driven video scenepack generator and character tracking studio.
+
+          ### 🌟 Key Highlights
+          * **Native macOS SwiftUI 6 Engine:** Ultra-fast startup, AVKit playback, Apple VideoToolbox hardware acceleration.
+          * **Consolidated Settings Hub:** Unified settings view with Light/Dark/System appearance, accent palettes, and full 10-chapter guide.
+          * **Fluid Liquid Glass Interface:** Apple HIG-inspired toolbars and 120Hz spring physics animations.
+          * **Smart Batch & Season Scanning:** Single-click multi-video extraction with multi-audio stream preservation.
+          * **Dialogue Protection (VAD):** Voice Activity Detection and speaker matching for clean scene cuts.
+
+          ### 📦 Download Packages
+          * **Windows:** Standalone `Focus-Windows.zip` (`Focus.exe`).
+          * **macOS:** Universal Apple Silicon & Intel `Focus-macOS-Native.zip` (`Focus.app`).
+
+          ---
+          **Engineered by Bartosz5500** • [GitHub Repository](https://github.com/Bartosz5500/Focus)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
