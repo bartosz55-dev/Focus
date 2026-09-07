@@ -63,7 +63,15 @@ if [ -d "${ROOT_DIR}/models" ]; then
     cp -r "${ROOT_DIR}/models" "${APP_BUNDLE}/Contents/Resources/"
     echo "Bundled models/ -> Resources"
 fi
-echo "Bundled Python backend scripts -> Resources"
+if [ -f "${ROOT_DIR}/CHANGELOG.md" ]; then
+    cp "${ROOT_DIR}/CHANGELOG.md" "${APP_BUNDLE}/Contents/Resources/"
+    echo "Bundled CHANGELOG.md -> Resources"
+fi
+if [ -f "${ROOT_DIR}/FocusMac/Sources/FocusMac/Resources/changelog.json" ]; then
+    cp "${ROOT_DIR}/FocusMac/Sources/FocusMac/Resources/changelog.json" "${APP_BUNDLE}/Contents/Resources/"
+    echo "Bundled changelog.json -> Resources"
+fi
+echo "Bundled Python backend scripts & changelog -> Resources"
 
 # 4. Generate Info.plist
 cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
