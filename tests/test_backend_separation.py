@@ -49,7 +49,7 @@ class TestBackendSeparationAndCleanImports(unittest.TestCase):
         """Verify APP_VERSION in backend follows valid version string pattern (e.g. v1.38)."""
         import scenepack_generator_backend as backend
         import re
-        self.assertTrue(bool(re.match(r"^v\d+\.\d{2,}$", backend.APP_VERSION)), f"Invalid APP_VERSION format: {backend.APP_VERSION}")
+        self.assertTrue(bool(re.match(r"^v\d+(\.\d+)+$", backend.APP_VERSION)), f"Invalid APP_VERSION format: {backend.APP_VERSION}")
 
     def test_platform_manager_flags(self):
         """Verify PlatformManager isolates Windows creationflags from macOS/POSIX."""

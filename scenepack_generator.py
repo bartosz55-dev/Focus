@@ -6,6 +6,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Tuple, List, Optional
+import cv2
+from PIL import Image
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -129,6 +131,7 @@ def main():
     parser.add_argument("--tolerance", type=float, default=0.6, help="Face recognition distance tolerance.")
     parser.add_argument("--json-stream", action="store_true", help="Emit real-time progress events as JSON lines on stdout.")
     parser.add_argument("--scan-only", action="store_true", help="Perform scan and prepare review list without final render.")
+    parser.add_argument("--intervals-json-file", type=str, help="Path to JSON file with reviewed clip intervals to render directly.")
     parser.add_argument("--get-audio-tracks", action="store_true", help="Query and print audio streams as JSON for video file.")
 
     args = parser.parse_args()
@@ -144,15 +147,51 @@ def main():
         print(json.dumps({"type": "audio_tracks", "tracks": out}))
         sys.exit(0)
 
-    if not args.video or not args.image:
+    if not args.video:
+        parser.print_help()
+        sys.exit(1)
+
+    if not args.intervals_json_file and not args.image:
         parser.print_help()
         sys.exit(1)
 
     queue = JsonStreamQueueProxy() if args.json_stream else None
-    generator = ScenePackGenerator(log_queue=queue, frame_skip=max(1, args.skip_frames), mode=args.mode)
+    generator = ScenePackGenerator(log_queue=queue, frame_skip=max(1, args.skip_frames), mode=args.mode, tolerance=args.tolerance)
 
     try:
         video_path = args.video if (";" in args.video or "," in args.video) else Path(args.video).resolve()
+
+        # 2. Direct Render from Reviewed Intervals (skips re-scanning!)
+        if args.intervals_json_file:
+            intervals_path = Path(args.intervals_json_file).resolve()
+            with open(intervals_path, "r", encoding="utf-8") as f:
+                raw_intervals = json.load(f)
+
+            render_intervals = []
+            for item in raw_intervals:
+                src_v = item.get("source") or (str(video_path) if isinstance(video_path, Path) else str(video_path))
+                s = float(item.get("start", 0.0))
+                e = float(item.get("end", 0.0))
+                avg_x = float(item.get("avg_x", 0.5))
+                render_intervals.append((src_v, s, e, avg_x))
+
+            default_stem = Path(video_path).stem if isinstance(video_path, Path) else "scenepack"
+            output_path = Path(args.output).resolve() if args.output else (Path(video_path).parent / f"{default_stem}_scenepack.mp4" if isinstance(video_path, Path) else Path(f"{default_stem}_scenepack.mp4").resolve())
+
+            logging.info(f"Direct rendering {len(render_intervals)} reviewed clips to: {output_path}")
+            generator.extract_and_concat(
+                video_path=video_path if isinstance(video_path, Path) else Path(render_intervals[0][0]),
+                intervals=render_intervals,
+                output_path=output_path,
+                aspect_ratio=args.aspect,
+                audio_track_index=args.audio_track,
+                export_quality=args.quality
+            )
+            if args.json_stream:
+                print(json.dumps({"type": "render_complete", "output": str(output_path)}))
+            return
+
+        # 3. Scan & Review or Full Generation with Reference Face
         ref_image_path = Path(args.image).resolve()
 
         if args.scan_only:
@@ -165,7 +204,7 @@ def main():
                 max_gap_tolerance=max(0.0, args.max_gap),
                 min_scene_duration=max(0.0, args.min_scene),
                 vad_enabled=args.vad,
-                vad_buffer_ms=args.vad_buffer,
+                vad_buffer=args.vad_buffer,
                 vad_speaker_enabled=args.vad_speaker,
                 vad_speaker_threshold=args.vad_speaker_threshold,
                 skip_intro=args.skip_intro,
@@ -174,8 +213,53 @@ def main():
                 intro_duration=args.intro_duration,
                 tolerance=args.tolerance
             )
-            if not args.json_stream:
-                print(json.dumps({"type": "review_ready", "intervals": intervals}))
+
+            # Normalize intervals so source video path is guaranteed
+            normalized_intervals = []
+            for item in intervals:
+                if len(item) >= 4 and isinstance(item[0], (str, Path)):
+                    normalized_intervals.append(item)
+                else:
+                    src_v = str(video_path) if isinstance(video_path, Path) else str(video_path)
+                    s = float(item[0])
+                    e = float(item[1])
+                    avg_x = float(item[2]) if len(item) > 2 else 0.5
+                    normalized_intervals.append((src_v, s, e, avg_x))
+
+            # Extract thumbnails for Review
+            logging.info(f"Scanning complete! Generating thumbnails for {len(normalized_intervals)} detected scene clips...")
+            thumbnails = []
+            caps = {}
+            try:
+                for item in normalized_intervals:
+                    src_v = str(item[0])
+                    start_sec = float(item[1])
+                    if src_v not in caps:
+                        caps[src_v] = cv2.VideoCapture(src_v)
+                    cap = caps[src_v]
+                    try:
+                        if cap.isOpened():
+                            cap.set(cv2.CAP_PROP_POS_MSEC, start_sec * 1000.0)
+                            ret, frame = cap.read()
+                            if ret and frame is not None:
+                                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                img = Image.fromarray(frame_rgb)
+                                img.thumbnail((160, 90), Image.Resampling.LANCZOS)
+                                thumbnails.append(img)
+                            else:
+                                thumbnails.append(None)
+                        else:
+                            thumbnails.append(None)
+                    except Exception:
+                        thumbnails.append(None)
+            finally:
+                for cap in caps.values():
+                    cap.release()
+
+            if queue:
+                queue.put(("show_review_checklist", (normalized_intervals, thumbnails)))
+            else:
+                print(json.dumps({"type": "review_ready", "intervals": normalized_intervals}))
         else:
             output_path = Path(args.output).resolve() if args.output else video_path.parent / f"{video_path.stem}_scenepack.mp4"
             generator.generate(
@@ -190,7 +274,7 @@ def main():
                 audio_track_index=args.audio_track,
                 export_quality=args.quality,
                 vad_enabled=args.vad,
-                vad_buffer_ms=args.vad_buffer,
+                vad_buffer=args.vad_buffer,
                 vad_speaker_enabled=args.vad_speaker,
                 vad_speaker_threshold=args.vad_speaker_threshold,
                 skip_intro=args.skip_intro,

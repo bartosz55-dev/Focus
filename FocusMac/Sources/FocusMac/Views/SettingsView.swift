@@ -463,35 +463,53 @@ public struct SettingsView: View {
             // System Hardware & Engine Cards
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 MetricCard(title: "Hardware Accel", val: "VideoToolbox", status: "Active", icon: "bolt.fill", color: .green)
-                MetricCard(title: "Backend Bridge", val: "Python CLI", status: "Standby", icon: "cpu", color: .blue)
-                MetricCard(title: "Power Inhibit", val: appState.settings.preventSleep ? "IOKit Assert" : "Standard", status: appState.settings.preventSleep ? "Preventing Sleep" : "Off", icon: "power", color: appState.settings.preventSleep ? .orange : .secondary)
+                MetricCard(title: "Backend Bridge", val: "Python CLI", status: appState.isProcessing ? "Processing" : "Standby", icon: "cpu", color: .blue)
+                MetricCard(title: "Power Inhibit", val: appState.settings.preventSleep ? "IOKit Assert" : "Standard", status: appState.settings.preventSleep ? "Active" : "Off", icon: "power", color: appState.settings.preventSleep ? .orange : .secondary)
                 MetricCard(title: "Active Logs", val: "\(appState.logLines.count) Lines", status: "Real-time", icon: "terminal.fill", color: appState.accentColor)
             }
 
             // Toolbar: Filter + Actions
-            HStack {
-                Text("System Log Stream")
+            HStack(spacing: 8) {
+                Text(appState.currentLanguage == "Polski" ? "Strumień Logów Systemowych" : "System Log Stream")
                     .font(.system(size: 13, weight: .bold))
 
                 Spacer()
 
                 Picker("", selection: $logFilter) {
-                    Text("All Logs").tag("ALL")
+                    Text(appState.currentLanguage == "Polski" ? "Wszystkie" : "All Logs").tag("ALL")
                     Text("Info").tag("INFO")
                     Text("Warnings").tag("WARNING")
                     Text("Errors").tag("ERROR")
                 }
                 .frame(width: 110)
 
-                Button("Copy All") {
+                Button(action: {
+                    appState.loadPersistentLogs()
+                    appState.showToast(appState.currentLanguage == "Polski" ? "Odświeżono logi z dysku" : "Reloaded focus_debug.log", icon: "arrow.clockwise")
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .help(appState.currentLanguage == "Polski" ? "Wczytaj najnowsze logi z focus_debug.log" : "Reload from focus_debug.log")
+                .controlSize(.small)
+
+                Button(action: {
+                    let logURL = URL(fileURLWithPath: ("~/Library/Logs/Focus" as NSString).expandingTildeInPath)
+                    NSWorkspace.shared.open(logURL)
+                }) {
+                    Image(systemName: "folder")
+                }
+                .help(appState.currentLanguage == "Polski" ? "Otwórz katalog z logami w Finderze" : "Open logs folder in Finder")
+                .controlSize(.small)
+
+                Button(appState.currentLanguage == "Polski" ? "Kopiuj" : "Copy") {
                     let text = appState.logLines.joined(separator: "\n")
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
-                    appState.showToast("Logs copied to clipboard!", icon: "doc.on.doc")
+                    appState.showToast(appState.currentLanguage == "Polski" ? "Skopiowano logi do schowka!" : "Logs copied to clipboard!", icon: "doc.on.doc")
                 }
                 .controlSize(.small)
 
-                Button("Clear") {
+                Button(appState.currentLanguage == "Polski" ? "Wyczyść" : "Clear") {
                     appState.logLines.removeAll()
                 }
                 .controlSize(.small)
@@ -500,46 +518,67 @@ public struct SettingsView: View {
             // Monospace Log Console
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 2) {
+                    LazyVStack(alignment: .leading, spacing: 3) {
                         if filteredLogs.isEmpty {
-                            Text("No log messages matching filter")
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.secondary)
-                                .padding(12)
+                            VStack(spacing: 6) {
+                                Image(systemName: "terminal")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.secondary)
+                                Text(appState.currentLanguage == "Polski" ? "Brak logów pasujących do wybranego filtra" : "No log messages matching filter")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(24)
                         } else {
                             ForEach(filteredLogs.indices, id: \.self) { idx in
                                 let line = filteredLogs[idx]
-                                Text(line)
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(logColor(line))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .id(idx)
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text(String(format: "%03d", idx + 1))
+                                        .font(.system(size: 10, weight: .regular, design: .monospaced))
+                                        .foregroundColor(.secondary.opacity(0.6))
+                                        .frame(width: 28, alignment: .trailing)
+
+                                    Text(line)
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(logColor(line))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .textSelection(.enabled)
+                                }
+                                .id(idx)
                             }
                         }
                     }
                     .padding(12)
                 }
                 .frame(minHeight: 280, maxHeight: 380)
-                .background(Color.black.opacity(0.85))
-                .cornerRadius(8)
+                .background(Color.black.opacity(0.88))
+                .cornerRadius(10)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
+                .onAppear {
+                    if appState.logLines.isEmpty {
+                        appState.loadPersistentLogs()
+                    }
+                }
             }
         }
     }
 
     private var filteredLogs: [String] {
         if logFilter == "ALL" { return appState.logLines }
-        return appState.logLines.filter { $0.contains(logFilter) }
+        return appState.logLines.filter { $0.localizedCaseInsensitiveContains(logFilter) }
     }
 
     private func logColor(_ line: String) -> Color {
-        if line.contains("ERROR") { return .red }
-        if line.contains("WARNING") { return .orange }
-        if line.contains("Verified") || line.contains("Successfully") { return .green }
-        return .green.opacity(0.85)
+        let upper = line.uppercased()
+        if upper.contains("ERROR") || upper.contains("FAILED") || upper.contains("EXCEPTION") { return .red }
+        if upper.contains("WARNING") { return .orange }
+        if upper.contains("VERIFIED") || upper.contains("SUCCESS") || upper.contains("COMPLETE") { return .green }
+        if upper.contains("PROGRESS") || upper.contains("INFO") { return Color(hex: "#38BDF8") }
+        return .white.opacity(0.9)
     }
 }
 

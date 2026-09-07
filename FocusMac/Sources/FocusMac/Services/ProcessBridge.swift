@@ -14,6 +14,39 @@ public enum BridgeEvent: Sendable {
     case error(String)
 }
 
+private final class ThreadSafeLogBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var lines: [String] = []
+
+    func append(_ line: String) {
+        lock.lock()
+        lines.append(line)
+        if lines.count > 100 {
+            lines.removeFirst()
+        }
+        lock.unlock()
+    }
+
+    func suffixJoined(_ count: Int, separator: String = "\n") -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return lines.suffix(count).joined(separator: separator)
+    }
+}
+
+private final class ThreadSafeResumeFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didResume = false
+
+    func resumeOnce(_ block: () -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !didResume else { return }
+        didResume = true
+        block()
+    }
+}
+
 public actor ProcessBridge {
     public static let shared = ProcessBridge()
     private var currentProcess: Process?
@@ -269,8 +302,13 @@ public actor ProcessBridge {
         currentProcess = proc
 
         let stdoutHandle = stdoutPipe.fileHandleForReading
+        let stderrHandle = stderrPipe.fileHandleForReading
+
+        let errBufferStore = ThreadSafeLogBuffer()
+        let resumeController = ThreadSafeResumeFlag()
 
         return try await withCheckedThrowingContinuation { continuation in
+            // 1. Concurrent stdout line reader (JSON protocol + stdout logs)
             DispatchQueue.global(qos: .userInitiated).async {
                 var buffer = Data()
                 while true {
@@ -290,19 +328,42 @@ public actor ProcessBridge {
                 }
             }
 
+            // 2. Concurrent stderr line reader (Python INFO, WARNING, ERROR logs)
+            DispatchQueue.global(qos: .userInitiated).async {
+                var errBuffer = Data()
+                while true {
+                    let chunk = stderrHandle.availableData
+                    if chunk.isEmpty { break }
+                    errBuffer.append(chunk)
+
+                    while let range = errBuffer.range(of: Data([0x0A])) {
+                        let lineData = errBuffer.subdata(in: errBuffer.startIndex..<range.lowerBound)
+                        errBuffer.removeSubrange(errBuffer.startIndex...range.lowerBound)
+
+                        if let line = String(data: lineData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                           !line.isEmpty {
+                            onEvent(.log(line))
+                            errBufferStore.append(line)
+                        }
+                    }
+                }
+            }
+
             proc.terminationHandler = { process in
                 Task { [weak self] in
                     await self?.clearProcess()
                 }
 
-                if process.terminationStatus == 0 {
-                    continuation.resume()
-                } else if process.terminationReason == .uncaughtSignal {
-                    continuation.resume()
+                if process.terminationStatus == 0 || process.terminationReason == .uncaughtSignal {
+                    resumeController.resumeOnce {
+                        continuation.resume()
+                    }
                 } else {
-                    let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                    let errMsg = String(data: errData, encoding: .utf8) ?? "Process exited with status \(process.terminationStatus)"
-                    continuation.resume(throwing: NSError(domain: "FocusBridge", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: errMsg]))
+                    let collectedErr = errBufferStore.suffixJoined(15)
+                    let finalErr = collectedErr.isEmpty ? "Process exited with status \(process.terminationStatus)" : collectedErr
+                    resumeController.resumeOnce {
+                        continuation.resume(throwing: NSError(domain: "FocusBridge", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: finalErr]))
+                    }
                 }
             }
 
@@ -310,7 +371,9 @@ public actor ProcessBridge {
                 try proc.run()
             } catch {
                 currentProcess = nil
-                continuation.resume(throwing: error)
+                resumeController.resumeOnce {
+                    continuation.resume(throwing: error)
+                }
             }
         }
     }
@@ -346,12 +409,14 @@ public actor ProcessBridge {
         case "gallery_status":
             if let status = json["status"] as? String {
                 onEvent(.galleryStatus(status))
+                onEvent(.log("[GALLERY] \(status)"))
             }
         case "gallery_results":
             if let clustersData = json["clusters"] {
                 if let rawData = try? JSONSerialization.data(withJSONObject: clustersData),
                    let profiles = try? JSONDecoder().decode([CharacterProfile].self, from: rawData) {
                     onEvent(.galleryResults(profiles))
+                    onEvent(.log("[GALLERY] Discovered \(profiles.count) unique character face clusters."))
                 }
             }
         case "review_ready":
@@ -359,15 +424,18 @@ public actor ProcessBridge {
                 if let rawData = try? JSONSerialization.data(withJSONObject: clipsData),
                    let clips = try? JSONDecoder().decode([ClipInterval].self, from: rawData) {
                     onEvent(.reviewReady(clips))
+                    onEvent(.log("[INFO] Succeeded! Detected \(clips.count) scene clips ready for review."))
                 }
             }
         case "render_complete":
             if let out = json["output"] as? String {
                 onEvent(.renderComplete(out))
+                onEvent(.log("[SUCCESS] Master render completed: \(out)"))
             }
         case "error":
             if let msg = json["message"] as? String {
                 onEvent(.error(msg))
+                onEvent(.log("[ERROR] \(msg)"))
             }
         case "audio_tracks":
             if let tracksData = json["tracks"] as? [[String: Any]] {
@@ -381,8 +449,10 @@ public actor ProcessBridge {
         case "master_concat_complete":
             if let out = json["output"] as? String {
                 onEvent(.masterConcatComplete(out))
+                onEvent(.log("[SUCCESS] Master concatenation finished: \(out)"))
             }
         default:
+            onEvent(.log(line))
             break
         }
     }

@@ -272,7 +272,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v1.43"
+APP_VERSION = "v2.0.0"
 
 
 class SleepInhibitor:
@@ -897,6 +897,13 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v2.0.0 (Natywna Wersja macOS w Swift/SwiftUI, Interfejs Liquid Glass, Hub Ustawień i Poprawki Silnika):\n"
+            "  - [SWIFTUI] Całkowicie przepisany natywny interfejs macOS w technologii Swift 6 / SwiftUI z płynnymi animacjami ProMotion 120Hz w standardzie Apple Human Interface Guidelines.\n"
+            "  - [LIQUID GLASS] Wprowadzono kapsułkowe paski narzędziowe Liquid Glass z adaptacyjnym rozmyciem tła (.ultraThinMaterial), podświetleniem krawędzi i sprężystymi mikrointerakcjami.\n"
+            "  - [SETTINGS HUB] Zunifikowano ustawienia, podręcznik użytkownika, 132-wersyjną historię wydań, konsolę diagnostyczną oraz kartę O programie w jednym spójnym widoku.\n"
+            "  - [DIAGNOSTYKA] Wdrożono asynchroniczne strumieniowanie logów stderr z silnika Pythona w czasie rzeczywistym oraz bezpośredni odczyt pliku focus_debug.log.\n"
+            "  - [REVIEW & RENDER] Dodano bezstratne renderowanie wyselekcjonowanych scen przez --intervals-json-file, eliminując ponowne skanowanie i szanując wybór użytkownika.\n"
+            "  - [SILNIK AI] Usunięto błąd niezgodności parametrów vad_buffer_ms oraz tolerance w scan_and_prepare, przywracając 100% stabilności detekcji.\n\n"
             "• v1.43 (Modernistyczny Design, Wielojęzyczne Audio, Blokada Usypiania i Nowy Szlif UI):\n"
             "  - [IKONY] Wdrożono nowy, elegancki design ikony Dark Obsidian Glass Squircle w standardzie Apple macOS HIG oraz wygenerowano spójne zestawy ikon dla Windows (.ico z 8 rozmiarami) i macOS (.icns) — koniec z przestarzałą ikoną na Windowsie!\n"
             "  - [UI/UX] Wyeliminowano ucinanie tekstu w przełączniku trybów ('2D Animation / Anime') oraz usunięto artefakt podkreślenia ('_Analyzing') z przycisku skanowania wywołany mnemonicznymi znacznikami Qt.\n"
@@ -1157,6 +1164,13 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v2.0.0 (Native macOS Swift/SwiftUI Edition, Liquid Glass Interface, Unified Settings Hub & Engine Reliability):\n"
+            "  - [SWIFTUI] Completely rewritten native macOS frontend powered by Swift 6 and SwiftUI, delivering fluid 120Hz ProMotion animations aligned with Apple Human Interface Guidelines.\n"
+            "  - [LIQUID GLASS] Introduced floating Liquid Glass capsule toolbars featuring adaptive frosted glass (.ultraThinMaterial), specular edge highlights, and physical spring physics.\n"
+            "  - [SETTINGS HUB] Unified general appearance, the comprehensive 10-chapter user manual, full 132-version interactive changelog, live diagnostics console, and About pane into one central hub.\n"
+            "  - [DIAGNOSTICS] Implemented concurrent real-time stderr log streaming from the Python AI engine alongside persistent focus_debug.log inspection.\n"
+            "  - [REVIEW & RENDER] Added instant lossless rendering of selected review scenes via --intervals-json-file, skipping redundant re-scans and strictly respecting user clip selections.\n"
+            "  - [AI ENGINE] Fixed vad_buffer_ms and tolerance keyword mismatches in scan_and_prepare, restoring 100% video processing reliability.\n\n"
             "• v1.43 (Modern Obsidian Icons, Multi-Audio Track Support, Anti-Sleep Engine & UI Polish Pass):\n"
             "  - [ICONS] Deployed modern Dark Obsidian Glass Squircle app icon aligning with Apple macOS HIG standards, paired with regenerated multi-resolution Windows .ico (8 resolutions from 16px to 256px) and macOS .icns — completely replacing outdated Windows icon assets.\n"
             "  - [UI/UX] Resolved text truncation in the mode switcher ('2D Animation / Anime') and eliminated rogue underscore artifacts ('_Analyzing') on the primary scan button triggered by Qt accelerator mnemonic parsing.\n"
@@ -1535,11 +1549,12 @@ class ScenePackGenerator:
     """
     Backend service for generating video scenepacks.
     """
-    def __init__(self, log_queue=None, frame_skip: int = 15, tolerance: float = 0.6, mode: str = "Real Faces"):
+    def __init__(self, log_queue=None, frame_skip: int = 15, tolerance: float = 0.6, mode: str = "Real Faces", current_lang: str = "English", **kwargs: Any):
         self.log_queue = log_queue if log_queue is not None else DummyQueue()
         self.frame_skip = frame_skip
         self.tolerance = tolerance
         self.mode = mode
+        self.current_lang = current_lang
         self.is_cancelled = False
 
         # Determine the directory where the script is located
@@ -2081,7 +2096,7 @@ class ScenePackGenerator:
             encodings = safe_face_encodings(image)
 
             if not encodings:
-                err_tmpl = get_translation(self.current_lang, "err_no_human_face")
+                err_tmpl = get_translation(getattr(self, "current_lang", "English"), "err_no_human_face")
                 if "{name}" in err_tmpl:
                     err_msg = err_tmpl.format(name=getattr(path_obj, 'name', str(path_obj)))
                 else:
@@ -2978,7 +2993,30 @@ class ScenePackGenerator:
             logging.error(f"Scene cut detection failed: {e}")
         return cuts
 
-    def scan_and_prepare(self, video_path: Any, ref_image_path: Any, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, vad_enabled: bool = False, vad_buffer: int = 300, vad_speaker_enabled: bool = True, vad_speaker_threshold: float = 0.68, skip_intro: bool = False, skip_outro: bool = False, intro_mode: str = "Auto Chapters", intro_duration: float = 90.0) -> List[Any]:
+    def scan_and_prepare(
+        self,
+        video_path: Any,
+        ref_image_path: Any,
+        padding_before: float = 2.0,
+        padding_after: float = 2.0,
+        max_gap_tolerance: float = 1.5,
+        min_scene_duration: float = 1.0,
+        vad_enabled: bool = False,
+        vad_buffer: int = 300,
+        vad_buffer_ms: Optional[int] = None,
+        vad_speaker_enabled: bool = True,
+        vad_speaker_threshold: float = 0.68,
+        skip_intro: bool = False,
+        skip_outro: bool = False,
+        intro_mode: str = "Auto Chapters",
+        intro_duration: float = 90.0,
+        tolerance: Optional[float] = None,
+        **kwargs: Any
+    ) -> List[Any]:
+        if vad_buffer_ms is not None:
+            vad_buffer = vad_buffer_ms
+        if tolerance is not None:
+            self.tolerance = tolerance
         self._check_and_download_ffmpeg()
 
         video_paths = parse_video_paths(video_path)
@@ -3147,10 +3185,38 @@ class ScenePackGenerator:
 
         return all_intervals
 
-    def generate(self, video_path: Path, ref_image_path: Path, output_path: Path, padding_before: float = 2.0, padding_after: float = 2.0, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, export_quality: str = "Medium"):
+    def generate(
+        self,
+        video_path: Path,
+        ref_image_path: Path,
+        output_path: Path,
+        padding_before: float = 2.0,
+        padding_after: float = 2.0,
+        max_gap_tolerance: float = 1.5,
+        min_scene_duration: float = 1.0,
+        aspect_ratio: str = "16:9 Original",
+        audio_track_index: int = 0,
+        export_quality: str = "Auto (Match Source Bitrate)",
+        vad_enabled: bool = False,
+        vad_buffer: int = 300,
+        vad_buffer_ms: Optional[int] = None,
+        vad_speaker_enabled: bool = True,
+        vad_speaker_threshold: float = 0.68,
+        skip_intro: bool = False,
+        skip_outro: bool = False,
+        intro_mode: str = "Auto Chapters",
+        intro_duration: float = 90.0,
+        tolerance: Optional[float] = None,
+        **kwargs: Any
+    ):
         """
         Main pipeline method to generate a scenepack (CLI compatibility wrapper).
         """
+        if vad_buffer_ms is not None:
+            vad_buffer = vad_buffer_ms
+        if tolerance is not None:
+            self.tolerance = tolerance
+
         try:
             intervals = self.scan_and_prepare(
                 video_path=video_path,
@@ -3158,21 +3224,34 @@ class ScenePackGenerator:
                 padding_before=padding_before,
                 padding_after=padding_after,
                 max_gap_tolerance=max_gap_tolerance,
-                min_scene_duration=min_scene_duration
+                min_scene_duration=min_scene_duration,
+                vad_enabled=vad_enabled,
+                vad_buffer=vad_buffer,
+                vad_speaker_enabled=vad_speaker_enabled,
+                vad_speaker_threshold=vad_speaker_threshold,
+                skip_intro=skip_intro,
+                skip_outro=skip_outro,
+                intro_mode=intro_mode,
+                intro_duration=intro_duration,
+                tolerance=tolerance
             )
         except ValueError as e:
             logging.warning(str(e))
-            self.log_queue.put(("log", str(e)))
+            if getattr(self, "log_queue", None):
+                self.log_queue.put(("log", str(e)))
             return
 
         if not intervals:
             logging.warning("Target face was not detected in the video. Aborting.")
-            self.log_queue.put(("log", "Target face was not detected in the video. Aborting."))
+            if getattr(self, "log_queue", None):
+                self.log_queue.put(("log", "Target face was not detected in the video. Aborting."))
             return
 
         self.extract_and_concat(
             video_path=video_path,
             intervals=intervals,
             output_path=output_path,
+            aspect_ratio=aspect_ratio,
+            audio_track_index=audio_track_index,
             export_quality=export_quality
         )
