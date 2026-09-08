@@ -2185,6 +2185,44 @@ class ScenePackGenerator:
             cap.release()
         return float('inf')
 
+    def _get_video_fps(self, video_path: Union[str, Path]) -> float:
+        """Returns exact frame rate of video stream via ffprobe with OpenCV fallback and caching."""
+        v_path = Path(video_path)
+        if not hasattr(self, "_cached_fps"):
+            self._cached_fps = {}
+        if str(v_path) in self._cached_fps:
+            return self._cached_fps[str(v_path)]
+
+        cmd = [
+            str(self.ffprobe_path), '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=r_frame_rate,avg_frame_rate',
+            '-of', 'json', str(v_path)
+        ]
+        try:
+            res = self.run_subprocess(cmd, capture_output=True, text=True)
+            if res.returncode == 0 and res.stdout:
+                data = json.loads(res.stdout)
+                streams = data.get('streams', [])
+                if streams:
+                    for key in ('r_frame_rate', 'avg_frame_rate'):
+                        val = streams[0].get(key, '')
+                        if val and '/' in val:
+                            num, den = val.split('/')
+                            if float(den) > 0:
+                                parsed_fps = float(num) / float(den)
+                                if 1.0 <= parsed_fps <= 240.0:
+                                    self._cached_fps[str(v_path)] = parsed_fps
+                                    return parsed_fps
+        except Exception:
+            pass
+
+        cap = cv2.VideoCapture(str(v_path))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 24.0
+        cap.release()
+        self._cached_fps[str(v_path)] = float(fps)
+        return float(fps)
+
     def merge_intervals(self, timestamps: List[Any], padding_before: float, padding_after: float, duration: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0) -> List[Any]:
         if not timestamps:
             return []
@@ -2532,7 +2570,7 @@ class ScenePackGenerator:
                     return None
 
                 h, w = frame.shape[:2]
-                target_w = 640 if self.mode == "Anime" else 480
+                target_w = 480
                 if w > target_w:
                     ratio = float(target_w) / float(w)
                     new_h = int(h * ratio)
@@ -2591,30 +2629,17 @@ class ScenePackGenerator:
                         thread_local_data.anime_cascade = get_cascade_classifier(str(self.anime_cascade_path))
                         
                     local_anime_cascade = thread_local_data.anime_cascade
-                    
+                    faces = []
                     if local_anime_cascade is not None and hasattr(local_anime_cascade, 'empty') and not local_anime_cascade.empty():
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                        faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.06, minNeighbors=3, minSize=(16, 16))
-                        if len(faces) == 0:
-                            faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.04, minNeighbors=2, minSize=(14, 14))
+                        detected = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.06, minNeighbors=3, minSize=(16, 16))
+                        if len(detected) == 0:
+                            detected = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.04, minNeighbors=2, minSize=(14, 14))
+                        if len(detected) > 0:
+                            faces = list(detected)
 
-                        if len(faces) > 0:
-                            if ref_anime_feats:
-                                for (x_f, y_f, w_f, h_f) in faces:
-                                    crop_bgr = small_frame[y_f:y_f+h_f, x_f:x_f+w_f]
-                                    if crop_bgr.size > 0:
-                                        curr_feat = extract_anime_face_features(crop_bgr)
-                                        if any(is_anime_feature_match(ref_f, curr_feat, tolerance=self.tolerance) for ref_f in ref_anime_feats):
-                                            center_x = x_f + w_f / 2.0
-                                            rel_x = center_x / w_resized
-                                            return (target_idx / fps, rel_x)
-                            else:
-                                (x_f, y_f, w_f, h_f) = faces[0]
-                                center_x = x_f + w_f / 2.0
-                                rel_x = center_x / w_resized
-                                return (target_idx / fps, rel_x)
-                    else:
-                        faces = []
+                    # Robust fallback: if anime cascade missed a stylized face, profile, or heavy shadow, fall back to frontal and neural HOG
+                    if len(faces) == 0:
                         gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
                         if not hasattr(thread_local_data, 'face_cascade'):
                             if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
@@ -2628,85 +2653,86 @@ class ScenePackGenerator:
                             if len(detected) > 0:
                                 faces = list(detected)
 
-                        # If cascade classifier found nothing or is absent, fall back to neural face recognition model
                         if len(faces) == 0:
                             rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                             flocs = safe_face_locations(rgb_frame, model="hog")
                             for (top, right, bottom, left) in flocs:
                                 faces.append((left, top, right - left, bottom - top))
 
-                        if len(faces) > 0:
-                            if ref_anime_feats:
-                                for (x_f, y_f, w_f, h_f) in faces:
-                                    crop_bgr = small_frame[y_f:y_f+h_f, x_f:x_f+w_f]
-                                    if crop_bgr.size > 0:
-                                        curr_feat = extract_anime_face_features(crop_bgr)
-                                        if any(is_anime_feature_match(ref_f, curr_feat, tolerance=self.tolerance) for ref_f in ref_anime_feats):
-                                            rel_x = (x_f + w_f / 2.0) / w_resized
-                                            return (target_idx / fps, rel_x)
-                            else:
-                                (x_f, y_f, w_f, h_f) = faces[0]
-                                rel_x = (x_f + w_f / 2.0) / w_resized
-                                return (target_idx / fps, rel_x)
+                    if len(faces) > 0:
+                        if ref_anime_feats:
+                            for (x_f, y_f, w_f, h_f) in faces:
+                                crop_bgr = small_frame[y_f:y_f+h_f, x_f:x_f+w_f]
+                                if crop_bgr.size > 0:
+                                    curr_feat = extract_anime_face_features(crop_bgr)
+                                    if any(is_anime_feature_match(ref_f, curr_feat, tolerance=self.tolerance) for ref_f in ref_anime_feats):
+                                        center_x = x_f + w_f / 2.0
+                                        rel_x = center_x / w_resized
+                                        return (target_idx / fps, rel_x)
+                        else:
+                            (x_f, y_f, w_f, h_f) = faces[0]
+                            center_x = x_f + w_f / 2.0
+                            rel_x = center_x / w_resized
+                            return (target_idx / fps, rel_x)
 
                 return None
 
             batch_size = 32
-            max_workers = min(4, os.cpu_count() or 4)
+            max_workers = min(8, max(2, (os.cpu_count() or 4) - 2))
 
             current_idx = 0
             target_idx_set = set(target_indices)
             
-            while current_idx < total_frames:
-                if getattr(self, 'is_cancelled', False):
-                    logging.info("Scene extraction cancelled by user.")
-                    break
-
-                batch_frames = []
-                while len(batch_frames) < batch_size and current_idx < total_frames:
-                    ret = cap.grab()
-                    if not ret:
-                        current_idx = total_frames
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                while current_idx < total_frames:
+                    if getattr(self, 'is_cancelled', False):
+                        logging.info("Scene extraction cancelled by user.")
                         break
-                    
-                    if current_idx in target_idx_set:
-                        ret_ret, frame = cap.retrieve()
-                        if ret_ret and frame is not None:
-                            batch_frames.append((current_idx, frame))
-                    current_idx += 1
 
-                if not batch_frames:
-                    continue
+                    batch_frames = []
+                    while len(batch_frames) < batch_size and current_idx < total_frames:
+                        ret = cap.grab()
+                        if not ret:
+                            current_idx = total_frames
+                            break
+                        
+                        if current_idx in target_idx_set:
+                            ret_ret, frame = cap.retrieve()
+                            if ret_ret and frame is not None:
+                                batch_frames.append((current_idx, frame))
+                        current_idx += 1
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    if not batch_frames:
+                        continue
+
                     results = list(executor.map(_process_single_frame, batch_frames))
 
-                for res in results:
-                    if res is not None:
-                        timestamps.append(res)
+                    for res in results:
+                        if res is not None:
+                            timestamps.append(res)
 
-                current_frame = batch_frames[-1][0]
-                episode_progress = min(1.0, current_frame / total_frames)
-                composite_progress = (video_index + episode_progress) / float(total_videos)
-                elapsed = time.time() - start_time
-                eta_seconds = (elapsed / episode_progress) - elapsed if episode_progress > 0 else 0
+                    current_frame = batch_frames[-1][0]
+                    episode_progress = min(1.0, current_frame / total_frames)
+                    composite_progress = (video_index + episode_progress) / float(total_videos)
+                    elapsed = time.time() - start_time
+                    eta_seconds = (elapsed / episode_progress) - elapsed if episode_progress > 0 else 0
 
-                eta_mins = int(eta_seconds // 60)
-                eta_secs = int(eta_seconds % 60)
+                    eta_mins = int(eta_seconds // 60)
+                    eta_secs = int(eta_seconds % 60)
 
-                if total_videos > 1:
-                    status_text = f"Episode [{video_index + 1}/{total_videos}] '{video_path.name}' ({int(episode_progress*100)}%) | Overall: {int(composite_progress*100)}% | ETA: {eta_mins}m {eta_secs}s"
+                    if total_videos > 1:
+                        status_text = f"Episode [{video_index + 1}/{total_videos}] '{video_path.name}' ({int(episode_progress*100)}%) | Overall: {int(composite_progress*100)}% | ETA: {eta_mins}m {eta_secs}s"
+                        if hasattr(self, "log_queue") and self.log_queue:
+                            self.log_queue.put(("episode_progress", (video_index + 1, total_videos, video_path.name, episode_progress, composite_progress)))
+                    else:
+                        status_text = f"ETA: {eta_mins}m {eta_secs}s  ({int(episode_progress*100)}%)"
+
                     if hasattr(self, "log_queue") and self.log_queue:
-                        self.log_queue.put(("episode_progress", (video_index + 1, total_videos, video_path.name, episode_progress, composite_progress)))
-                else:
-                    status_text = f"ETA: {eta_mins}m {eta_secs}s  ({int(episode_progress*100)}%)"
+                        self.log_queue.put(("progress", composite_progress, status_text))
 
-                if hasattr(self, "log_queue") and self.log_queue:
-                    self.log_queue.put(("progress", composite_progress, status_text))
-
-                if len(timestamps) % (batch_size * 2) < batch_size:
-                    logging.info(f"[{video_path.name}] Scanned {min(current_frame, total_frames)}/{total_frames} frames ({int(episode_progress*100)}%)...")
-                    gc.collect()
+                    if len(timestamps) % (batch_size * 2) < batch_size:
+                        logging.info(f"[{video_path.name}] Scanned {min(current_frame, total_frames)}/{total_frames} frames ({int(episode_progress*100)}%)...")
+                        gc.collect()
 
         finally:
             cap.release()
@@ -2807,12 +2833,14 @@ class ScenePackGenerator:
                 chunk_path = temp_dir / f"chunk_{i:04d}.ts"
                 duration = end - start
 
-                vf_filter = "setpts=PTS-STARTPTS,fps=24"
+                src_fps = self._get_video_fps(src_video)
+                fps_tag = f",fps={src_fps:.3f}" if (src_fps > 0 and abs(src_fps - 24.0) > 0.05) else ",fps=24"
+                vf_filter = f"setpts=PTS-STARTPTS{fps_tag}"
                 aspect_lower = aspect_ratio.lower()
                 if "9:16" in aspect_ratio and ("vert" in aspect_lower or "auto" in aspect_lower or "pion" in aspect_lower or "vertical" in aspect_lower):
-                    vf_filter = f"crop='ceil(ih*9/32)*2':'ceil(ih/2)*2':'max(0,min(iw-ceil(ih*9/32)*2,floor(iw*{avg_x}-ceil(ih*9/32))))':0,setpts=PTS-STARTPTS,fps=24"
+                    vf_filter = f"crop='ceil(ih*9/32)*2':'ceil(ih/2)*2':'max(0,min(iw-ceil(ih*9/32)*2,floor(iw*{avg_x}-ceil(ih*9/32))))':0,setpts=PTS-STARTPTS{fps_tag}"
                 elif "9:16" in aspect_ratio and ("blur" in aspect_lower or "rozm" in aspect_lower or "tł" in aspect_lower or "background" in aspect_lower):
-                    vf_filter = "[0:v]split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS,fps=24"
+                    vf_filter = f"[0:v]split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS{fps_tag}"
 
                 hwaccel_flags = self._get_hwaccel_args()
                 cmd = [
@@ -3023,7 +3051,7 @@ class ScenePackGenerator:
         if not video_paths:
             raise FileNotFoundError(f"No valid video file(s) provided: {video_path}")
 
-        if isinstance(ref_image_path, dict):
+        if isinstance(ref_image_path, (dict, tuple, np.ndarray)):
             ref_data = ref_image_path
         else:
             ref_data = self.load_reference_face(ref_image_path)
@@ -3053,8 +3081,10 @@ class ScenePackGenerator:
                 logging.warning(f"[{v_path.name}] No character/face occurrences were detected during scanning. Skipping shot boundaries and audio filters.")
                 continue
 
-            logging.info(f"[{v_path.name}] Detecting shot boundaries for scene snapping...")
-            scene_cuts = self._detect_scene_cuts(v_path)
+            scene_cuts = []
+            if vad_enabled or kwargs.get("snap_to_shots", False):
+                logging.info(f"[{v_path.name}] Detecting shot boundaries for scene snapping...")
+                scene_cuts = self._detect_scene_cuts(v_path)
 
             if vad_enabled:
                 logging.info(f"[{v_path.name}] VAD Protection Enabled. Running FFmpeg silence detection...")
