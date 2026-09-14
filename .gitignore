@@ -15,6 +15,7 @@ venv.bak/
 build/
 dist/
 dist_mac/
+.bin_cache/
 FocusMac/.build/
 FocusMac/.swiftpm/
 *.spec

@@ -406,7 +406,48 @@ class PlatformManager:
 
     @staticmethod
     def get_ffmpeg_safe_path(binary_name: str = "ffmpeg") -> str:
-        return shutil.which(binary_name) or binary_name
+        exe_suffix = PlatformManager.get_exe_suffix()
+        target_name = f"{binary_name}{exe_suffix}" if not binary_name.endswith(exe_suffix) else binary_name
+
+        # 1. Standard system PATH check
+        found = shutil.which(target_name) or shutil.which(binary_name)
+        if found:
+            return found
+
+        candidates: List[Path] = []
+
+        # 2. PyInstaller frozen bundle path (sys._MEIPASS)
+        if hasattr(sys, '_MEIPASS'):
+            base = Path(sys._MEIPASS)
+            candidates.append(base / "bin" / target_name)
+            candidates.append(base.parent / "bin" / target_name)
+            candidates.append(base / target_name)
+
+        # 3. Application Support / AppData directory
+        app_dir = PlatformManager.get_app_data_dir()
+        candidates.append(app_dir / "bin" / target_name)
+
+        # 4. Adjacent bin directory or bundled Resources
+        script_dir = Path(__file__).resolve().parent
+        candidates.append(script_dir / "bin" / target_name)
+        candidates.append(script_dir.parent / "bin" / target_name)
+        candidates.append(script_dir / "Contents" / "Resources" / "bin" / target_name)
+        candidates.append(script_dir.parent / "Resources" / "bin" / target_name)
+
+        # 5. Common macOS / Linux locations
+        if PlatformManager.is_macos():
+            candidates.append(Path(f"/opt/homebrew/bin/{target_name}"))
+            candidates.append(Path(f"/usr/local/bin/{target_name}"))
+            candidates.append(Path(f"/usr/bin/{target_name}"))
+        elif not PlatformManager.is_windows():
+            candidates.append(Path(f"/usr/local/bin/{target_name}"))
+            candidates.append(Path(f"/usr/bin/{target_name}"))
+
+        for cand in candidates:
+            if cand.exists() and os.access(cand, os.X_OK if not PlatformManager.is_windows() else os.F_OK):
+                return str(cand.resolve())
+
+        return binary_name
 
     @staticmethod
     def write_concat_demuxer_manifest(file_list: List[Path], manifest_path: Path):
@@ -1581,9 +1622,15 @@ class ScenePackGenerator:
                     break
 
         if not bundle_cascade:
-            local_models = Path(__file__).resolve().parent / "models" / "lbpcascade_animeface.xml"
-            if local_models.exists():
-                bundle_cascade = local_models.resolve()
+            candidates = [
+                Path(__file__).resolve().parent / "models" / "lbpcascade_animeface.xml",
+                Path(__file__).resolve().parent.parent / "models" / "lbpcascade_animeface.xml",
+                Path(__file__).resolve().parent.parent / "Resources" / "models" / "lbpcascade_animeface.xml",
+            ]
+            for c in candidates:
+                if c.exists():
+                    bundle_cascade = c.resolve()
+                    break
 
         if bundle_cascade and bundle_cascade.exists():
             self.anime_cascade_path = bundle_cascade
@@ -1593,9 +1640,12 @@ class ScenePackGenerator:
         self.bin_dir = self.app_dir / "bin"
         self.bin_dir.mkdir(parents=True, exist_ok=True)
         exe_suffix = PlatformManager.get_exe_suffix()
-        self.ffmpeg_path = self.bin_dir / f"ffmpeg{exe_suffix}"
-        self.ffprobe_path = self.bin_dir / f"ffprobe{exe_suffix}"
-        
+        safe_ffmpeg = PlatformManager.get_ffmpeg_safe_path("ffmpeg")
+        safe_ffprobe = PlatformManager.get_ffmpeg_safe_path("ffprobe")
+
+        self.ffmpeg_path = Path(safe_ffmpeg) if Path(safe_ffmpeg).is_absolute() else (self.bin_dir / f"ffmpeg{exe_suffix}")
+        self.ffprobe_path = Path(safe_ffprobe) if Path(safe_ffprobe).is_absolute() else (self.bin_dir / f"ffprobe{exe_suffix}")
+
         if not self.ffmpeg_path.exists() and shutil.which("ffmpeg"):
             self.ffmpeg_path = Path(shutil.which("ffmpeg"))
         if not self.ffprobe_path.exists() and shutil.which("ffprobe"):

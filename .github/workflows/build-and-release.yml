@@ -49,20 +49,21 @@ jobs:
       run: |
         python build.py
 
-    - name: Build macOS Native (SwiftUI)
+    - name: Build macOS Standalone (SwiftUI & DMG)
       if: matrix.os == 'macos-latest'
       run: |
-        chmod +x FocusMac/build_mac.sh
-        ./FocusMac/build_mac.sh
+        chmod +x FocusMac/build_mac.sh FocusMac/build_standalone_dmg.sh
+        ./FocusMac/build_standalone_dmg.sh
         cd dist_mac
         zip -ry ../Focus-macOS-Native.zip Focus.app
+        cp Focus-macOS-AppleSilicon.dmg ../Focus-macOS-AppleSilicon.dmg
 
     - name: Zip build artifact (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         Compress-Archive -Path dist/Focus.exe -DestinationPath Focus-Windows.zip
 
-    - name: Zip build artifact (macOS)
+    - name: Zip build artifact (macOS PyInstaller)
       if: matrix.os == 'macos-latest'
       run: |
         cd dist
@@ -76,6 +77,7 @@ jobs:
           Focus-Windows.zip
           Focus-macOS.zip
           Focus-macOS-Native.zip
+          Focus-macOS-AppleSilicon.dmg
         if-no-files-found: ignore
 
   release:
@@ -98,6 +100,7 @@ jobs:
       with:
         files: |
           artifacts/**/*.zip
+          artifacts/**/*.dmg
         name: Focus ${{ github.ref_name }}
         body_path: CHANGELOG.md
       env:

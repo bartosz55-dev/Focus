@@ -109,9 +109,16 @@ public final class AppState: ObservableObject {
         LocalizationManager.shared.string(for: key, language: currentLanguage)
     }
 
+    @Published public var engineDiagnostics: ProcessBridge.EngineDiagnostics = ProcessBridge.checkEngineDiagnostics()
+
+    public func refreshEngineDiagnostics() {
+        self.engineDiagnostics = ProcessBridge.checkEngineDiagnostics()
+    }
+
     public init() {
         refreshPresets()
         loadPersistentLogs()
+        refreshEngineDiagnostics()
     }
 
     public func loadPersistentLogs() {

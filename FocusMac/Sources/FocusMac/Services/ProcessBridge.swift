@@ -67,17 +67,18 @@ public actor ProcessBridge {
         let projectDir = bundleURL.deletingLastPathComponent().deletingLastPathComponent().path
         candidates.append((appDir as NSString).appendingPathComponent("scenepack_generator.py"))
         candidates.append((projectDir as NSString).appendingPathComponent("scenepack_generator.py"))
+        candidates.append((bundleURL.path as NSString).appendingPathComponent("Contents/Resources/scenepack_generator.py"))
 
-        // 3. Known repository directories
-        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/scenepack_generator.py")
-        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software/scenepack_generator.py")
-        candidates.append("/Users/bartosz5500/Antigravity/Kwiatson cliping software copy 2/scenepack_generator.py")
+        // 3. User home and standard locations
+        let homeDir = ("~" as NSString).expandingTildeInPath
+        candidates.append((homeDir as NSString).appendingPathComponent("Focus/scenepack_generator.py"))
 
         // 4. Current working directory (if executed from terminal, ignoring root "/")
         let currentDir = FileManager.default.currentDirectoryPath
         if currentDir != "/" && !currentDir.isEmpty {
             candidates.append((currentDir as NSString).appendingPathComponent("scenepack_generator.py"))
             candidates.append((currentDir as NSString).appendingPathComponent("../scenepack_generator.py"))
+            candidates.append((currentDir as NSString).appendingPathComponent("Focus/scenepack_generator.py"))
         }
 
         for path in candidates {
@@ -91,7 +92,22 @@ public actor ProcessBridge {
     public static func resolvePythonExecutable(forScript scriptPath: String = "") -> String {
         var candidates: [String] = []
 
-        // 1. Check venv adjacent to resolved script
+        // 1. Embedded portable Python inside App Bundle (Standalone distribution)
+        if let resPath = Bundle.main.resourcePath {
+            candidates.append((resPath as NSString).appendingPathComponent("python/bin/python3"))
+            candidates.append((resPath as NSString).appendingPathComponent("python/bin/python"))
+            candidates.append((resPath as NSString).appendingPathComponent("Frameworks/Python.framework/Versions/Current/bin/python3"))
+        }
+
+        // 2. Application Support runtime (auto-bootstrapped user environment)
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Focus").path {
+            candidates.append((appSupport as NSString).appendingPathComponent("runtime/bin/python3"))
+            candidates.append((appSupport as NSString).appendingPathComponent("runtime/bin/python"))
+            candidates.append((appSupport as NSString).appendingPathComponent("venv/bin/python3"))
+            candidates.append((appSupport as NSString).appendingPathComponent("venv/bin/python"))
+        }
+
+        // 3. Check venv adjacent to resolved script
         if !scriptPath.isEmpty && scriptPath != "scenepack_generator.py" {
             let scriptDir = (scriptPath as NSString).deletingLastPathComponent
             if !scriptDir.isEmpty && scriptDir != "/" {
@@ -100,20 +116,19 @@ public actor ProcessBridge {
             }
         }
 
-        // 2. Relative to Focus.app bundle location
+        // 4. Relative to Focus.app bundle location
         let bundleURL = Bundle.main.bundleURL
         let projectDir = bundleURL.deletingLastPathComponent().deletingLastPathComponent().path
         candidates.append((projectDir as NSString).appendingPathComponent("venv/bin/python3"))
         candidates.append((projectDir as NSString).appendingPathComponent("venv/bin/python"))
 
-        // 3. Known configured project venvs with cv2 and full AI dependencies
-        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/venv/bin/python3")
-        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/venv/bin/python")
-        candidates.append("/Users/bartosz5500/Antigravity/Kwiatson cliping software copy 2/venv/bin/python3")
-        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software/venv/bin/python3")
-        candidates.append("/Users/bartosz5500/venv/bin/python3")
+        // 5. Standard user environment paths
+        let home = ("~" as NSString).expandingTildeInPath
+        candidates.append((home as NSString).appendingPathComponent("Focus/venv/bin/python3"))
+        candidates.append((home as NSString).appendingPathComponent(".focus/venv/bin/python3"))
+        candidates.append((home as NSString).appendingPathComponent("venv/bin/python3"))
 
-        // 4. Current working directory venv (if not root "/")
+        // 6. Current working directory venv (if not root "/")
         let currentDir = FileManager.default.currentDirectoryPath
         if currentDir != "/" && !currentDir.isEmpty {
             candidates.append((currentDir as NSString).appendingPathComponent("venv/bin/python3"))
@@ -121,7 +136,7 @@ public actor ProcessBridge {
             candidates.append((currentDir as NSString).appendingPathComponent("../venv/bin/python3"))
         }
 
-        // 5. System Python
+        // 7. System Python
         candidates.append("/opt/homebrew/bin/python3")
         candidates.append("/usr/local/bin/python3")
         candidates.append("/usr/bin/python3")
@@ -134,18 +149,149 @@ public actor ProcessBridge {
         return "python3"
     }
 
-    public static func resolveFFprobeExecutable() -> String? {
-        let candidates = [
-            "/opt/homebrew/bin/ffprobe",
-            "/usr/local/bin/ffprobe",
-            "/usr/bin/ffprobe"
-        ]
+    public static func resolveFFmpegExecutable() -> String? {
+        var candidates: [String] = []
+
+        // 1. Embedded inside App Bundle
+        if let resPath = Bundle.main.resourcePath {
+            candidates.append((resPath as NSString).appendingPathComponent("bin/ffmpeg"))
+        }
+
+        // 2. Application Support
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Focus").path {
+            candidates.append((appSupport as NSString).appendingPathComponent("bin/ffmpeg"))
+        }
+
+        // 3. System paths
+        candidates.append("/opt/homebrew/bin/ffmpeg")
+        candidates.append("/usr/local/bin/ffmpeg")
+        candidates.append("/usr/bin/ffmpeg")
+
         for p in candidates {
             if FileManager.default.isExecutableFile(atPath: p) {
                 return p
             }
         }
         return nil
+    }
+
+    public static func resolveFFprobeExecutable() -> String? {
+        var candidates: [String] = []
+
+        // 1. Embedded inside App Bundle
+        if let resPath = Bundle.main.resourcePath {
+            candidates.append((resPath as NSString).appendingPathComponent("bin/ffprobe"))
+        }
+
+        // 2. Application Support
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Focus").path {
+            candidates.append((appSupport as NSString).appendingPathComponent("bin/ffprobe"))
+        }
+
+        // 3. System paths
+        candidates.append("/opt/homebrew/bin/ffprobe")
+        candidates.append("/usr/local/bin/ffprobe")
+        candidates.append("/usr/bin/ffprobe")
+
+        for p in candidates {
+            if FileManager.default.isExecutableFile(atPath: p) {
+                return p
+            }
+        }
+        return nil
+    }
+
+    public static func resolveEngineExecutable() -> String? {
+        var candidates: [String] = []
+
+        // 1. Embedded inside App Bundle (Standalone distribution)
+        if let resPath = Bundle.main.resourcePath {
+            candidates.append((resPath as NSString).appendingPathComponent("engine/focus-engine"))
+            candidates.append((resPath as NSString).appendingPathComponent("bin/focus-engine"))
+            candidates.append((resPath as NSString).appendingPathComponent("focus-engine/focus-engine"))
+        }
+
+        // 2. Application Support runtime
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Focus").path {
+            candidates.append((appSupport as NSString).appendingPathComponent("engine/focus-engine"))
+            candidates.append((appSupport as NSString).appendingPathComponent("bin/focus-engine"))
+        }
+
+        // 3. Current working directory / dist
+        let currentDir = FileManager.default.currentDirectoryPath
+        if currentDir != "/" && !currentDir.isEmpty {
+            candidates.append((currentDir as NSString).appendingPathComponent("dist_engine/focus-engine/focus-engine"))
+        }
+
+        for p in candidates {
+            if FileManager.default.isExecutableFile(atPath: p) {
+                return (p as NSString).standardizingPath
+            }
+        }
+        return nil
+    }
+
+    public struct EngineDiagnostics: Sendable {
+        public let engineType: String
+        public let pythonPath: String
+        public let ffmpegPath: String?
+        public let ffprobePath: String?
+        public let isReady: Bool
+        public let statusDescription: String
+
+        public init(
+            engineType: String = "Python Runtime",
+            pythonPath: String,
+            ffmpegPath: String?,
+            ffprobePath: String?,
+            isReady: Bool,
+            statusDescription: String
+        ) {
+            self.engineType = engineType
+            self.pythonPath = pythonPath
+            self.ffmpegPath = ffmpegPath
+            self.ffprobePath = ffprobePath
+            self.isReady = isReady
+            self.statusDescription = statusDescription
+        }
+    }
+
+    public static func checkEngineDiagnostics() -> EngineDiagnostics {
+        let engine = resolveEngineExecutable()
+        let script = resolveScriptPath()
+        let python = resolvePythonExecutable(forScript: script)
+        let ffmpeg = resolveFFmpegExecutable()
+        let ffprobe = resolveFFprobeExecutable()
+
+        let hasEngine = (engine != nil)
+        let hasPython = FileManager.default.isExecutableFile(atPath: python)
+        let hasFFmpeg = (ffmpeg != nil)
+        let isReady = (hasEngine || hasPython) && hasFFmpeg
+
+        let engineType = hasEngine ? "Standalone (Zero-Config)" : "Python Environment"
+        let activeRuntimePath = engine ?? python
+
+        let desc: String
+        if isReady {
+            if hasEngine {
+                desc = "Standalone Engine Ready (Embedded, FFmpeg: \(ffmpeg != nil ? "Ready" : "Missing"))"
+            } else {
+                desc = "Engine Ready (Python: \((python as NSString).lastPathComponent), FFmpeg: \(ffmpeg != nil ? "Ready" : "Missing"))"
+            }
+        } else if !hasEngine && !hasPython {
+            desc = "AI Engine runtime not found"
+        } else {
+            desc = "FFmpeg binary missing"
+        }
+
+        return EngineDiagnostics(
+            engineType: engineType,
+            pythonPath: activeRuntimePath,
+            ffmpegPath: ffmpeg,
+            ffprobePath: ffprobe,
+            isReady: isReady,
+            statusDescription: desc
+        )
     }
 
     public func cancel() {
@@ -159,44 +305,68 @@ public actor ProcessBridge {
         currentProcess = nil
     }
 
+    public static func makeProcessEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        var customBins: [String] = []
+
+        // 1. Bundle resources bin
+        if let resPath = Bundle.main.resourcePath {
+            customBins.append((resPath as NSString).appendingPathComponent("bin"))
+            customBins.append((resPath as NSString).appendingPathComponent("python/bin"))
+        }
+
+        // 2. Application Support Focus bin
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Focus").path {
+            customBins.append((appSupport as NSString).appendingPathComponent("bin"))
+            customBins.append((appSupport as NSString).appendingPathComponent("runtime/bin"))
+        }
+
+        // 3. Standard system paths
+        customBins.append(contentsOf: ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"])
+
+        let extraPaths = customBins.joined(separator: ":")
+        if let existing = env["PATH"] {
+            env["PATH"] = extraPaths + ":" + existing
+        } else {
+            env["PATH"] = extraPaths
+        }
+        env["PYTHONUNBUFFERED"] = "1"
+        return env
+    }
+
     public func queryAudioTracks(for videoPath: String) async -> [AudioTrackItem] {
-        // Method 1: Fast direct ffprobe in ~15ms
+        // Method 1: Direct fast probe via local ffprobe if available
         if let ffprobe = Self.resolveFFprobeExecutable() {
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: ffprobe)
             proc.arguments = [
                 "-v", "error",
-                "-select_streams", "a",
                 "-show_entries", "stream=index,codec_name:stream_tags=language,title",
+                "-select_streams", "a",
                 "-of", "json",
                 videoPath
             ]
-            let stdoutPipe = Pipe()
-            proc.standardOutput = stdoutPipe
+            let pipe = Pipe()
+            proc.standardOutput = pipe
             proc.standardError = Pipe()
-
             do {
                 try proc.run()
-                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 proc.waitUntilExit()
 
-                if proc.terminationStatus == 0,
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let streams = json["streams"] as? [[String: Any]], !streams.isEmpty {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let streams = json["streams"] as? [[String: Any]] {
                     var items: [AudioTrackItem] = []
-                    for (idx, stream) in streams.enumerated() {
-                        let tags = stream["tags"] as? [String: Any] ?? [:]
-                        let lang = (tags["language"] as? String) ?? "und"
-                        let title = (tags["title"] as? String) ?? ""
-                        let codec = (stream["codec_name"] as? String) ?? "audio"
+                    for s in streams {
+                        guard let idx = s["index"] as? Int else { continue }
+                        let tags = s["tags"] as? [String: Any]
+                        let lang = tags?["language"] as? String
+                        let title = tags?["title"] as? String
+                        let codec = s["codec_name"] as? String ?? "audio"
 
-                        var labelParts = ["Track \(idx + 1)"]
-                        if lang != "und" && !lang.isEmpty {
-                            labelParts.append("[\(lang.uppercased())]")
-                        }
-                        if !title.isEmpty {
-                            labelParts.append("- \(title)")
-                        }
+                        var labelParts: [String] = ["Track \(idx + 1)"]
+                        if let lang = lang, !lang.isEmpty { labelParts.append("[\(lang.uppercased())]") }
+                        if let title = title, !title.isEmpty { labelParts.append("(\(title))") }
                         labelParts.append("(\(codec))")
                         items.append(AudioTrackItem(index: idx, label: labelParts.joined(separator: " ")))
                     }
@@ -209,28 +379,24 @@ public actor ProcessBridge {
             }
         }
 
-        // Method 2: Fallback to Python backend bridge
-        let script = Self.resolveScriptPath()
-        let python = Self.resolvePythonExecutable(forScript: script)
-        let scriptURL = URL(fileURLWithPath: script)
-        let scriptDirURL = scriptURL.deletingLastPathComponent()
-
+        // Method 2: Standalone Engine or Python backend bridge
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: python)
-        if FileManager.default.fileExists(atPath: scriptDirURL.path) {
-            proc.currentDirectoryURL = scriptDirURL
-        }
-        proc.arguments = [script, "-v", videoPath, "--get-audio-tracks"]
-
-        var env = ProcessInfo.processInfo.environment
-        let extraPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        if let existing = env["PATH"] {
-            env["PATH"] = extraPaths + ":" + existing
+        if let engine = Self.resolveEngineExecutable() {
+            proc.executableURL = URL(fileURLWithPath: engine)
+            proc.arguments = ["-v", videoPath, "--get-audio-tracks"]
         } else {
-            env["PATH"] = extraPaths
+            let script = Self.resolveScriptPath()
+            let python = Self.resolvePythonExecutable(forScript: script)
+            let scriptURL = URL(fileURLWithPath: script)
+            let scriptDirURL = scriptURL.deletingLastPathComponent()
+
+            proc.executableURL = URL(fileURLWithPath: python)
+            if FileManager.default.fileExists(atPath: scriptDirURL.path) {
+                proc.currentDirectoryURL = scriptDirURL
+            }
+            proc.arguments = [script, "-v", videoPath, "--get-audio-tracks"]
         }
-        env["PYTHONUNBUFFERED"] = "1"
-        proc.environment = env
+        proc.environment = Self.makeProcessEnvironment()
 
         let stdoutPipe = Pipe()
         proc.standardOutput = stdoutPipe
@@ -260,7 +426,7 @@ public actor ProcessBridge {
                 }
             }
         } catch {
-            print("ProcessBridge queryAudioTracks fallback error: \(error)")
+            print("Audio track probe error: \(error)")
         }
 
         return []
@@ -272,27 +438,23 @@ public actor ProcessBridge {
     ) async throws {
         cancel()
 
-        let script = Self.resolveScriptPath()
-        let python = Self.resolvePythonExecutable(forScript: script)
-        let scriptURL = URL(fileURLWithPath: script)
-        let scriptDirURL = scriptURL.deletingLastPathComponent()
-
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: python)
-        if FileManager.default.fileExists(atPath: scriptDirURL.path) {
-            proc.currentDirectoryURL = scriptDirURL
-        }
-        proc.arguments = [script] + arguments + ["--json-stream"]
-
-        var env = ProcessInfo.processInfo.environment
-        let extraPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        if let existing = env["PATH"] {
-            env["PATH"] = extraPaths + ":" + existing
+        if let engine = Self.resolveEngineExecutable() {
+            proc.executableURL = URL(fileURLWithPath: engine)
+            proc.arguments = arguments + ["--json-stream"]
         } else {
-            env["PATH"] = extraPaths
+            let script = Self.resolveScriptPath()
+            let python = Self.resolvePythonExecutable(forScript: script)
+            let scriptURL = URL(fileURLWithPath: script)
+            let scriptDirURL = scriptURL.deletingLastPathComponent()
+
+            proc.executableURL = URL(fileURLWithPath: python)
+            if FileManager.default.fileExists(atPath: scriptDirURL.path) {
+                proc.currentDirectoryURL = scriptDirURL
+            }
+            proc.arguments = [script] + arguments + ["--json-stream"]
         }
-        env["PYTHONUNBUFFERED"] = "1"
-        proc.environment = env
+        proc.environment = Self.makeProcessEnvironment()
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()

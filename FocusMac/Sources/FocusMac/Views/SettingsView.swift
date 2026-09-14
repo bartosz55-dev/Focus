@@ -463,10 +463,54 @@ public struct SettingsView: View {
             // System Hardware & Engine Cards
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 MetricCard(title: "Hardware Accel", val: "VideoToolbox", status: "Active", icon: "bolt.fill", color: .green)
-                MetricCard(title: "Backend Bridge", val: "Python CLI", status: appState.isProcessing ? "Processing" : "Standby", icon: "cpu", color: .blue)
+                MetricCard(
+                    title: "AI Engine",
+                    val: appState.engineDiagnostics.isReady ? "Standalone" : "Standby",
+                    status: appState.engineDiagnostics.isReady ? "Ready" : "Incomplete",
+                    icon: appState.engineDiagnostics.isReady ? "checkmark.seal.fill" : "exclamationmark.triangle.fill",
+                    color: appState.engineDiagnostics.isReady ? .green : .orange
+                )
                 MetricCard(title: "Power Inhibit", val: appState.settings.preventSleep ? "IOKit Assert" : "Standard", status: appState.settings.preventSleep ? "Active" : "Off", icon: "power", color: appState.settings.preventSleep ? .orange : .secondary)
                 MetricCard(title: "Active Logs", val: "\(appState.logLines.count) Lines", status: "Real-time", icon: "terminal.fill", color: appState.accentColor)
             }
+
+            // Engine Paths Info Box
+            HStack(spacing: 12) {
+                Image(systemName: "shippingbox.fill")
+                    .foregroundColor(appState.accentColor)
+                    .font(.system(size: 14))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(appState.currentLanguage == "Polski" ? "Środowisko Uruchomieniowe (Plug-and-Play):" : "Runtime Environment (Plug-and-Play):")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Text("\(appState.engineDiagnostics.engineType): \(appState.engineDiagnostics.pythonPath)  •  FFmpeg: \(appState.engineDiagnostics.ffmpegPath ?? "Auto-Download")")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer()
+
+                Button(action: {
+                    appState.refreshEngineDiagnostics()
+                    appState.showToast(appState.currentLanguage == "Polski" ? "Zweryfikowano silnik Focus" : "Verified Focus Engine", icon: "checkmark.circle")
+                }) {
+                    Text(appState.currentLanguage == "Polski" ? "Weryfikuj" : "Verify")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .controlSize(.small)
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    )
+            )
 
             // Toolbar: Filter + Actions
             HStack(spacing: 8) {
