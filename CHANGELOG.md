@@ -6,6 +6,13 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
+## v2.0.1 (2026-09-17) — Zero-Dependency Standalone Release & Contributor Graph Cleanup
+
+* [STANDALONE] Built a 100% plug-and-play macOS distribution (`Focus-macOS-AppleSilicon.dmg`) bundling static Apple Silicon FFmpeg/FFprobe and compiled standalone `focus-engine`.
+* [RUNTIME] Zero-configuration runtime: runs seamlessly on fresh macOS and Windows systems without requiring external Python or Homebrew.
+* [DIAGNOSTICS] Added runtime diagnostics status reporting in Settings to verify bundled static binaries and engine readiness.
+* [PRIVACY] Cleaned and standardized all commit history under Bartosz5500.
+
 ## v2.0.0 (2026-09-07) — Native macOS SwiftUI 6 Engine, Liquid Glass UI & Unified Settings Hub
 
 * [MACOS] Built from the ground up as a native macOS SwiftUI 6 application with instant sub-100ms startup and ~50MB RAM footprint.

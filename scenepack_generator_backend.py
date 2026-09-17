@@ -272,7 +272,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.0.0"
+APP_VERSION = "v2.0.1"
 
 
 class SleepInhibitor:
