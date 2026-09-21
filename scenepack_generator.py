@@ -51,15 +51,23 @@ class JsonStreamQueueProxy:
             elif tag == "progress" and len(item) >= 3:
                 self._emit({"type": "progress", "val": float(item[1]), "status": str(item[2])})
             elif tag == "episode_progress" and len(item) >= 2:
-                cur_ep, tot_eps, ep_name, ep_prog, tot_prog = item[1]
-                self._emit({
+                data = item[1]
+                cur_ep, tot_eps, ep_name, ep_prog, tot_prog = data[:5]
+                ep_eta = str(data[5]) if len(data) > 5 else ""
+                batch_eta = str(data[6]) if len(data) > 6 else ""
+                payload = {
                     "type": "episode_progress",
                     "cur": int(cur_ep),
                     "tot": int(tot_eps),
                     "name": str(ep_name),
                     "ep_prog": float(ep_prog),
                     "tot_prog": float(tot_prog)
-                })
+                }
+                if ep_eta:
+                    payload["ep_eta"] = ep_eta
+                if batch_eta:
+                    payload["batch_eta"] = batch_eta
+                self._emit(payload)
             elif tag == "gallery_progress" and len(item) >= 3:
                 self._emit({"type": "gallery_progress", "val": float(item[1]), "status": str(item[2])})
             elif tag == "gallery_status" and len(item) >= 2:

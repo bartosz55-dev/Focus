@@ -63,7 +63,7 @@ class QtQueueProxy(QObject):
             elif tag == "progress" and len(item) >= 3:
                 self.progress_signal.emit(float(item[1]), str(item[2]))
             elif tag == "episode_progress" and len(item) >= 2:
-                cur_ep, tot_eps, ep_name, ep_prog, tot_prog = item[1]
+                cur_ep, tot_eps, ep_name, ep_prog, tot_prog = item[1][:5]
                 self.episode_progress_signal.emit(cur_ep, tot_eps, str(ep_name), float(ep_prog), float(tot_prog))
             elif tag == "gallery_progress" and len(item) >= 3:
                 self.gallery_progress_signal.emit(float(item[1]), str(item[2]))

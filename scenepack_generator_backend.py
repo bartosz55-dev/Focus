@@ -299,7 +299,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.3.1"
+APP_VERSION = "v2.3.2"
 STUDIO_AUDIO_BITRATE = "320k"
 
 
@@ -3203,7 +3203,7 @@ class ScenePackGenerator:
 
         return False
 
-    def find_scenes(self, video_path: Path, ref_data, padding_before: float, padding_after: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, video_index: int = 0, total_videos: int = 1, skip_intro: bool = False, skip_outro: bool = False, intro_mode: str = "Auto Chapters", intro_duration: float = 90.0) -> List[Tuple[float, float, float]]:
+    def find_scenes(self, video_path: Path, ref_data, padding_before: float, padding_after: float, max_gap_tolerance: float = 1.5, min_scene_duration: float = 1.0, video_index: int = 0, total_videos: int = 1, skip_intro: bool = False, skip_outro: bool = False, intro_mode: str = "Auto Chapters", intro_duration: float = 90.0, batch_start_time: Optional[float] = None) -> List[Tuple[float, float, float]]:
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
             raise IOError(f"Could not open video file: {video_path}")
@@ -3414,15 +3414,32 @@ class ScenePackGenerator:
                     elapsed = time.time() - start_time
                     eta_seconds = (elapsed / episode_progress) - elapsed if episode_progress > 0 else 0
 
-                    eta_mins = int(eta_seconds // 60)
-                    eta_secs = int(eta_seconds % 60)
+                    ep_mins = int(eta_seconds // 60)
+                    ep_secs = int(eta_seconds % 60)
+                    ep_eta_str = f"{ep_mins}m {ep_secs}s"
 
                     if total_videos > 1:
-                        status_text = f"Episode [{video_index + 1}/{total_videos}] '{video_path.name}' ({int(episode_progress*100)}%) | Overall: {int(composite_progress*100)}% | ETA: {eta_mins}m {eta_secs}s"
+                        b_start = batch_start_time if batch_start_time is not None else start_time
+                        batch_elapsed = time.time() - b_start
+                        if composite_progress > 0:
+                            batch_eta_secs = max(0.0, (batch_elapsed / composite_progress) - batch_elapsed)
+                        else:
+                            batch_eta_secs = 0.0
+
+                        if batch_eta_secs >= 3600:
+                            b_hrs = int(batch_eta_secs // 3600)
+                            b_mins = int((batch_eta_secs % 3600) // 60)
+                            batch_eta_str = f"{b_hrs}h {b_mins}m"
+                        else:
+                            b_mins = int(batch_eta_secs // 60)
+                            b_secs = int(batch_eta_secs % 60)
+                            batch_eta_str = f"{b_mins}m {b_secs}s"
+
+                        status_text = f"Episode [{video_index + 1}/{total_videos}] '{video_path.name}' ({int(episode_progress*100)}%) | Ep ETA: {ep_eta_str} | Season ETA: ~{batch_eta_str}"
                         if hasattr(self, "log_queue") and self.log_queue:
-                            self.log_queue.put(("episode_progress", (video_index + 1, total_videos, video_path.name, episode_progress, composite_progress)))
+                            self.log_queue.put(("episode_progress", (video_index + 1, total_videos, video_path.name, episode_progress, composite_progress, ep_eta_str, batch_eta_str)))
                     else:
-                        status_text = f"ETA: {eta_mins}m {eta_secs}s  ({int(episode_progress*100)}%)"
+                        status_text = f"ETA: {ep_eta_str}  ({int(episode_progress*100)}%)"
 
                     if hasattr(self, "log_queue") and self.log_queue:
                         self.log_queue.put(("progress", composite_progress, status_text))
@@ -3840,6 +3857,7 @@ class ScenePackGenerator:
 
         all_intervals = []
         total_videos = len(video_paths)
+        batch_start_time = time.time()
         for idx, v_path in enumerate(video_paths):
             if not v_path.is_file():
                 logging.warning(f"Video file not found: {v_path}, skipping.")
@@ -3856,7 +3874,8 @@ class ScenePackGenerator:
                 v_path, ref_data, padding_before, padding_after, max_gap_tolerance, min_scene_duration,
                 video_index=idx, total_videos=total_videos,
                 skip_intro=skip_intro, skip_outro=skip_outro,
-                intro_mode=intro_mode, intro_duration=intro_duration
+                intro_mode=intro_mode, intro_duration=intro_duration,
+                batch_start_time=batch_start_time
             )
 
             if not intervals:

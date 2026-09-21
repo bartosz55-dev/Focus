@@ -71,6 +71,8 @@ public final class AppState: ObservableObject {
     @Published public var progressValue: Double = 0.0
     @Published public var episodeProgressBadge: String?
     @Published public var episodeProgressBar: Double = 0.0
+    @Published public var currentEpisodeEta: String?
+    @Published public var seasonBatchEta: String?
 
     // Results & Reviews
     @Published public var detectedClips: [ClipInterval] = []
@@ -307,6 +309,10 @@ public final class AppState: ObservableObject {
 
         isProcessing = true
         progressValue = 0.0
+        episodeProgressBadge = nil
+        episodeProgressBar = 0.0
+        currentEpisodeEta = nil
+        seasonBatchEta = nil
         processingStatus = "Initializing scan..."
         detectedClips.removeAll()
         if settings.preventSleep {
@@ -455,6 +461,10 @@ public final class AppState: ObservableObject {
         }
         isProcessing = false
         processingStatus = "Cancelled"
+        episodeProgressBadge = nil
+        episodeProgressBar = 0.0
+        currentEpisodeEta = nil
+        seasonBatchEta = nil
         SleepManager.shared.allowSleep()
         showToast("Process cancelled", icon: "slash.circle")
     }
@@ -466,10 +476,12 @@ public final class AppState: ObservableObject {
         case .progress(let val, let status):
             self.progressValue = val
             self.processingStatus = status
-        case .episodeProgress(let cur, let tot, let name, let epProg, let totProg):
+        case .episodeProgress(let cur, let tot, let name, let epProg, let totProg, let epEta, let batchEta):
             self.episodeProgressBadge = "Episode [\(cur)/\(tot)]: \(name)"
             self.episodeProgressBar = epProg
             self.progressValue = totProg
+            self.currentEpisodeEta = epEta
+            self.seasonBatchEta = batchEta
         case .galleryProgress(let val, let status):
             self.progressValue = val
             self.processingStatus = status
@@ -483,6 +495,8 @@ public final class AppState: ObservableObject {
         case .reviewReady(let clips):
             self.detectedClips = clips
             self.isProcessing = false
+            self.currentEpisodeEta = nil
+            self.seasonBatchEta = nil
             self.processingStatus = "Scan complete! Found \(clips.count) clip(s)."
             self.logLines.append("[INFO] Scan finished successfully with \(clips.count) candidate clip(s).")
             SleepManager.shared.allowSleep()
@@ -491,6 +505,8 @@ public final class AppState: ObservableObject {
             }
         case .renderComplete(let out):
             self.isProcessing = false
+            self.currentEpisodeEta = nil
+            self.seasonBatchEta = nil
             self.progressValue = 1.0
             self.processingStatus = "Render complete! Saved to \(URL(fileURLWithPath: out).lastPathComponent)"
             self.logLines.append("[SUCCESS] Scenepack successfully rendered: \(out)")
@@ -501,10 +517,14 @@ public final class AppState: ObservableObject {
             self.audioTracks = tracks + [AudioTrackItem(index: -1, label: "Keep All Audio Tracks (Multi-Audio)")]
         case .masterConcatComplete(let out):
             self.isProcessing = false
+            self.currentEpisodeEta = nil
+            self.seasonBatchEta = nil
             self.processingStatus = "Master scenepack created: \(URL(fileURLWithPath: out).lastPathComponent)"
             SleepManager.shared.allowSleep()
         case .error(let msg):
             self.isProcessing = false
+            self.currentEpisodeEta = nil
+            self.seasonBatchEta = nil
             self.processingStatus = "Error: \(msg)"
             SleepManager.shared.allowSleep()
             showToast("Error: \(msg)", icon: "xmark.octagon")

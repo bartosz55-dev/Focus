@@ -62,6 +62,14 @@ class TestCLIScenePackGeneratorLogic(unittest.TestCase):
         self.assertEqual(ev3["cur"], 1)
         self.assertEqual(ev3["tot"], 10)
 
+        # Test dual ETA forwarding
+        buf2 = io.StringIO()
+        with redirect_stdout(buf2):
+            proxy.put(("episode_progress", (2, 10, "Episode 2.mp4", 0.5, 0.15, "1m 30s", "12m 00s")))
+        ev_dual = json.loads(buf2.getvalue().strip())
+        self.assertEqual(ev_dual["ep_eta"], "1m 30s")
+        self.assertEqual(ev_dual["batch_eta"], "12m 00s")
+
         ev4 = json.loads(output[3])
         self.assertEqual(ev4["type"], "error")
         self.assertEqual(ev4["message"], "Fatal error occurred")

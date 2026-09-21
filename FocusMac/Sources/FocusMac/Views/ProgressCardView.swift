@@ -72,20 +72,36 @@ public struct ProgressCardView: View {
                 }
 
                 // Progress Bar and ETA
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 8) {
                         if let badge = appState.episodeProgressBadge {
                             Text(badge)
-                                .font(.system(size: 11, weight: .bold))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(appState.accentColor.opacity(0.3)))
+                                .font(.system(size: 10, weight: .bold))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2.5)
+                                .background(Capsule().fill(appState.accentColor.opacity(0.25)))
+                                .foregroundColor(.primary)
                         }
 
-                        Text(appState.processingStatus)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
+                        if let epEta = appState.currentEpisodeEta, let seasonEta = appState.seasonBatchEta, !epEta.isEmpty, !seasonEta.isEmpty {
+                            HStack(spacing: 6) {
+                                Label(epEta, systemImage: "timer")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                Text("•")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary.opacity(0.5))
+                                Label("Season: ~\(seasonEta)", systemImage: "clock.arrow.circlepath")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(appState.accentColor)
+                            }
                             .lineLimit(1)
+                        } else {
+                            Text(appState.processingStatus)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
 
                         Spacer()
 
@@ -94,11 +110,39 @@ public struct ProgressCardView: View {
                             .foregroundColor(appState.accentColor)
                     }
 
-                    // Fluid Animated Progress Bar
+                    // Multi-episode Sub-Progress Bar (Current File)
+                    if appState.episodeProgressBadge != nil {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack {
+                                Text("Current File")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(.secondary.opacity(0.8))
+                                Spacer()
+                                Text("\(Int(appState.episodeProgressBar * 100))%")
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color.primary.opacity(0.08))
+                                        .frame(height: 3)
+
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(appState.accentColor.opacity(0.65))
+                                        .frame(width: max(0, min(geo.size.width * CGFloat(appState.episodeProgressBar), geo.size.width)), height: 3)
+                                        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: appState.episodeProgressBar)
+                                }
+                            }
+                            .frame(height: 3)
+                        }
+                    }
+
+                    // Main Season / Overall Fluid Progress Bar
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.white.opacity(0.1))
+                                .fill(Color.primary.opacity(0.08))
                                 .frame(height: 6)
 
                             RoundedRectangle(cornerRadius: 4)

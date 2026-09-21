@@ -3,7 +3,7 @@ import Foundation
 public enum BridgeEvent: Sendable {
     case log(String)
     case progress(value: Double, status: String)
-    case episodeProgress(current: Int, total: Int, name: String, epProgress: Double, totalProgress: Double)
+    case episodeProgress(current: Int, total: Int, name: String, epProgress: Double, totalProgress: Double, epEta: String?, batchEta: String?)
     case galleryProgress(value: Double, status: String)
     case galleryStatus(String)
     case galleryResults([CharacterProfile])
@@ -563,7 +563,9 @@ public actor ProcessBridge {
             let name = (json["name"] as? String) ?? ""
             let epProg = (json["ep_prog"] as? Double) ?? 0.0
             let totProg = (json["tot_prog"] as? Double) ?? 0.0
-            onEvent(.episodeProgress(current: cur, total: tot, name: name, epProgress: epProg, totalProgress: totProg))
+            let epEta = json["ep_eta"] as? String
+            let batchEta = json["batch_eta"] as? String
+            onEvent(.episodeProgress(current: cur, total: tot, name: name, epProgress: epProg, totalProgress: totProg, epEta: epEta, batchEta: batchEta))
         case "gallery_progress":
             let val = (json["val"] as? Double) ?? 0.0
             let status = (json["status"] as? String) ?? ""
