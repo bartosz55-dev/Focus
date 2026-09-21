@@ -133,6 +133,7 @@ def main():
     parser.add_argument("--scan-only", action="store_true", help="Perform scan and prepare review list without final render.")
     parser.add_argument("--intervals-json-file", type=str, help="Path to JSON file with reviewed clip intervals to render directly.")
     parser.add_argument("--get-audio-tracks", action="store_true", help="Query and print audio streams as JSON for video file.")
+    parser.add_argument("--export-clips-folder", action="store_true", help="Export individual scene clips folder alongside master scenepack.")
 
     args = parser.parse_args()
 
@@ -185,7 +186,8 @@ def main():
                 output_path=output_path,
                 aspect_ratio=args.aspect,
                 audio_track_index=args.audio_track,
-                export_quality=args.quality
+                export_quality=args.quality,
+                export_clips_folder=args.export_clips_folder
             )
             if args.json_stream:
                 print(json.dumps({"type": "render_complete", "output": str(output_path)}))
@@ -281,7 +283,8 @@ def main():
                 skip_outro=args.skip_outro,
                 intro_mode=args.intro_mode,
                 intro_duration=args.intro_duration,
-                tolerance=args.tolerance
+                tolerance=args.tolerance,
+                export_clips_folder=args.export_clips_folder
             )
     except Exception as e:
         logging.error(f"Scenepack processing failed: {str(e)}")

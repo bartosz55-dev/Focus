@@ -1,6 +1,6 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v2.0.1)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v2.1.0)
 
-[![Version](https://img.shields.io/badge/version-v2.0.1-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
+[![Version](https://img.shields.io/badge/version-v2.1.0-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
 [![Changelog](https://img.shields.io/badge/changelog-132%20releases-success.svg?style=for-the-badge)](CHANGELOG.md)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-SwiftUI%206%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)

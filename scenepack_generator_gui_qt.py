@@ -32,7 +32,7 @@ import scenepack_generator_backend as sg_engine
 from scenepack_generator_backend import (
     ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION,
     get_changelog_text, get_app_dir, parse_video_paths, natural_sort_key,
-    SleepInhibitor, PresetManager
+    SleepInhibitor, PresetManager, generate_scene_standard_filename
 )
 from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker, MasterConcatWorker
@@ -623,7 +623,7 @@ class FocusApp(QMainWindow):
             "intro_duration": 90, "export_quality": "Auto (Match Source Bitrate)",
             "play_sound": True, "appearance_mode": "Dark", "theme": "violet",
             "language": "English", "default_mode": "Real Faces",
-            "prevent_sleep": True, "auto_render": False
+            "prevent_sleep": True, "auto_render": False, "export_clips_folder": False
         }
         settings_path = Path.home() / ".focus_settings.json"
         if not settings_path.exists():
@@ -656,6 +656,7 @@ class FocusApp(QMainWindow):
                 "intro_mode": getattr(self, 'combo_intro_mode', None) and self.combo_intro_mode.currentText(),
                 "intro_duration": float(getattr(self, 'input_intro_duration', None) and self.input_intro_duration.text() or 90),
                 "auto_render": getattr(self, 'chk_auto_render', None) and self.chk_auto_render.isChecked(),
+                "export_clips_folder": getattr(self, 'chk_export_clips_folder', None) and self.chk_export_clips_folder.isChecked(),
                 "prevent_sleep": getattr(self, 'prevent_sleep_enabled', True),
                 "play_sound": self.settings.get("play_sound", True),
                 "appearance_mode": self.settings.get("appearance_mode", "Dark"),
@@ -1265,6 +1266,13 @@ class FocusApp(QMainWindow):
         self.chk_auto_render.setChecked(self.settings.get("auto_render", False))
         self.chk_auto_render.toggled.connect(self.save_current_settings)
         intro_box.addWidget(self.chk_auto_render)
+
+        intro_box.addSpacing(14)
+        self.chk_export_clips_folder = QCheckBox(get_translation(self.current_lang, "export_clips_folder_enable"))
+        self.chk_export_clips_folder.setChecked(self.settings.get("export_clips_folder", False))
+        self.chk_export_clips_folder.setToolTip(get_translation(self.current_lang, "tt_export_clips_folder"))
+        self.chk_export_clips_folder.toggled.connect(self.save_current_settings)
+        intro_box.addWidget(self.chk_export_clips_folder)
 
         intro_box.addStretch()
         auto_layout.addLayout(intro_box)
@@ -1923,6 +1931,9 @@ class FocusApp(QMainWindow):
             self.btn_delete_preset.setText(get_translation(lang_name, "preset_delete_btn"))
         if hasattr(self, "chk_auto_render"):
             self.chk_auto_render.setText(get_translation(lang_name, "auto_render_enable"))
+        if hasattr(self, "chk_export_clips_folder"):
+            self.chk_export_clips_folder.setText(get_translation(lang_name, "export_clips_folder_enable"))
+            self.chk_export_clips_folder.setToolTip(get_translation(lang_name, "tt_export_clips_folder"))
         if hasattr(self, "btn_select_all"):
             self.btn_select_all.setText(f"✅ {get_translation(lang_name, 'select_all')}")
         if hasattr(self, "btn_deselect_all"):
@@ -2143,7 +2154,13 @@ class FocusApp(QMainWindow):
             self.selected_ref_data = None
 
     def select_output(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save Output As", "", "MP4 Video (*.mp4);;All Files (*.*)")
+        valid_paths = self.get_input_video_paths()
+        v_stem = valid_paths[0].stem if valid_paths else "scenepack"
+        char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+        suggested_name = generate_scene_standard_filename(v_stem, character_name=char_name)
+        default_dir = Path(self.output_path_str).parent if self.output_path_str else (valid_paths[0].parent if valid_paths else Path.home() / "Desktop")
+        suggested_path = str(default_dir / suggested_name)
+        path, _ = QFileDialog.getSaveFileName(self, "Save Output As", suggested_path, "MP4 Video (*.mp4);;All Files (*.*)")
         if path:
             if not path.lower().endswith(".mp4"):
                 path += ".mp4"
@@ -2216,7 +2233,9 @@ class FocusApp(QMainWindow):
         if (self.is_batch_running or len(valid_paths) > 1) and not self.output_path_str:
             v_name = valid_paths[0].stem if len(valid_paths) == 1 else "Master_MultiVideo"
             out_dir = Path.home() / "Desktop"
-            self.output_path_str = str(out_dir / f"{v_name}_scenepack.mp4")
+            char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+            clean_name = generate_scene_standard_filename(v_name, character_name=char_name)
+            self.output_path_str = str(out_dir / clean_name)
             self.lbl_output_path.setText(Path(self.output_path_str).name)
 
         if not self.has_valid_video_input() or not self.output_path_str:
@@ -2286,7 +2305,12 @@ class FocusApp(QMainWindow):
                 return
 
         if not self.output_path_str:
-            path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", "scenepack.mp4", "MP4 Video (*.mp4);;All Files (*.*)")
+            valid_paths = self.get_input_video_paths()
+            v_stem = valid_paths[0].stem if valid_paths else "scenepack"
+            char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+            default_name = generate_scene_standard_filename(v_stem, character_name=char_name)
+            default_dir = valid_paths[0].parent if valid_paths else Path.home() / "Desktop"
+            path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", str(default_dir / default_name), "MP4 Video (*.mp4);;All Files (*.*)")
             if path:
                 if not path.lower().endswith(".mp4"):
                     path += ".mp4"
@@ -2316,11 +2340,13 @@ class FocusApp(QMainWindow):
         self._acquire_sleep_lock("Rendering Video Clips")
         generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
         export_quality = self.combo_export_quality.currentText()
+        export_clips_folder = self.chk_export_clips_folder.isChecked() if hasattr(self, 'chk_export_clips_folder') else False
         self.render_worker = RenderWorker(
             generator_inst, self.video_path_str, selected_intervals,
             self.output_path_str, aspect_canonical, self.queue_proxy,
             audio_track_index=audio_track_idx,
-            export_quality=export_quality
+            export_quality=export_quality,
+            export_clips_folder=export_clips_folder
         )
         self.render_worker.start()
 
@@ -2822,7 +2848,9 @@ class FocusApp(QMainWindow):
 
             out_dir = Path(self.output_path_str).parent if self.output_path_str else Path.home() / "Desktop"
             v_name = Path(self.video_path_str).stem
-            auto_out_path = out_dir / f"{v_name}_scenepack.mp4"
+            char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+            clean_name = generate_scene_standard_filename(v_name, character_name=char_name)
+            auto_out_path = out_dir / clean_name
             self.output_path_str = str(auto_out_path)
             self.lbl_output_path.setText(auto_out_path.name)
             QTimer.singleShot(800, self.start_render)

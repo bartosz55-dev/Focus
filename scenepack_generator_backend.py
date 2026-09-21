@@ -272,7 +272,110 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.0.1"
+APP_VERSION = "v2.1.0"
+STUDIO_AUDIO_BITRATE = "320k"
+
+
+def generate_scene_standard_filename(
+    video_path: Union[str, Path],
+    character_name: Optional[str] = None,
+    source_tag: Optional[str] = None
+) -> str:
+    """
+    Generates an industry-standard (411 / Scene standard) clean scenepack filename:
+    Pattern: '{Character} - {Show Title} ({Year}) {Season} - [{Resolution} {Source}] - Focus.mp4'
+    """
+    path_obj = Path(video_path)
+    stem = path_obj.stem
+
+    res_match = re.search(r"\b(2160p|4k|1080p|720p|480p)\b", stem, re.IGNORECASE)
+    res_str = res_match.group(1).lower() if res_match else ""
+    if res_str == "4k":
+        res_str = "4K"
+    elif res_str:
+        res_str = res_str.lower()
+    else:
+        res_str = "1080p"
+
+    source_match = re.search(r"\b(remux|bluray|blu-ray|bdrip|web-dl|webrip|web|hdtv|uhd)\b", stem, re.IGNORECASE)
+    if source_match:
+        s_raw = source_match.group(1).upper()
+        if "REMUX" in s_raw:
+            detected_source = "REMUX"
+        elif "BLU" in s_raw or "BD" in s_raw:
+            detected_source = "BluRay"
+        elif "WEB-DL" in s_raw or "WEBDL" in s_raw:
+            detected_source = "WEB-DL"
+        elif "WEBRIP" in s_raw:
+            detected_source = "WEBRip"
+        elif "UHD" in s_raw:
+            detected_source = "UHD"
+        else:
+            detected_source = s_raw
+    else:
+        detected_source = source_tag or "WEB-DL"
+
+    season_match = re.search(r"\b(s\d{1,2}(?:e\d{1,2})?|season\s*\d{1,2})\b", stem, re.IGNORECASE)
+    season_str = ""
+    if season_match:
+        raw_s = season_match.group(1).upper()
+        s_only = re.search(r"S(\d{1,2})", raw_s)
+        if s_only:
+            season_str = f"S{int(s_only.group(1)):02d}"
+        else:
+            season_str = raw_s.replace("SEASON", "S").strip()
+
+    year_match = re.search(r"\b(19\d{2}|20\d{2})\b", stem)
+    year_str = f"({year_match.group(1)})" if year_match else ""
+
+    clean_stem = re.sub(r"\[.*?\]|\(.*?\)", " ", stem)
+    tech_tags = [
+        r"\b(x264|x265|h264|h265|hevc|10bit|hdr|dovi|aac|dts|ddp|flac|don|ntb|qxr|framestor|flux|dimension)\b"
+    ]
+    for tag in tech_tags:
+        clean_stem = re.sub(tag, " ", clean_stem, flags=re.IGNORECASE)
+
+    cutoff_patterns = [
+        r"\b(s\d{1,2}(?:e\d{1,2})?|season\s*\d{1,2})\b",
+        r"\b(2160p|4k|1080p|720p)\b",
+        r"\b(19\d{2}|20\d{2})\b",
+        r"\b(bluray|remux|web-dl|webrip)\b"
+    ]
+    earliest_cutoff = len(clean_stem)
+    for pat in cutoff_patterns:
+        m = re.search(pat, clean_stem, re.IGNORECASE)
+        if m and m.start() < earliest_cutoff and m.start() > 2:
+            earliest_cutoff = m.start()
+
+    raw_title = clean_stem[:earliest_cutoff].replace(".", " ").replace("_", " ").strip("- ").strip()
+    raw_title = re.sub(r"\s+", " ", raw_title)
+    raw_title = re.sub(r"\s*-\s*\d+\s*$", "", raw_title).strip()
+    if not raw_title:
+        raw_title = "Scenepack"
+
+    parts = []
+    has_character = character_name and character_name.strip() and character_name.lower() not in ("all", "all characters", "wyszyscy", "wszystkie postacie")
+    if has_character:
+        parts.append(character_name.strip())
+
+    title_block = raw_title
+    if year_str and year_str not in title_block:
+        title_block = f"{title_block} {year_str}".strip()
+    if season_str and season_str not in title_block:
+        title_block = f"{title_block} {season_str}".strip()
+
+    if has_character:
+        parts.append(f"- {title_block}")
+    else:
+        parts.append(title_block)
+
+    meta_tag = f"[{res_str} {detected_source}]".strip()
+    parts.append(f"- {meta_tag} - Focus.mp4")
+
+    filename = " ".join(parts)
+    filename = re.sub(r"\s+", " ", filename)
+    filename = re.sub(r"\s+-\s+-", " -", filename)
+    return filename
 
 
 class SleepInhibitor:
@@ -550,6 +653,8 @@ TRANSLATIONS = {
         "th_duration": "Duration (s)",
         "audio_all_tracks": "Keep All Audio Tracks (Multi/Dual Audio)",
         "auto_render_enable": "Auto-Render all clips (Skip review)",
+        "export_clips_folder_enable": "Export Scene Clips Folder alongside Master",
+        "tt_export_clips_folder": "Exports each extracted scene as a separate fast-start clip in a dedicated folder alongside the master scenepack file.",
         "prevent_sleep_enable": "Prevent computer from sleeping during processing",
         "custom_color_btn": "Custom Color...",
         "preset_save_btn": "Save Preset...",
@@ -702,6 +807,8 @@ TRANSLATIONS = {
         "th_duration": "Długość (s)",
         "audio_all_tracks": "Zachowaj Obie / Wszystkie Ścieżki Audio (Multi-Audio)",
         "auto_render_enable": "Automatycznie renderuj wszystkie klipy (Pomiń weryfikację)",
+        "export_clips_folder_enable": "Eksportuj folder z osobnymi scenami obok Mastera",
+        "tt_export_clips_folder": "Zapisuje każdą wyciętą scenę jako osobny plik w dedykowanym folderze obok głównego scenepacka.",
         "prevent_sleep_enable": "Blokuj uśpienie i wygaszanie komputera podczas pracy",
         "custom_color_btn": "Własny Kolor...",
         "preset_save_btn": "Zapisz Preset...",
@@ -898,6 +1005,8 @@ TRANSLATIONS = {
         "light": "ライト",
         "dark": "ダーク",
         "system": "システム",
+        "export_clips_folder_enable": "個別シーンクリップフォルダも同時に書き出す",
+        "tt_export_clips_folder": "マスター動画と同時に、各シーンを個別クリップとして専用フォルダに出力します。",
         "colors": ["赤", "オレンジ", "黄色", "緑", "青", "インディゴ", "紫", "ピンク"],
 "tt_pad_before": "検出された顔の前に余分な秒数を追加します。",
         "tt_pad_after": "検出された顔の後ろに余分な秒数を追加します。",
@@ -1597,6 +1706,7 @@ class ScenePackGenerator:
         self.mode = mode
         self.current_lang = current_lang
         self.is_cancelled = False
+        self._color_meta_cache = {}
 
         # Determine the directory where the script is located
         if PlatformManager.is_windows():
@@ -1897,6 +2007,67 @@ class ScenePackGenerator:
             tracks = [(0, "Default Audio Stream (Track 1)")]
 
         return tracks
+
+    def _probe_color_metadata(self, video_path: Any) -> dict:
+        """
+        Detects video stream color space, transfer characteristics, and primaries to identify HDR.
+        Returns a dict with: {'color_space': str, 'color_transfer': str, 'color_primaries': str, 'pix_fmt': str, 'is_hdr': bool}
+        """
+        default_meta = {
+            "color_space": "bt709",
+            "color_transfer": "bt709",
+            "color_primaries": "bt709",
+            "pix_fmt": "yuv420p",
+            "is_hdr": False
+        }
+        parsed = parse_video_paths(video_path)
+        target_path = parsed[0] if parsed else None
+        if not target_path:
+            return default_meta
+
+        cache_key = str(target_path)
+        if hasattr(self, "_color_meta_cache") and cache_key in self._color_meta_cache:
+            return self._color_meta_cache[cache_key]
+
+        try:
+            cmd = [
+                str(self.ffprobe_path), '-v', 'error',
+                '-select_streams', 'v:0',
+                '-show_entries', 'stream=color_space,color_transfer,color_primaries,pix_fmt',
+                '-of', 'json', str(target_path)
+            ]
+            res = self.run_subprocess(cmd, capture_output=True, text=True)
+            if res.returncode == 0 and res.stdout:
+                data = json.loads(res.stdout)
+                streams = data.get('streams', [])
+                if streams:
+                    vstream = streams[0]
+                    c_space = str(vstream.get("color_space") or "").lower()
+                    c_trans = str(vstream.get("color_transfer") or "").lower()
+                    c_prim = str(vstream.get("color_primaries") or "").lower()
+                    pix_fmt = str(vstream.get("pix_fmt") or "").lower()
+
+                    is_hdr = (
+                        c_trans in ("smpte2084", "arib-std-b67", "bt2020-10", "bt2020-12") or
+                        c_space in ("bt2020nc", "bt2020c", "bt2020") or
+                        c_prim in ("bt2020",) or
+                        ("2020" in pix_fmt and "10" in pix_fmt)
+                    )
+                    meta = {
+                        "color_space": c_space or "bt709",
+                        "color_transfer": c_trans or "bt709",
+                        "color_primaries": c_prim or "bt709",
+                        "pix_fmt": pix_fmt or "yuv420p",
+                        "is_hdr": is_hdr
+                    }
+                    if not hasattr(self, "_color_meta_cache"):
+                        self._color_meta_cache = {}
+                    self._color_meta_cache[cache_key] = meta
+                    return meta
+        except Exception as e:
+            logging.warning(f"Could not probe color metadata with ffprobe: {e}")
+
+        return default_meta
 
     def get_video_chapters(self, video_path: Any) -> List[dict]:
         """
@@ -2848,7 +3019,7 @@ class ScenePackGenerator:
         self._cached_bitrates[str(v_path)] = 3_000_000
         return 3_000_000
 
-    def extract_and_concat(self, video_path: Path, intervals: List[Tuple[float, float, float]], output_path: Path, aspect_ratio: str = "16:9 Original", audio_track_index: int = 0, export_quality: str = "Auto (Match Source Bitrate)"):
+    def extract_and_concat(self, video_path: Path, intervals: List[Tuple[float, float, float]], output_path: Path, aspect_ratio: str = "16:9 Original", audio_track_index: int = 0, export_quality: str = "Auto (Match Source Bitrate)", export_clips_folder: bool = False):
         if not intervals:
             logging.warning("No scenes to extract.")
             return
@@ -2885,12 +3056,18 @@ class ScenePackGenerator:
 
                 src_fps = self._get_video_fps(src_video)
                 fps_tag = f",fps={src_fps:.3f}" if (src_fps > 0 and abs(src_fps - 24.0) > 0.05) else ",fps=24"
-                vf_filter = f"setpts=PTS-STARTPTS{fps_tag}"
+
+                # Check for HDR Wide Color Gamut in source video
+                color_meta = self._probe_color_metadata(src_video)
+                is_hdr = color_meta.get("is_hdr", False)
+                hdr_tonemap = "colorspace=iall=bt2020:all=bt709:itrc=bt2020-10:trc=bt709:format=yuv420p," if is_hdr else ""
+
+                vf_filter = f"{hdr_tonemap}setpts=PTS-STARTPTS{fps_tag}"
                 aspect_lower = aspect_ratio.lower()
                 if "9:16" in aspect_ratio and ("vert" in aspect_lower or "auto" in aspect_lower or "pion" in aspect_lower or "vertical" in aspect_lower):
-                    vf_filter = f"crop='ceil(ih*9/32)*2':'ceil(ih/2)*2':'max(0,min(iw-ceil(ih*9/32)*2,floor(iw*{avg_x}-ceil(ih*9/32))))':0,setpts=PTS-STARTPTS{fps_tag}"
+                    vf_filter = f"{hdr_tonemap}crop='ceil(ih*9/32)*2':'ceil(ih/2)*2':'max(0,min(iw-ceil(ih*9/32)*2,floor(iw*{avg_x}-ceil(ih*9/32))))':0,setpts=PTS-STARTPTS{fps_tag}"
                 elif "9:16" in aspect_ratio and ("blur" in aspect_lower or "rozm" in aspect_lower or "tł" in aspect_lower or "background" in aspect_lower):
-                    vf_filter = f"[0:v]split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS{fps_tag}"
+                    vf_filter = f"[0:v]{hdr_tonemap}split=2[fg][bg];[bg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=increase,crop='ceil(ih*9/32)*2':'ceil(ih/2)*2',boxblur=20:20[bg2];[fg]scale='ceil(ih*9/32)*2':'ceil(ih/2)*2':force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,setpts=PTS-STARTPTS{fps_tag}"
 
                 hwaccel_flags = self._get_hwaccel_args()
                 cmd = [
@@ -2974,7 +3151,7 @@ class ScenePackGenerator:
                     '-bf', '0',
                     '-pix_fmt', 'yuv420p',
                     '-c:a', 'aac',
-                    '-b:a', '192k',
+                    '-b:a', STUDIO_AUDIO_BITRATE,
                     '-ar', '48000',
                     '-ac', '2',
                     '-avoid_negative_ts', 'make_zero',
@@ -3046,6 +3223,24 @@ class ScenePackGenerator:
                 raise RuntimeError(f"FFmpeg concat failed: {concat_result.stderr}")
 
             logging.info(f"Successfully saved scenepack to:\n{output_path.name}")
+
+            if export_clips_folder and chunk_paths:
+                clips_dir = output_path.parent / f"{output_path.stem}_clips"
+                clips_dir.mkdir(parents=True, exist_ok=True)
+                for idx, cp in enumerate(chunk_paths):
+                    dest_clip = clips_dir / f"Scene_{idx+1:03d}.mp4"
+                    remux_cmd = [
+                        str(self.ffmpeg_path), '-y',
+                        '-hide_banner', '-loglevel', 'error',
+                        '-i', str(cp),
+                        '-c', 'copy',
+                        '-movflags', '+faststart',
+                        str(dest_clip)
+                    ]
+                    self.run_subprocess(remux_cmd, capture_output=True, text=True)
+                logging.info(f"Successfully exported {len(chunk_paths)} individual scene clips to:\n{clips_dir.name}")
+                if hasattr(self, "log_queue") and self.log_queue:
+                    self.log_queue.put(("log", f"Exported individual scene clips folder: {clips_dir.name}"))
 
         finally:
             logging.info("Cleaning up temporary chunk files...")
@@ -3287,6 +3482,7 @@ class ScenePackGenerator:
         intro_mode: str = "Auto Chapters",
         intro_duration: float = 90.0,
         tolerance: Optional[float] = None,
+        export_clips_folder: bool = False,
         **kwargs: Any
     ):
         """
@@ -3333,5 +3529,6 @@ class ScenePackGenerator:
             output_path=output_path,
             aspect_ratio=aspect_ratio,
             audio_track_index=audio_track_index,
-            export_quality=export_quality
+            export_quality=export_quality,
+            export_clips_folder=export_clips_folder
         )

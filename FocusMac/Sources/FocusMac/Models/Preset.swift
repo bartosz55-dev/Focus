@@ -48,7 +48,8 @@ public enum PresetManager {
             "skip_outro": settings.skipOutro,
             "intro_mode": settings.introMode,
             "intro_dur": settings.introDuration,
-            "auto_render": settings.autoRender
+            "auto_render": settings.autoRender,
+            "export_clips_folder": settings.exportClipsFolder
         ]
         presets[name] = dict
         do {

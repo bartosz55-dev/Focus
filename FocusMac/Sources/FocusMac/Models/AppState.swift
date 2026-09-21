@@ -199,6 +199,7 @@ public final class AppState: ObservableObject {
         if let im = data["intro_mode"] as? String { settings.introMode = im }
         if let id = numDouble(data["intro_dur"]) { settings.introDuration = id }
         if let ar = boolVal(data["auto_render"]) { settings.autoRender = ar }
+        if let exp = boolVal(data["export_clips_folder"]) { settings.exportClipsFolder = exp }
         if let aspStr = data["aspect"] as? String, let asp = AspectRatioOption(rawValue: aspStr) {
             settings.aspect = asp
         }
@@ -354,6 +355,9 @@ public final class AppState: ObservableObject {
             "--quality", settings.quality.rawValue,
             "--audio-track", String(settings.audioTrackIndex)
         ]
+        if settings.exportClipsFolder {
+            args.append("--export-clips-folder")
+        }
         if let img = referenceImageURL {
             args += ["-i", img.path]
         } else if let char = selectedCharacterProfile {

@@ -6,6 +6,14 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
+## v2.1.0 (2026-09-21) — 411 Scenepack Standards, HDR Tone-Mapping & Studio Audio Pipeline
+
+* [COLOR / HDR] Automatic HDR-to-SDR Tone-Mapping: Automatically inspects color metadata (`color_space`, `color_transfer`, `color_primaries`, `pix_fmt`) with ffprobe. Injects native FFmpeg BT.2020 to BT.709 tone-mapping filter graph for HDR10, Dolby Vision, and HLG 4K sources, preventing washed-out or desaturated clips.
+* [AUDIO] Studio-Grade 320 kbps AAC Stereo: Upgraded scene chunk audio pipeline to 320 kbps AAC at 48 kHz (`STUDIO_AUDIO_BITRATE = "320k"`), ensuring uncompromised audio fidelity for high-energy music and dialogue edits.
+* [CLIPS FOLDER] Discrete Scene Clips Folder Export (`export_clips_folder`): Added option in PySide6 GUI, FocusMac SwiftUI, and CLI (`--export-clips-folder`) to remux and export each detected cut as an individual, faststart-enabled file (`Scene_001.mp4`, etc.) into a dedicated folder alongside the consolidated master scenepack.
+* [NAMING] Smart 411 / Scene Standard Filename Generator: Built-in naming engine automatically suggests standard release filenames (`{Character} - {Title} ({Year}) {Season} - [{Resolution} {Source}] - Focus.mp4`) in save dialogs and batch queues.
+* [UI & MAC] Full cross-platform parity: integrated new export controls into macOS SwiftUI Settings & Tuning panel, PySide6 Qt GUI, and JSON stream engine with complete multilingual localization.
+
 ## v2.0.1 (2026-09-17) — Zero-Dependency Standalone Release & Contributor Graph Cleanup
 
 * [STANDALONE] Built a 100% plug-and-play macOS distribution (`Focus-macOS-AppleSilicon.dmg`) bundling static Apple Silicon FFmpeg/FFprobe and compiled standalone `focus-engine`.

@@ -189,6 +189,10 @@ public struct TuningSectionView: View {
                                 .toggleStyle(.checkbox)
                                 .font(.system(size: 11, weight: .bold))
                                 .tint(appState.accentColor)
+
+                            Toggle(appState.localized("export_clips_folder"), isOn: $appState.settings.exportClipsFolder)
+                                .toggleStyle(.checkbox)
+                                .font(.system(size: 11, weight: .medium))
                         }
 
                         HStack(spacing: 6) {
