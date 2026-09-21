@@ -16,7 +16,8 @@ from scenepack_generator_backend import (
     ScenePackGenerator,
     write_concat_list,
     APP_VERSION,
-    PlatformManager
+    PlatformManager,
+    parse_reference_image_paths
 )
 
 CREATE_NO_WINDOW = PlatformManager.get_creation_flags()
@@ -109,7 +110,7 @@ class JsonStreamQueueProxy:
 def main():
     parser = argparse.ArgumentParser(description="Focus Scenepack Generator CLI & Native Bridge.")
     parser.add_argument("-v", "--video", type=str, help="Path to the input video file (or comma-separated paths).")
-    parser.add_argument("-i", "--image", type=str, help="Path to the reference face image.")
+    parser.add_argument("-i", "--image", type=str, help="Path to reference face image(s), or comma/semicolon-separated paths.")
     parser.add_argument("-o", "--output", type=str, help="Path to save the output scenepack video.")
     parser.add_argument("--mode", type=str, default="Real Faces", choices=["Real Faces", "Anime"], help="Detection mode.")
     parser.add_argument("--pad-before", type=float, default=2.0, help="Seconds of padding before a detected face.")
@@ -199,7 +200,8 @@ def main():
             return
 
         # 3. Scan & Review or Full Generation with Reference Face
-        ref_image_path = Path(args.image).resolve()
+        ref_paths = parse_reference_image_paths(args.image)
+        ref_image_path = ref_paths if len(ref_paths) > 1 else (ref_paths[0] if ref_paths else Path(args.image).resolve())
 
         if args.scan_only:
             # Perform scan and emit review checklist

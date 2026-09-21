@@ -134,7 +134,7 @@ class ScanWorker(QThread):
             self.generator_instance = self.generator_cls(
                 log_queue=self.queue_proxy, frame_skip=self.skip, mode=self.mode, tolerance=self.tolerance
             )
-            ref_arg = self.image_path if isinstance(self.image_path, dict) or self.image_path is None else Path(self.image_path)
+            ref_arg = self.image_path
             scanned_intervals = self.generator_instance.scan_and_prepare(
                 self.video_path, ref_arg,
                 self.pad_before, self.pad_after, self.max_gap, self.min_scene,

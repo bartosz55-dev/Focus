@@ -1,7 +1,7 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v2.2.0)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v2.3.0)
 
-[![Version](https://img.shields.io/badge/version-v2.2.0-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
-[![Changelog](https://img.shields.io/badge/changelog-133%20releases-success.svg?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.3.0-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
+[![Changelog](https://img.shields.io/badge/changelog-134%20releases-success.svg?style=for-the-badge)](CHANGELOG.md)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-SwiftUI%206%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -13,12 +13,13 @@
 
 **Focus** is a high-performance, AI-driven desktop video processing studio engineered for content creators, video editors, and anime/film clippers. It automates the tedious process of finding, tracking, cropping, and extracting character-specific scenes from full-length movies, anime series, or long-form videos—converting raw footage into high-quality, ready-to-edit scenepacks in minutes.
 
-By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Perceptual dHash Feature Matching**, **Letterbox Auto-Cropping**, **Premiere/DaVinci FCPXML Timeline Export**, **Intelligent Intro/Outro Removal**, **Auto Match Source Bitrate Engine**, **Voice Activity Detection (VAD)**, **Camera Shot Cut Snapping**, and multi-core **FFmpeg parallel rendering**, Focus scans entire video seasons and extracts strictly the exact moments that matter.
+By combining **Multi-Reference Face Recognition (Real Faces & Anime)**, **Zero-Lock Color & Perceptual dHash Feature Matching**, **Letterbox Auto-Cropping**, **Premiere/DaVinci FCPXML Timeline Export**, **Intelligent Intro/Outro Removal**, **Auto Match Source Bitrate Engine**, **Voice Activity Detection (VAD)**, **Camera Shot Cut Snapping**, and multi-core **FFmpeg parallel rendering**, Focus scans entire video seasons and extracts strictly the exact moments that matter.
 
 ---
 
-## ⚡ Key Features (v2.2.0)
+## ⚡ Key Features (v2.3.0)
 
+* **👥 Multi-Reference Face Photos & Recall Boost:** Select and combine multiple reference photos for a character (different angles, profile shots, expressions, lighting conditions) to dramatically enhance detection recall across dynamic footage.
 * **🎞️ Auto-Crop Letterbox (Black Bars Detection & Removal):** Multi-point frame sampling engine (20%, 40%, 60%, 80%) automatically detects cinematic 2.39:1 / 2.35:1 letterbox or 4:3 pillarbox black bars and generates clean cropped footage with night-scene safety guards and even dimensions.
 * **⏱️ Premiere Pro & DaVinci Resolve Timeline Export (`.xml` FCPXML):** Instantly outputs an industry-standard Apple Final Cut Pro XML v4 timeline alongside the scenepack. Editors can drag-and-drop cuts directly into their Premiere Pro or DaVinci Resolve timeline without waiting for video re-encoding!
 * **📋 Technical Specifications & Compatibility Report (`{stem}_info.txt`):** Auto-generates an editor specification sheet verifying constant frame rate (CFR 24.000 fps), Studio 320 kbps audio, Rec.709 color matrix, and zero-drift compatibility with Adobe After Effects CC and CapCut.

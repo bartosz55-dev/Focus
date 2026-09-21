@@ -6,6 +6,20 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
+## v2.3.0 (2026-09-21) — Multi-Reference Face Photos & Enhanced Detection Recall
+
+* **[MULTI-REFERENCE FACES] Support for Multiple Character Photos:** Users can now select and combine multiple reference photos for a single character (different camera angles, side profiles, diverse lighting conditions, smiling/laughing, and dynamic facial expressions). This resolves the #1 limitation of single-photo matching where dynamic camera angles or lighting shifts resulted in dropped scenes.
+* **[MATCHING ENGINE] Comprehensive Multi-Vector & Multi-Feature Comparison:**
+  - **Real Faces Mode:** Extracts 128-dimensional facial encodings from each reference photo. During scene scanning, every candidate face is compared across all reference encodings (`safe_compare_faces(ref_encs_list, ...)`), registering a match if ANY reference passes the distance threshold.
+  - **Anime Mode:** Extracts feature sets (color histograms, dHash perceptual hash, and ORB feature descriptors) from each reference photo. Candidates match if any reference profile satisfies composite anime similarity.
+* **[UI & WORKFLOW] Modern Multi-Reference Action Bar:**
+  - Upgraded the Reference Face row with an ergonomic action button box: "👤 Select Reference Face(s)...", "➕ Add Face..." (to append more reference photos across multiple folders without losing existing ones), and "🗑️" (instant clear).
+  - Displays dynamic status badge (e.g. `👥 3 Reference Faces Selected`) and multi-line tooltip detailing all loaded image file paths and filenames.
+* **[STANDARDS & CLI] Full Backward Compatibility & CLI Support:**
+  - Passing a single image retains exact single-face return types (`np.ndarray` for Real Faces, 3-tuple for Anime).
+  - CLI flag `-i / --image` seamlessly accepts single image paths, multiple paths, or comma/semicolon-separated path strings.
+  - Auto-generated standard filenames cleanly derive character stems from the primary reference image (`char_name = Path(first_img).stem`).
+
 ## v2.2.0 (2026-09-21) — Auto-Crop Letterbox, Premiere / DaVinci XML Timeline & Editor Compatibility Suite
 
 * **[AUTO-CROP LETTERBOX] Cinematic Black Bars Detection & Removal:** Built an intelligent multi-point frame sampling engine (sampling at 20%, 40%, 60%, and 80%) that accurately identifies persistent cinematic letterbox (2.39:1 / 2.35:1) or pillarbox (4:3) black bars. Employs a conservative minimum-bar safety threshold (min >= 24px) to protect dark and nighttime scenes from over-cropping, automatically feeding clean `crop=w:h:x:y` filters to FFmpeg with even YUV420p dimensions.

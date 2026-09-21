@@ -942,13 +942,33 @@ class FocusApp(QMainWindow):
         ref_out_grid = QGridLayout()
         ref_out_grid.setSpacing(10)
 
+        ref_btn_box = QHBoxLayout()
+        ref_btn_box.setContentsMargins(0, 0, 0, 0)
+        ref_btn_box.setSpacing(6)
+
         self.btn_select_image = QPushButton(f"👤 {get_translation(self.current_lang, 'sel_ref')}")
         self.btn_select_image.setFixedHeight(36)
         self.btn_select_image.clicked.connect(self.select_image)
+
+        self.btn_add_image = QPushButton(get_translation(self.current_lang, "add_ref"))
+        self.btn_add_image.setFixedHeight(36)
+        self.btn_add_image.setToolTip(get_translation(self.current_lang, "tt_add_ref"))
+        self.btn_add_image.clicked.connect(self.add_more_images)
+
+        self.btn_clear_image = QPushButton("🗑️")
+        self.btn_clear_image.setFixedWidth(36)
+        self.btn_clear_image.setFixedHeight(36)
+        self.btn_clear_image.setToolTip(get_translation(self.current_lang, "clear_ref"))
+        self.btn_clear_image.clicked.connect(self.clear_reference_images)
+
+        ref_btn_box.addWidget(self.btn_select_image)
+        ref_btn_box.addWidget(self.btn_add_image)
+        ref_btn_box.addWidget(self.btn_clear_image)
+
         self.lbl_image_path = QLabel(get_translation(self.current_lang, "no_image"))
         self.lbl_image_path.setObjectName("PathLabel")
         self.lbl_image_path.setMinimumHeight(38)
-        ref_out_grid.addWidget(self.btn_select_image, 0, 0)
+        ref_out_grid.addLayout(ref_btn_box, 0, 0)
         ref_out_grid.addWidget(self.lbl_image_path, 0, 1)
 
         self.btn_select_output = QPushButton(f"💾 {get_translation(self.current_lang, 'sel_output')}")
@@ -1917,6 +1937,16 @@ class FocusApp(QMainWindow):
 
         if hasattr(self, "btn_select_image"):
             self.btn_select_image.setText(f"👤 {get_translation(lang_name, 'sel_ref')}")
+        if hasattr(self, "btn_add_image"):
+            self.btn_add_image.setText(get_translation(lang_name, "add_ref"))
+            self.btn_add_image.setToolTip(get_translation(lang_name, "tt_add_ref"))
+        if hasattr(self, "btn_clear_image"):
+            self.btn_clear_image.setToolTip(get_translation(lang_name, "clear_ref"))
+        if hasattr(self, "lbl_image_path"):
+            if not self.image_path_str and self.selected_ref_data is None:
+                self.lbl_image_path.setText(get_translation(lang_name, "no_image"))
+            elif self.image_path_str:
+                self.set_reference_images(self.image_path_str.split(";"), show_toast=False)
         if hasattr(self, "btn_select_output"):
             self.btn_select_output.setText(f"💾 {get_translation(lang_name, 'sel_output')}")
         if hasattr(self, "lbl_audio_track"):
@@ -2188,16 +2218,69 @@ class FocusApp(QMainWindow):
                 QMessageBox.information(self, "No Videos Found", f"No supported video files were found in:\n{folder}")
 
     def select_image(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Select Reference Face", "", "Image Files (*.png *.jpg *.jpeg *.webp *.bmp);;All Files (*.*)")
-        if path:
-            self.image_path_str = path
-            self.lbl_image_path.setText(Path(path).name)
-            self.selected_ref_data = None
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            get_translation(self.current_lang, "sel_ref"),
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.webp *.bmp);;All Files (*.*)"
+        )
+        if files:
+            self.set_reference_images(files)
+
+    def add_more_images(self):
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            get_translation(self.current_lang, "add_ref"),
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.webp *.bmp);;All Files (*.*)"
+        )
+        if files:
+            existing = [p.strip() for p in self.image_path_str.split(";") if p.strip()] if self.image_path_str else []
+            combined = list(dict.fromkeys(existing + files))
+            self.set_reference_images(combined)
+
+    def clear_reference_images(self):
+        self.image_path_str = ""
+        self.selected_ref_data = None
+        self.lbl_image_path.setText(get_translation(self.current_lang, "no_image"))
+        self.lbl_image_path.setToolTip("")
+        self.toast.show_toast("Reference face images cleared.", "🗑️", 2500)
+
+    def set_reference_images(self, paths: List[Union[str, Path]], show_toast: bool = True):
+        if not paths:
+            self.clear_reference_images()
+            return
+
+        cleaned_paths = [str(Path(p).resolve()) for p in paths if p]
+        unique_paths = list(dict.fromkeys(cleaned_paths))
+        if not unique_paths:
+            self.clear_reference_images()
+            return
+
+        self.image_path_str = ";".join(unique_paths)
+        self.selected_ref_data = None
+
+        if len(unique_paths) == 1:
+            p_obj = Path(unique_paths[0])
+            self.lbl_image_path.setText(f"👤 {p_obj.name}")
+            self.lbl_image_path.setToolTip(str(p_obj))
+            if show_toast:
+                self.toast.show_toast(f"Reference face: {p_obj.name}", "👤", 3000)
+        else:
+            count = len(unique_paths)
+            tmpl = get_translation(self.current_lang, "ref_faces_selected")
+            msg = tmpl.format(count=count) if "{count}" in tmpl else f"{count} Reference Faces Selected"
+            self.lbl_image_path.setText(f"👥 {msg}")
+            tooltip_lines = [f"{count} Reference Faces:"] + [f"• {Path(p).name} ({p})" for p in unique_paths]
+            self.lbl_image_path.setToolTip("\n".join(tooltip_lines))
+            if show_toast:
+                self.toast.show_toast(f"Loaded {count} reference face photos!", "👥", 3500)
 
     def select_output(self):
         valid_paths = self.get_input_video_paths()
         v_stem = valid_paths[0].stem if valid_paths else "scenepack"
-        char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+        first_img = self.image_path_str.split(";")[0].strip() if self.image_path_str else ""
+        char_name = Path(first_img).stem if first_img else ""
         suggested_name = generate_scene_standard_filename(v_stem, character_name=char_name)
         default_dir = Path(self.output_path_str).parent if self.output_path_str else (valid_paths[0].parent if valid_paths else Path.home() / "Desktop")
         suggested_path = str(default_dir / suggested_name)
@@ -2274,7 +2357,8 @@ class FocusApp(QMainWindow):
         if (self.is_batch_running or len(valid_paths) > 1) and not self.output_path_str:
             v_name = valid_paths[0].stem if len(valid_paths) == 1 else "Master_MultiVideo"
             out_dir = Path.home() / "Desktop"
-            char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+            first_img = self.image_path_str.split(";")[0].strip() if self.image_path_str else ""
+            char_name = Path(first_img).stem if first_img else ""
             clean_name = generate_scene_standard_filename(v_name, character_name=char_name)
             self.output_path_str = str(out_dir / clean_name)
             self.lbl_output_path.setText(Path(self.output_path_str).name)
@@ -2348,7 +2432,8 @@ class FocusApp(QMainWindow):
         if not self.output_path_str:
             valid_paths = self.get_input_video_paths()
             v_stem = valid_paths[0].stem if valid_paths else "scenepack"
-            char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+            first_img = self.image_path_str.split(";")[0].strip() if self.image_path_str else ""
+            char_name = Path(first_img).stem if first_img else ""
             default_name = generate_scene_standard_filename(v_stem, character_name=char_name)
             default_dir = valid_paths[0].parent if valid_paths else Path.home() / "Desktop"
             path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", str(default_dir / default_name), "MP4 Video (*.mp4);;All Files (*.*)")
@@ -2893,7 +2978,8 @@ class FocusApp(QMainWindow):
 
             out_dir = Path(self.output_path_str).parent if self.output_path_str else Path.home() / "Desktop"
             v_name = Path(self.video_path_str).stem
-            char_name = Path(self.image_path_str).stem if self.image_path_str else ""
+            first_img = self.image_path_str.split(";")[0].strip() if self.image_path_str else ""
+            char_name = Path(first_img).stem if first_img else ""
             clean_name = generate_scene_standard_filename(v_name, character_name=char_name)
             auto_out_path = out_dir / clean_name
             self.output_path_str = str(auto_out_path)

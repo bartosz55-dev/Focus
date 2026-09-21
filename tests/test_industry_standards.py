@@ -247,6 +247,154 @@ class TestIndustryStandardsAndQuality(unittest.TestCase):
             self.assertIn("Adobe After Effects", content)
             self.assertIn("CapCut", content)
 
+    def test_parse_reference_image_paths(self):
+        """Verify parse_reference_image_paths correctly handles string, list, semicolon, and comma inputs."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            p1 = Path(tmpdir) / "face1.png"
+            p2 = Path(tmpdir) / "face2.jpg"
+            p3 = Path(tmpdir) / "face3.webp"
+            for p in (p1, p2, p3):
+                p.write_bytes(b"dummy_img")
+
+            # Single path
+            res = backend.parse_reference_image_paths(str(p1))
+            self.assertEqual(len(res), 1)
+            self.assertEqual(res[0], p1.resolve())
+
+            # List of paths
+            res = backend.parse_reference_image_paths([p1, p2, p3])
+            self.assertEqual(len(res), 3)
+
+            # Semicolon separated
+            res = backend.parse_reference_image_paths(f"{p1}; {p2}; {p3}")
+            self.assertEqual(len(res), 3)
+
+            # Comma separated
+            res = backend.parse_reference_image_paths(f"{p1}, {p2}")
+            self.assertEqual(len(res), 2)
+
+            # Deduplication
+            res = backend.parse_reference_image_paths([p1, p1, p2])
+            self.assertEqual(len(res), 2)
+
+    def test_multi_reference_images_real_faces(self):
+        """Verify load_reference_face handles multiple real face images and returns all encodings."""
+        import tempfile
+        import numpy as np
+        generator = backend.ScenePackGenerator(mode="Real Faces")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            p1 = Path(tmpdir) / "actor_front.png"
+            p2 = Path(tmpdir) / "actor_side.png"
+            p1.write_bytes(b"face1")
+            p2.write_bytes(b"face2")
+
+            enc1 = np.ones(128, dtype=np.float64) * 0.1
+            enc2 = np.ones(128, dtype=np.float64) * 0.2
+
+            def fake_encodings(img):
+                # Return enc1 for first image, enc2 for second
+                return [enc1] if getattr(fake_encodings, "call_count", 0) == 0 else [enc2]
+
+            with patch("face_recognition.load_image_file", return_value=np.zeros((100, 100, 3))), \
+                 patch("scenepack_generator_backend.safe_face_encodings") as mock_safe_enc:
+                mock_safe_enc.side_effect = [ [enc1], [enc2] ]
+                res = generator.load_reference_face([p1, p2])
+                self.assertIsInstance(res, list)
+                self.assertEqual(len(res), 2)
+                np.testing.assert_array_equal(res[0], enc1)
+                np.testing.assert_array_equal(res[1], enc2)
+
+            # Single image test returns single np.ndarray for backward compatibility
+            with patch("face_recognition.load_image_file", return_value=np.zeros((100, 100, 3))), \
+                 patch("scenepack_generator_backend.safe_face_encodings", return_value=[enc1]):
+                single_res = generator.load_reference_face(p1)
+                self.assertIsInstance(single_res, np.ndarray)
+                np.testing.assert_array_equal(single_res, enc1)
+
+    def test_multi_reference_images_anime(self):
+        """Verify load_reference_face handles multiple anime images and returns list of feature tuples."""
+        import tempfile
+        import numpy as np
+        generator = backend.ScenePackGenerator(mode="Anime")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            p1 = Path(tmpdir) / "anime_look1.png"
+            p2 = Path(tmpdir) / "anime_look2.png"
+            p1.write_bytes(b"anime1")
+            p2.write_bytes(b"anime2")
+
+            dummy_feat1 = (np.zeros(24), 12345, None)
+            dummy_feat2 = (np.ones(24), 67890, None)
+
+            with patch("cv2.imread", return_value=np.zeros((100, 100, 3), dtype=np.uint8)), \
+                 patch.object(generator, "_download_anime_cascade"), \
+                 patch("scenepack_generator_backend.get_cascade_classifier", return_value=None), \
+                 patch("scenepack_generator_backend.extract_anime_face_features") as mock_feat:
+                mock_feat.side_effect = [dummy_feat1, dummy_feat2]
+                res = generator.load_reference_face([p1, p2])
+                self.assertIsInstance(res, list)
+                self.assertEqual(len(res), 2)
+                self.assertEqual(res[0], dummy_feat1)
+                self.assertEqual(res[1], dummy_feat2)
+
+            # Single image test returns single 3-tuple
+            with patch("cv2.imread", return_value=np.zeros((100, 100, 3), dtype=np.uint8)), \
+                 patch.object(generator, "_download_anime_cascade"), \
+                 patch("scenepack_generator_backend.get_cascade_classifier", return_value=None), \
+                 patch("scenepack_generator_backend.extract_anime_face_features", return_value=dummy_feat1):
+                single_res = generator.load_reference_face(p1)
+                self.assertIsInstance(single_res, tuple)
+                self.assertEqual(len(single_res), 3)
+                self.assertEqual(single_res, dummy_feat1)
+
+    def test_multi_reference_matching(self):
+        """Verify candidate matching works when comparing against multiple reference encodings."""
+        import numpy as np
+        generator = backend.ScenePackGenerator(mode="Real Faces")
+
+        ref1 = np.zeros(128, dtype=np.float64)
+        ref2 = np.ones(128, dtype=np.float64) * 0.5
+
+        # Candidate is identical to ref2
+        candidate = np.ones(128, dtype=np.float64) * 0.52
+
+        ref_list = generator._extract_encodings_list([ref1, ref2])
+        matches = backend.safe_compare_faces(ref_list, candidate, tolerance=0.6)
+        self.assertTrue(any(matches))
+        self.assertFalse(matches[0])  # ref1 is far
+        self.assertTrue(matches[1])   # ref2 is close
+
+    def test_gui_multi_reference_handling(self):
+        """Verify GUI set_reference_images and clear_reference_images correctly format state and label."""
+        import tempfile
+        from scenepack_generator_gui_qt import FocusApp
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            p1 = Path(tmpdir) / "char_smile.png"
+            p2 = Path(tmpdir) / "char_profile.jpg"
+            p1.write_bytes(b"1")
+            p2.write_bytes(b"2")
+
+            app = FocusApp()
+            try:
+                # Set 2 images
+                app.set_reference_images([str(p1), str(p2)], show_toast=False)
+                self.assertIn(";", app.image_path_str)
+                self.assertEqual(len(app.image_path_str.split(";")), 2)
+                self.assertIn("2", app.lbl_image_path.text())
+                self.assertIn("char_smile.png", app.lbl_image_path.toolTip())
+                self.assertIn("char_profile.jpg", app.lbl_image_path.toolTip())
+
+                # Clear
+                app.clear_reference_images()
+                self.assertEqual(app.image_path_str, "")
+                self.assertIsNone(app.selected_ref_data)
+                self.assertEqual(app.lbl_image_path.toolTip(), "")
+            finally:
+                app.close()
+
 
 if __name__ == "__main__":
     unittest.main()

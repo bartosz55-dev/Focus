@@ -198,6 +198,31 @@ def parse_video_paths(video_input: Any) -> List[Path]:
     return sorted(unique_paths, key=natural_sort_key)
 
 
+def parse_reference_image_paths(ref_input: Any) -> List[Path]:
+    """
+    Normalizes a single image path string, Path, a list/tuple of strings or Paths,
+    or a semicolon/comma-separated string into a deduplicated list of resolved Path objects.
+    """
+    if not ref_input:
+        return []
+    paths: List[Path] = []
+    if isinstance(ref_input, (list, tuple)):
+        for item in ref_input:
+            if item:
+                paths.append(Path(item).resolve())
+    elif isinstance(ref_input, (str, Path)):
+        str_val = str(ref_input).strip()
+        if ";" in str_val:
+            parts = [p.strip() for p in str_val.split(";") if p.strip()]
+            paths = [Path(p).resolve() for p in parts]
+        elif "," in str_val and not os.path.exists(str_val):
+            parts = [p.strip() for p in str_val.split(",") if p.strip()]
+            paths = [Path(p).resolve() for p in parts]
+        else:
+            paths = [Path(str_val).resolve()]
+
+    return list(dict.fromkeys(paths))
+
 
 def init_gpu_acceleration():
     """
@@ -274,7 +299,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.2.0"
+APP_VERSION = "v2.3.0"
 STUDIO_AUDIO_BITRATE = "320k"
 
 
@@ -833,7 +858,11 @@ TRANSLATIONS = {
         "sel_video": "Select Input Video(s)...",
         "sel_folder": "Add Folder...",
         "clear": "Clear",
-        "sel_ref": "Select Reference Face Image...",
+        "sel_ref": "Select Reference Face(s)...",
+        "add_ref": "Add Face...",
+        "clear_ref": "Clear selected faces",
+        "tt_add_ref": "Add more reference face photos (different angles, lighting, expressions) to improve detection recall",
+        "ref_faces_selected": "{count} Reference Faces Selected",
         "sel_output": "Select Export Folder / Output...",
         "output_mode": "Output Mode:",
         "master_scenepack": "Master Scenepack (Single Video)",
@@ -991,7 +1020,11 @@ TRANSLATIONS = {
         "sel_video": "Wybierz Plik(i) Wideo...",
         "sel_folder": "Dodaj Folder...",
         "clear": "Wyczyść",
-        "sel_ref": "Wybierz Twarz Referencyjną...",
+        "sel_ref": "Wybierz Twarz(e) Referencyjną...",
+        "add_ref": "Dodaj Twarz...",
+        "clear_ref": "Wyczyść wybrane twarze",
+        "tt_add_ref": "Dodaj kolejne zdjęcia referencyjne twarzy (różne kąty, oświetlenie, miny), aby zwiększyć skuteczność wykrywania",
+        "ref_faces_selected": "Wybrano {count} twarzy referencyjnych",
         "sel_output": "Wybierz Folder Docelowy / Zapisz Jako...",
         "output_mode": "Tryb Wyjściowy:",
         "master_scenepack": "Pojedynczy Master Scenepack",
@@ -1133,7 +1166,11 @@ TRANSLATIONS = {
         "mode_light": "Hell",
         "mode_system": "System (Auto)",
         "sel_video": "Eingabevideo auswählen...",
-        "sel_ref": "Referenzgesicht auswählen...",
+        "sel_ref": "Referenzgesicht(er) auswählen...",
+        "add_ref": "Gesicht hinzufügen...",
+        "clear_ref": "Ausgewählte Gesichter löschen",
+        "tt_add_ref": "Fügen Sie weitere Referenzfotos hinzu (verschiedene Winkel, Beleuchtung), um die Erkennung zu verbessern",
+        "ref_faces_selected": "{count} Referenzgesichter ausgewählt",
         "sel_output": "Exportordner auswählen...",
         "generate": "Schritt 1: Video analysieren & scannen",
         "btn_render": "Schritt 2: Ausgewählte Clips exportieren",
@@ -1162,7 +1199,11 @@ TRANSLATIONS = {
         "mode_light": "Claro",
         "mode_system": "Sistema (Auto)",
         "sel_video": "Seleccionar video(s)...",
-        "sel_ref": "Seleccionar rostro de referencia...",
+        "sel_ref": "Seleccionar rostro(s) de referencia...",
+        "add_ref": "Añadir rostro...",
+        "clear_ref": "Borrar rostros seleccionados",
+        "tt_add_ref": "Añade más fotos de referencia (diferentes ángulos, iluminación) para mejorar la detección",
+        "ref_faces_selected": "{count} rostros de referencia seleccionados",
         "sel_output": "Seleccionar carpeta de exportación...",
         "generate": "Paso 1: Analizar y Escanear Video",
         "btn_render": "Paso 2: Renderizar Clips Seleccionados",
@@ -1191,7 +1232,11 @@ TRANSLATIONS = {
         "mode_light": "Clair",
         "mode_system": "Système (Auto)",
         "sel_video": "Sélectionner vidéo(s)...",
-        "sel_ref": "Sélectionner visage de référence...",
+        "sel_ref": "Sélectionner visage(s) de référence...",
+        "add_ref": "Ajouter visage...",
+        "clear_ref": "Effacer les visages sélectionnés",
+        "tt_add_ref": "Ajoutez plus de photos de référence (angles différents, éclairage) pour améliorer la détection",
+        "ref_faces_selected": "{count} visages de référence sélectionnés",
         "sel_output": "Dossier d'exportation...",
         "generate": "Étape 1 : Analyser la Vidéo",
         "btn_render": "Étape 2 : Rendre les Clips",
@@ -1223,6 +1268,10 @@ TRANSLATIONS = {
         "changelog": "更新履歴",
         "sel_video": "入力動画を選択",
         "sel_ref": "参照顔画像を選択",
+        "add_ref": "顔を追加...",
+        "clear_ref": "選択した顔をクリア",
+        "tt_add_ref": "検出精度向上のため複数の参照顔写真を追加",
+        "ref_faces_selected": "{count} 件の参照顔を選択中",
         "sel_output": "出力先フォルダを選択",
         "pad_before": "前パディング(秒):",
         "pad_after": "後パディング(秒):",
@@ -1287,6 +1336,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v2.3.0 (Wielokrotne Zdjęcia Referencyjne Twarzy & Zwiększona Dokładność Detekcji):\n"
+            "  - [MULTI-REFERENCE FACES] Dodano możliwość wyboru wielu zdjęć referencyjnych dla jednej postaci (różne kąty widzenia, profil, różne oświetlenie, uśmiech, dynamiczna mimika).\n"
+            "  - [MATCHING ENGINE] Dopasowywanie kandydatów do pełnego zbioru wektorów cech zarówno w trybie 'Real Faces' (wielowymiarowe wektory encodings), jak i '2D Animation / Anime' (zestawy cech koloru, konturów i deskryptorów).\n"
+            "  - [NOWY INTERFEJS REFERENCJI] Wprowadzono ergonomiczne przyciski: wybór wielu plików naraz, przycisk '➕ Dodaj Twarz...' do dołączania zdjęć z innych folderów oraz przycisk '🗑️' do szybkiego resetu.\n\n"
             "• v2.2.0 (Automatyczne Kadrowanie Letterbox, Eksport Osi Czasu Premiere/DaVinci & Pakiet Zgodności NLE):\n"
             "  - [LETTERBOX AUTO-CROP] Automatyczne próbkowanie klatek w 4 punktach (20%, 40%, 60%, 80%) i wykrywanie kinowych czarnych pasów (2.39:1 / letterboxing / pillarboxing) z ochroną przed ciemnymi scenami i usuwaniem czarnych obramowań.\n"
             "  - [PREMIERE & RESOLVE XML] Generowanie standardowego pliku osi czasu Apple FCPXML (xmeml v4) umożliwiającego natychmiastowe przeciągnięcie wyciętych scen na oś czasu Premiere Pro, DaVinci Resolve i Final Cut bez rekompresji.\n"
@@ -1562,6 +1615,10 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v2.3.0 (Multi-Reference Face Photos & Enhanced Detection Recall):\n"
+            "  - [MULTI-REFERENCE FACES] Support for selecting multiple reference face images per character (varying angles, side profiles, diverse lighting, expressions) to dramatically boost recall across complex scenes.\n"
+            "  - [MATCHING ENGINE] Frame candidates match against the complete reference set for both 'Real Faces' (multi-encoding distance check) and '2D Animation / Anime' (multi-feature histogram, dHash & ORB descriptors).\n"
+            "  - [ENHANCED REFERENCE UI] Modern action button group: multi-file selection, '➕ Add Face...' to append photos across different folders, and '🗑️' quick clear with detailed selection status and tooltips.\n\n"
             "• v2.2.0 (Auto-Crop Letterbox, Premiere Pro & DaVinci Resolve Timeline Export & NLE Compatibility Suite):\n"
             "  - [LETTERBOX AUTO-CROP] Multi-point frame sampling (20%, 40%, 60%, 80%) detecting cinematic black bars (2.39:1 letterbox / pillarbox) with night scene safety guard, auto-cropping to clean full-frame video.\n"
             "  - [PREMIERE & RESOLVE XML] Standard Apple FCPXML (xmeml v4) timeline generator allowing instant drag-and-drop cut import into Premiere Pro, DaVinci Resolve, and Final Cut Pro with zero re-encoding.\n"
@@ -2562,81 +2619,114 @@ class ScenePackGenerator:
     def load_reference_face(self, ref_image_path: Any):
         if isinstance(ref_image_path, dict) or ref_image_path is None:
             return ref_image_path
-            
-        path_obj = Path(ref_image_path) if isinstance(ref_image_path, (str, Path)) else ref_image_path
-        if hasattr(path_obj, "is_file") and not path_obj.is_file():
-            raise FileNotFoundError(f"Reference image not found: {path_obj}")
 
-        logging.info(f"Loading reference face from '{getattr(path_obj, 'name', str(path_obj))}'...")
+        # If already precomputed encodings or features
+        if isinstance(ref_image_path, np.ndarray):
+            return ref_image_path
+        if isinstance(ref_image_path, tuple) and len(ref_image_path) == 3:
+            return ref_image_path
+        if isinstance(ref_image_path, list) and ref_image_path:
+            if isinstance(ref_image_path[0], (np.ndarray, tuple)):
+                return ref_image_path
+
+        paths = parse_reference_image_paths(ref_image_path)
+        if not paths:
+            if hasattr(ref_image_path, "is_file") and not ref_image_path.is_file():
+                raise FileNotFoundError(f"Reference image not found: {ref_image_path}")
+            raise FileNotFoundError(f"Reference image not found: {ref_image_path}")
+
+        for p in paths:
+            if not p.is_file():
+                raise FileNotFoundError(f"Reference image not found: {p}")
 
         if self.mode == "Real Faces":
-            image = face_recognition.load_image_file(str(path_obj))
-            encodings = safe_face_encodings(image)
+            all_encodings: List[np.ndarray] = []
+            for p in paths:
+                logging.info(f"Loading reference face from '{p.name}'...")
+                image = face_recognition.load_image_file(str(p))
+                encodings = safe_face_encodings(image)
 
-            if not encodings:
-                err_tmpl = get_translation(getattr(self, "current_lang", "English"), "err_no_human_face")
-                if "{name}" in err_tmpl:
-                    err_msg = err_tmpl.format(name=getattr(path_obj, 'name', str(path_obj)))
-                else:
-                    err_msg = err_tmpl
-                raise ValueError(err_msg)
+                if not encodings:
+                    if len(paths) == 1:
+                        err_tmpl = get_translation(getattr(self, "current_lang", "English"), "err_no_human_face")
+                        if "{name}" in err_tmpl:
+                            err_msg = err_tmpl.format(name=p.name)
+                        else:
+                            err_msg = err_tmpl
+                        raise ValueError(err_msg)
+                    else:
+                        logging.warning(f"No human face found in reference image '{p.name}'. Skipping.")
+                        continue
 
-            return encodings[0]
+                all_encodings.append(encodings[0])
+
+            if not all_encodings:
+                raise ValueError("No human faces could be detected in any of the provided reference images.")
+
+            return all_encodings if len(paths) > 1 else all_encodings[0]
         else:
-            image_bgr = cv2.imread(str(path_obj))
-            if image_bgr is None:
-                try:
-                    with open(str(path_obj), "rb") as f_img:
-                        img_arr = np.frombuffer(f_img.read(), dtype=np.uint8)
-                        image_bgr = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
-                except Exception:
-                    pass
-            if image_bgr is None:
-                raise ValueError(f"Could not load reference image: {path_obj}")
-
-            gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+            all_features: List[Any] = []
             self._download_anime_cascade()
             anime_cascade = get_cascade_classifier(str(self.anime_cascade_path))
 
-            faces = []
-            if anime_cascade is not None and hasattr(anime_cascade, 'empty') and not anime_cascade.empty():
-                faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
+            for p in paths:
+                logging.info(f"Loading reference anime face from '{p.name}'...")
+                image_bgr = cv2.imread(str(p))
+                if image_bgr is None:
+                    try:
+                        with open(str(p), "rb") as f_img:
+                            img_arr = np.frombuffer(f_img.read(), dtype=np.uint8)
+                            image_bgr = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+                    except Exception:
+                        pass
+                if image_bgr is None:
+                    if len(paths) == 1:
+                        raise ValueError(f"Could not load reference image: {p}")
+                    else:
+                        logging.warning(f"Could not load reference image: {p}. Skipping.")
+                        continue
+
+                gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+                faces = []
+                if anime_cascade is not None and hasattr(anime_cascade, 'empty') and not anime_cascade.empty():
+                    faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
+                    if len(faces) == 0:
+                        faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.03, minNeighbors=1, minSize=(20, 20))
+
                 if len(faces) == 0:
-                    faces = anime_cascade.detectMultiScale(gray, scaleFactor=1.03, minNeighbors=1, minSize=(20, 20))
+                    aux_cascade = None
+                    if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                        p_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
+                        aux_cascade = get_cascade_classifier(p_path)
+                    if aux_cascade is not None and hasattr(aux_cascade, 'empty') and not aux_cascade.empty():
+                        aux_faces = aux_cascade.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=3, minSize=(30, 30))
+                        if len(aux_faces) > 0:
+                            faces = aux_faces
 
-            if len(faces) == 0:
-                # Auxiliary fallback: attempt frontalface Haar cascade for semi-realistic anime characters
-                aux_cascade = None
-                if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
-                    p_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
-                    aux_cascade = get_cascade_classifier(p_path)
-                if aux_cascade is not None and hasattr(aux_cascade, 'empty') and not aux_cascade.empty():
-                    aux_faces = aux_cascade.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=3, minSize=(30, 30))
-                    if len(aux_faces) > 0:
-                        faces = aux_faces
-
-            if len(faces) > 0:
-                # Sort by area descending and pick the largest detected face
-                faces = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
-                x, y, w, h = faces[0]
-                crop_bgr = image_bgr[y:y+h, x:x+w]
-            else:
-                # Smart crop fallback for full posters / wallpapers to avoid diluted background histograms
-                h_img, w_img = image_bgr.shape[:2]
-                if w_img > 1.3 * h_img:
-                    # Landscape wallpaper: crop top 70% and middle 60%
-                    x_s = int(w_img * 0.2)
-                    x_e = int(w_img * 0.8)
-                    y_e = int(h_img * 0.7)
-                    crop_bgr = image_bgr[0:y_e, x_s:x_e]
-                elif h_img > 1.3 * w_img:
-                    # Tall poster/portrait: crop top 50%
-                    crop_bgr = image_bgr[0:int(h_img * 0.5), :]
+                if len(faces) > 0:
+                    faces = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
+                    x, y, w, h = faces[0]
+                    crop_bgr = image_bgr[y:y+h, x:x+w]
                 else:
-                    crop_bgr = image_bgr
+                    h_img, w_img = image_bgr.shape[:2]
+                    if w_img > 1.3 * h_img:
+                        x_s = int(w_img * 0.2)
+                        x_e = int(w_img * 0.8)
+                        y_e = int(h_img * 0.7)
+                        crop_bgr = image_bgr[0:y_e, x_s:x_e]
+                    elif h_img > 1.3 * w_img:
+                        crop_bgr = image_bgr[0:int(h_img * 0.5), :]
+                    else:
+                        crop_bgr = image_bgr
 
-            features = extract_anime_face_features(crop_bgr)
-            return features
+                features = extract_anime_face_features(crop_bgr)
+                if features is not None:
+                    all_features.append(features)
+
+            if not all_features:
+                raise ValueError("Could not extract anime features from any of the provided reference images.")
+
+            return all_features if len(paths) > 1 else all_features[0]
 
     def _get_video_duration(self, video_path: Path) -> float:
         cmd = [
@@ -3742,6 +3832,8 @@ class ScenePackGenerator:
             raise FileNotFoundError(f"No valid video file(s) provided: {video_path}")
 
         if isinstance(ref_image_path, (dict, tuple, np.ndarray)):
+            ref_data = ref_image_path
+        elif isinstance(ref_image_path, list) and ref_image_path and isinstance(ref_image_path[0], (np.ndarray, tuple)):
             ref_data = ref_image_path
         else:
             ref_data = self.load_reference_face(ref_image_path)
