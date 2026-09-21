@@ -270,7 +270,13 @@ public final class AppState: ObservableObject {
         if !foundVideos.isEmpty {
             self.selectedVideoURLs = foundVideos
             if self.outputURL == nil, let first = foundVideos.first {
-                self.outputURL = first.deletingLastPathComponent().appendingPathComponent("\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4")
+                if foundVideos.count > 1 {
+                    let parent = first.deletingLastPathComponent().lastPathComponent
+                    let name = (parent.isEmpty || parent == "/") ? "Master_Scenepack.mp4" : "\(parent) - Master Scenepack.mp4"
+                    self.outputURL = first.deletingLastPathComponent().appendingPathComponent(name)
+                } else {
+                    self.outputURL = first.deletingLastPathComponent().appendingPathComponent("\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4")
+                }
             }
             showToast("Selected \(foundVideos.count) video(s)", icon: "film.stack")
             if let first = foundVideos.first {

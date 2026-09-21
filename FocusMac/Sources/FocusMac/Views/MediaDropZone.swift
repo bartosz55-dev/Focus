@@ -202,6 +202,11 @@ public struct MediaDropZone: View {
                             .frame(width: 32)
 
                         VStack(alignment: .leading, spacing: 2) {
+                            if appState.selectedVideoURLs.count > 1 {
+                                Text("📦 Single Master Scenepack (\(appState.selectedVideoURLs.count) Episodes)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(appState.accentColor)
+                            }
                             if let out = appState.outputURL {
                                 Text(out.lastPathComponent)
                                     .font(.system(size: 12, weight: .medium))
@@ -287,7 +292,13 @@ public struct MediaDropZone: View {
             panel.nameFieldStringValue = current.lastPathComponent
         } else if let first = appState.selectedVideoURLs.first {
             panel.directoryURL = first.deletingLastPathComponent()
-            panel.nameFieldStringValue = "\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4"
+            if appState.selectedVideoURLs.count > 1 {
+                let parent = first.deletingLastPathComponent().lastPathComponent
+                let name = (parent.isEmpty || parent == "/") ? "Master_Scenepack.mp4" : "\(parent) - Master Scenepack.mp4"
+                panel.nameFieldStringValue = name
+            } else {
+                panel.nameFieldStringValue = "\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4"
+            }
         } else {
             panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
             panel.nameFieldStringValue = "scenepack.mp4"

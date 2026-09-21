@@ -82,6 +82,14 @@ if [ -f "${ROOT_DIR}/FocusMac/Sources/FocusMac/Resources/changelog.json" ]; then
 fi
 echo "Bundled Python backend scripts & changelog -> Resources"
 
+if [ -d "${ROOT_DIR}/venv" ]; then
+    ln -sfn "${ROOT_DIR}/venv" "${APP_BUNDLE}/Contents/Resources/venv"
+    echo "Linked project venv -> Resources/venv"
+    mkdir -p "$HOME/Library/Application Support/Focus"
+    ln -sfn "${ROOT_DIR}/venv" "$HOME/Library/Application Support/Focus/venv"
+    echo "Linked project venv -> ~/Library/Application Support/Focus/venv"
+fi
+
 # 4. Generate Info.plist
 cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>

@@ -89,11 +89,34 @@ public actor ProcessBridge {
         return "scenepack_generator.py"
     }
 
+    private static var cachedResolvedPython: String?
+
+    private static func testPythonHasCv2(_ executable: String) -> Bool {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: executable)
+        p.arguments = ["-c", "import cv2"]
+        p.standardOutput = Pipe()
+        p.standardError = Pipe()
+        do {
+            try p.run()
+            p.waitUntilExit()
+            return p.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+
     public static func resolvePythonExecutable(forScript scriptPath: String = "") -> String {
+        if let cached = cachedResolvedPython {
+            return cached
+        }
+
         var candidates: [String] = []
 
         // 1. Embedded portable Python inside App Bundle (Standalone distribution)
         if let resPath = Bundle.main.resourcePath {
+            candidates.append((resPath as NSString).appendingPathComponent("venv/bin/python3"))
+            candidates.append((resPath as NSString).appendingPathComponent("venv/bin/python"))
             candidates.append((resPath as NSString).appendingPathComponent("python/bin/python3"))
             candidates.append((resPath as NSString).appendingPathComponent("python/bin/python"))
             candidates.append((resPath as NSString).appendingPathComponent("Frameworks/Python.framework/Versions/Current/bin/python3"))
@@ -101,13 +124,18 @@ public actor ProcessBridge {
 
         // 2. Application Support runtime (auto-bootstrapped user environment)
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Focus").path {
-            candidates.append((appSupport as NSString).appendingPathComponent("runtime/bin/python3"))
-            candidates.append((appSupport as NSString).appendingPathComponent("runtime/bin/python"))
             candidates.append((appSupport as NSString).appendingPathComponent("venv/bin/python3"))
             candidates.append((appSupport as NSString).appendingPathComponent("venv/bin/python"))
+            candidates.append((appSupport as NSString).appendingPathComponent("runtime/bin/python3"))
+            candidates.append((appSupport as NSString).appendingPathComponent("runtime/bin/python"))
         }
 
-        // 3. Check venv adjacent to resolved script
+        // 3. Known development project locations
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/venv/bin/python3")
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software copy 2/venv/bin/python")
+        candidates.append("/Volumes/DyskNvmeE6XPG/Antigravity/Kwiatson cliping software/venv/bin/python3")
+
+        // 4. Check venv adjacent to resolved script
         if !scriptPath.isEmpty && scriptPath != "scenepack_generator.py" {
             let scriptDir = (scriptPath as NSString).deletingLastPathComponent
             if !scriptDir.isEmpty && scriptDir != "/" {
@@ -116,19 +144,19 @@ public actor ProcessBridge {
             }
         }
 
-        // 4. Relative to Focus.app bundle location
+        // 5. Relative to Focus.app bundle location
         let bundleURL = Bundle.main.bundleURL
         let projectDir = bundleURL.deletingLastPathComponent().deletingLastPathComponent().path
         candidates.append((projectDir as NSString).appendingPathComponent("venv/bin/python3"))
         candidates.append((projectDir as NSString).appendingPathComponent("venv/bin/python"))
 
-        // 5. Standard user environment paths
+        // 6. Standard user environment paths
         let home = ("~" as NSString).expandingTildeInPath
         candidates.append((home as NSString).appendingPathComponent("Focus/venv/bin/python3"))
         candidates.append((home as NSString).appendingPathComponent(".focus/venv/bin/python3"))
         candidates.append((home as NSString).appendingPathComponent("venv/bin/python3"))
 
-        // 6. Current working directory venv (if not root "/")
+        // 7. Current working directory venv (if not root "/")
         let currentDir = FileManager.default.currentDirectoryPath
         if currentDir != "/" && !currentDir.isEmpty {
             candidates.append((currentDir as NSString).appendingPathComponent("venv/bin/python3"))
@@ -136,17 +164,32 @@ public actor ProcessBridge {
             candidates.append((currentDir as NSString).appendingPathComponent("../venv/bin/python3"))
         }
 
-        // 7. System Python
+        // 8. System Python
         candidates.append("/opt/homebrew/bin/python3")
         candidates.append("/usr/local/bin/python3")
         candidates.append("/usr/bin/python3")
 
+        var executableCandidates: [String] = []
         for p in candidates {
             if FileManager.default.isExecutableFile(atPath: p) {
-                return (p as NSString).standardizingPath
+                let clean = (p as NSString).standardizingPath
+                if !executableCandidates.contains(clean) {
+                    executableCandidates.append(clean)
+                }
             }
         }
-        return "python3"
+
+        // Validate that candidate has cv2 installed
+        for p in executableCandidates {
+            if testPythonHasCv2(p) {
+                cachedResolvedPython = p
+                return p
+            }
+        }
+
+        let fallback = executableCandidates.first ?? "python3"
+        cachedResolvedPython = fallback
+        return fallback
     }
 
     public static func resolveFFmpegExecutable() -> String? {
