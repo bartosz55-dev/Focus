@@ -36,9 +36,9 @@ public struct GlassCard<Content: View>: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                 )
-                .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 4)
+                .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
         }
     }
 }

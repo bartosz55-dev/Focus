@@ -16,7 +16,7 @@ struct FocusMacApp: App {
                     let credits = NSMutableAttributedString(string: "High-Performance AI Scenepack Generator & Video Studio\nNative Apple Silicon & Intel Engine\nEngineered by Bartosz5500\n\nhttps://github.com/Bartosz5500/Focus")
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
                         .applicationName: "Focus",
-                        .version: "2.3.0",
+                        .version: "2.3.1",
                         .applicationVersion: "230",
                         NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): "© 2026 Bartosz5500. All rights reserved.",
                         .credits: credits

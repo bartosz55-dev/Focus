@@ -54,7 +54,7 @@ public struct AboutAppView: View {
                         .tracking(3)
                         .foregroundColor(.primary)
 
-                    Text("Version 2.3.0 (Build 230)")
+                    Text("Version 2.3.1 (Build 231)")
                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
                         .foregroundColor(.secondary)
 
@@ -150,7 +150,11 @@ private struct TechPill: View {
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                .fill(Color.primary.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                )
         )
     }
 }

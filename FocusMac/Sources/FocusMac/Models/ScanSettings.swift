@@ -64,6 +64,8 @@ public struct ScanSettings: Codable, Sendable {
     public var audioTrackIndex: Int = 0
     public var autoRender: Bool = false
     public var exportClipsFolder: Bool = false
+    public var exportXml: Bool = false
+    public var snapCuts: Bool = true
     public var preventSleep: Bool = true
 
     public init() {}

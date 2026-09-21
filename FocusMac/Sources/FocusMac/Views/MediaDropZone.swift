@@ -64,10 +64,10 @@ public struct MediaDropZone: View {
                     .contentShape(Rectangle())
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(isVideoTargeted ? appState.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                            .fill(isVideoTargeted ? appState.accentColor.opacity(0.15) : Color.primary.opacity(0.04))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isVideoTargeted ? appState.accentColor : Color.white.opacity(0.1), lineWidth: 1)
+                                    .stroke(isVideoTargeted ? appState.accentColor : Color.primary.opacity(0.08), lineWidth: 1)
                             )
                     )
                     .onTapGesture {
@@ -175,10 +175,10 @@ public struct MediaDropZone: View {
                     .contentShape(Rectangle())
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(isImageTargeted ? appState.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                            .fill(isImageTargeted ? appState.accentColor.opacity(0.15) : Color.primary.opacity(0.04))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isImageTargeted ? appState.accentColor : Color.white.opacity(0.1), lineWidth: 1)
+                                    .stroke(isImageTargeted ? appState.accentColor : Color.primary.opacity(0.08), lineWidth: 1)
                             )
                     )
                     .onTapGesture {
@@ -225,10 +225,10 @@ public struct MediaDropZone: View {
                     .contentShape(Rectangle())
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                            .fill(Color.primary.opacity(0.04))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                             )
                     )
                     .onTapGesture {

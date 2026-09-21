@@ -66,6 +66,23 @@ class TestCLIScenePackGeneratorLogic(unittest.TestCase):
         self.assertEqual(ev4["type"], "error")
         self.assertEqual(ev4["message"], "Fatal error occurred")
 
+    def test_cli_parser_new_flags(self):
+        """Verify new flags: --snap-cuts, --no-snap-cuts, --export-xml, --no-export-xml, --prevent-sleep."""
+        import subprocess
+
+        cmd = [
+            sys.executable,
+            str(project_root / "scenepack_generator.py"),
+            "--help"
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0)
+        self.assertIn("--snap-cuts", res.stdout)
+        self.assertIn("--no-snap-cuts", res.stdout)
+        self.assertIn("--export-xml", res.stdout)
+        self.assertIn("--no-export-xml", res.stdout)
+        self.assertIn("--prevent-sleep", res.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

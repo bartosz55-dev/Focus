@@ -299,7 +299,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.3.0"
+APP_VERSION = "v2.3.1"
 STUDIO_AUDIO_BITRATE = "320k"
 
 

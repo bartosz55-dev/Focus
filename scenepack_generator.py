@@ -17,7 +17,8 @@ from scenepack_generator_backend import (
     write_concat_list,
     APP_VERSION,
     PlatformManager,
-    parse_reference_image_paths
+    parse_reference_image_paths,
+    SleepInhibitor
 )
 
 CREATE_NO_WINDOW = PlatformManager.get_creation_flags()
@@ -138,6 +139,9 @@ def main():
     parser.add_argument("--no-crop-black-bars", action="store_true", help="Disable automatic letterbox/pillarbox detection and cropping.")
     parser.add_argument("--export-xml", action="store_true", default=True, help="Export Premiere Pro / DaVinci Resolve FCPXML timeline.")
     parser.add_argument("--no-export-xml", dest="export_xml", action="store_false", help="Disable timeline XML export.")
+    parser.add_argument("--snap-cuts", action="store_true", default=True, help="Snap clip boundaries to camera shot cuts.")
+    parser.add_argument("--no-snap-cuts", dest="snap_cuts", action="store_false", help="Disable shot boundary snapping.")
+    parser.add_argument("--prevent-sleep", action="store_true", default=False, help="Inhibit system & display sleep during processing.")
 
     args = parser.parse_args()
 
@@ -164,6 +168,8 @@ def main():
     generator = ScenePackGenerator(log_queue=queue, frame_skip=max(1, args.skip_frames), mode=args.mode, tolerance=args.tolerance)
 
     try:
+        if args.prevent_sleep:
+            SleepInhibitor.prevent_sleep()
         video_path = args.video if (";" in args.video or "," in args.video) else Path(args.video).resolve()
 
         # 2. Direct Render from Reviewed Intervals (skips re-scanning!)
@@ -220,7 +226,8 @@ def main():
                 skip_outro=args.skip_outro,
                 intro_mode=args.intro_mode,
                 intro_duration=args.intro_duration,
-                tolerance=args.tolerance
+                tolerance=args.tolerance,
+                snap_to_shots=args.snap_cuts
             )
 
             # Normalize intervals so source video path is guaranteed
@@ -293,13 +300,17 @@ def main():
                 tolerance=args.tolerance,
                 export_clips_folder=args.export_clips_folder,
                 auto_crop_black_bars=not args.no_crop_black_bars,
-                export_timeline_xml=args.export_xml
+                export_timeline_xml=args.export_xml,
+                snap_to_shots=args.snap_cuts
             )
     except Exception as e:
         logging.error(f"Scenepack processing failed: {str(e)}")
         if args.json_stream:
             print(json.dumps({"type": "error", "message": str(e)}))
         sys.exit(1)
+    finally:
+        if args.prevent_sleep:
+            SleepInhibitor.allow_sleep()
 
 
 if __name__ == "__main__":

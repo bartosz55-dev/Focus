@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import AppKit
 
 public enum SidebarTab: String, CaseIterable, Identifiable, Sendable {
     case generator = "Generator"
@@ -87,6 +88,7 @@ public final class AppState: ObservableObject {
     @Published public var appearanceMode: String = UserDefaults.standard.string(forKey: "appearanceMode") ?? "Dark" {
         didSet {
             UserDefaults.standard.set(appearanceMode, forKey: "appearanceMode")
+            updateAppAppearance()
         }
     }
 
@@ -95,6 +97,24 @@ public final class AppState: ObservableObject {
         case "Light": return .light
         case "Dark": return .dark
         default: return nil // Auto / System
+        }
+    }
+
+    public func updateAppAppearance() {
+        DispatchQueue.main.async {
+            let appAppearance: NSAppearance?
+            switch self.appearanceMode {
+            case "Light":
+                appAppearance = NSAppearance(named: .aqua)
+            case "Dark":
+                appAppearance = NSAppearance(named: .darkAqua)
+            default:
+                appAppearance = nil
+            }
+            NSApp.appearance = appAppearance
+            for window in NSApp.windows {
+                window.appearance = appAppearance
+            }
         }
     }
 
@@ -131,6 +151,7 @@ public final class AppState: ObservableObject {
         refreshPresets()
         loadPersistentLogs()
         refreshEngineDiagnostics()
+        updateAppAppearance()
     }
 
     public func loadPersistentLogs() {
@@ -322,6 +343,14 @@ public final class AppState: ObservableObject {
         if settings.vadSpeakerEnabled { args.append("--vad-speaker") }
         if settings.skipIntro { args.append("--skip-intro") }
         if settings.skipOutro { args.append("--skip-outro") }
+        if settings.snapCuts {
+            args.append("--snap-cuts")
+        } else {
+            args.append("--no-snap-cuts")
+        }
+        if settings.preventSleep {
+            args.append("--prevent-sleep")
+        }
 
         Task {
             do {
@@ -370,6 +399,14 @@ public final class AppState: ObservableObject {
         ]
         if settings.exportClipsFolder {
             args.append("--export-clips-folder")
+        }
+        if settings.exportXml {
+            args.append("--export-xml")
+        } else {
+            args.append("--no-export-xml")
+        }
+        if settings.preventSleep {
+            args.append("--prevent-sleep")
         }
         if !referenceImageURLs.isEmpty {
             let imgArg = referenceImageURLs.count > 1 ? referenceImageURLs.map { $0.path }.joined(separator: ";") : referenceImageURLs[0].path

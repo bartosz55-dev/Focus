@@ -16,7 +16,9 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 def update_python_versions(ver: str):
+    v_ver = f"v{ver}" if not ver.startswith("v") else ver
     targets = [
+        ROOT_DIR / "scenepack_generator_backend.py",
         ROOT_DIR / "scenepack_generator.py",
         ROOT_DIR / "scenepack_generator_gui_qt.py",
         ROOT_DIR / "scenepack_generator_gui.py",
@@ -25,10 +27,10 @@ def update_python_versions(ver: str):
         if not p.exists():
             continue
         text = p.read_text(encoding="utf-8")
-        new_text = re.sub(r'APP_VERSION\s*=\s*"[^"]+"', f'APP_VERSION = "{ver}"', text)
+        new_text = re.sub(r'APP_VERSION\s*=\s*"[^"]+"', f'APP_VERSION = "{v_ver}"', text)
         if text != new_text:
             p.write_text(new_text, encoding="utf-8")
-            print(f"  ✓ Updated {p.name} -> {ver}")
+            print(f"  ✓ Updated {p.name} -> {v_ver}")
 
 def update_swift_versions(ver: str, build: str):
     # FocusMacApp.swift

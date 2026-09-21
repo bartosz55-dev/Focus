@@ -235,7 +235,11 @@ public struct SettingsView: View {
             .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+                    .fill(Color.primary.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    )
             )
 
             // 10 Chapters
@@ -263,10 +267,10 @@ public struct SettingsView: View {
                 .padding(14)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+                        .fill(Color.primary.opacity(0.03))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                         )
                 )
             }
@@ -314,7 +318,11 @@ public struct SettingsView: View {
             .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+                    .fill(Color.primary.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    )
             )
 
             // Milestone Filter Chips
@@ -331,7 +339,7 @@ public struct SettingsView: View {
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
                                 .background(
-                                    Capsule().fill(selectedVersionMilestone == mf.tag ? appState.accentColor : Color.white.opacity(0.06))
+                                    Capsule().fill(selectedVersionMilestone == mf.tag ? appState.accentColor : Color.primary.opacity(0.06))
                                 )
                                 .foregroundColor(selectedVersionMilestone == mf.tag ? .white : .secondary)
                         }
@@ -398,10 +406,10 @@ public struct SettingsView: View {
                         .padding(14)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+                                .fill(Color.primary.opacity(0.03))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                                 )
                         )
                     }
@@ -505,10 +513,10 @@ public struct SettingsView: View {
             .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                    .fill(Color.primary.opacity(0.04))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                     )
             )
 
@@ -650,10 +658,10 @@ private struct ThemeOptionCard: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                    .fill(Color.primary.opacity(0.04))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(isSelected ? accentColor : Color.white.opacity(0.08), lineWidth: isSelected ? 2 : 1)
+                            .stroke(isSelected ? accentColor : Color.primary.opacity(0.08), lineWidth: isSelected ? 2 : 1)
                     )
             )
         }
@@ -692,10 +700,10 @@ private struct MetricCard: View {
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                .fill(Color.primary.opacity(0.04))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                 )
         )
     }

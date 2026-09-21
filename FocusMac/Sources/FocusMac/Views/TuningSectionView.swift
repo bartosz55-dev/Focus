@@ -33,10 +33,10 @@ public struct TuningSectionView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.white.opacity(0.03))
+                        .fill(Color.primary.opacity(0.03))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                         )
                 )
 
@@ -95,10 +95,10 @@ public struct TuningSectionView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.white.opacity(0.03))
+                        .fill(Color.primary.opacity(0.03))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                         )
                 )
 
@@ -157,10 +157,10 @@ public struct TuningSectionView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.white.opacity(0.03))
+                        .fill(Color.primary.opacity(0.03))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                         )
                 )
 
@@ -185,6 +185,13 @@ public struct TuningSectionView: View {
                                 .toggleStyle(.checkbox)
                                 .font(.system(size: 11, weight: .medium))
 
+                            Toggle(appState.localized("snap_cuts"), isOn: $appState.settings.snapCuts)
+                                .toggleStyle(.checkbox)
+                                .font(.system(size: 11, weight: .medium))
+                                .help("Snap scene clip boundaries to camera cut changes")
+                        }
+
+                        HStack(spacing: 12) {
                             Toggle(appState.localized("auto_render"), isOn: $appState.settings.autoRender)
                                 .toggleStyle(.checkbox)
                                 .font(.system(size: 11, weight: .bold))
@@ -193,6 +200,11 @@ public struct TuningSectionView: View {
                             Toggle(appState.localized("export_clips_folder"), isOn: $appState.settings.exportClipsFolder)
                                 .toggleStyle(.checkbox)
                                 .font(.system(size: 11, weight: .medium))
+
+                            Toggle(appState.localized("export_xml"), isOn: $appState.settings.exportXml)
+                                .toggleStyle(.checkbox)
+                                .font(.system(size: 11, weight: .medium))
+                                .help("Export .xml FCPXML timeline for Premiere Pro & DaVinci Resolve")
                         }
 
                         HStack(spacing: 6) {
@@ -213,10 +225,10 @@ public struct TuningSectionView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.white.opacity(0.03))
+                        .fill(Color.primary.opacity(0.03))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                         )
                 )
             }
