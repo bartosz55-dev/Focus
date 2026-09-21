@@ -104,7 +104,7 @@ public struct SidebarView: View {
                 .buttonStyle(AppleSpringButtonStyle())
 
                 HStack {
-                    Text("v2.0.0 (macOS Native)")
+                    Text("v2.3.0 (macOS Native)")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
                     Spacer()

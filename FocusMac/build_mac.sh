@@ -17,18 +17,27 @@ echo "=========================================="
 echo " Building Focus (macOS Native SwiftUI)    "
 echo "=========================================="
 
-# 1. Resolve Xcode developer directory if available
-if [ -d "/Volumes/DyskNvmeE6XPG/Applications/Xcode.app/Contents/Developer" ]; then
-    export DEVELOPER_DIR="/Volumes/DyskNvmeE6XPG/Applications/Xcode.app/Contents/Developer"
-elif [ -d "/Applications/Xcode.app/Contents/Developer" ]; then
-    export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+# 1. Resolve Swift macro plugins if Xcode is available
+EXTRA_SWIFT_FLAGS=()
+XCODE_PLUGINS_DIR=""
+if [ -d "/Volumes/DyskNvmeE6XPG/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins" ]; then
+    XCODE_PLUGINS_DIR="/Volumes/DyskNvmeE6XPG/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins"
+elif [ -d "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins" ]; then
+    XCODE_PLUGINS_DIR="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins"
 fi
-echo "Using Developer Dir: ${DEVELOPER_DIR:-$(xcode-select -p)}"
+
+if [ -n "${XCODE_PLUGINS_DIR}" ]; then
+    echo "Using Xcode Swift Macro Plugins: ${XCODE_PLUGINS_DIR}"
+    EXTRA_SWIFT_FLAGS+=(
+        -Xswiftc -plugin-path -Xswiftc "${XCODE_PLUGINS_DIR}"
+        -Xswiftc -load-plugin-library -Xswiftc "${XCODE_PLUGINS_DIR}/libSwiftUIMacros.dylib"
+    )
+fi
 
 # 2. Compile in Release mode
 echo "==> Compiling Swift Package in Release mode..."
 cd "${SCRIPT_DIR}"
-xcrun swift build -c release
+swift build -c release "${EXTRA_SWIFT_FLAGS[@]}"
 
 RELEASE_BIN="${BUILD_DIR}/release/FocusMac"
 if [ ! -f "${RELEASE_BIN}" ]; then
@@ -94,9 +103,9 @@ cat << 'EOF' > "${APP_BUNDLE}/Contents/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.0.0</string>
+    <string>2.3.0</string>
     <key>CFBundleVersion</key>
-    <string>200</string>
+    <string>230</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>

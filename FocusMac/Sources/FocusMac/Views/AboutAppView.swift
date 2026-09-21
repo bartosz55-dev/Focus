@@ -54,7 +54,7 @@ public struct AboutAppView: View {
                         .tracking(3)
                         .foregroundColor(.primary)
 
-                    Text("Version 2.0.0 (Build 200)")
+                    Text("Version 2.3.0 (Build 230)")
                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
                         .foregroundColor(.secondary)
 

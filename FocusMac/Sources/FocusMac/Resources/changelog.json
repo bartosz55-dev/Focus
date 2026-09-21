@@ -1,6 +1,48 @@
 {
   "en": [
     {
+      "version": "v2.3.0",
+      "date": "2026-09-21",
+      "title": "Multi-Reference Face Photos & Enhanced Detection Recall",
+      "points": [
+        "[MULTI-REFERENCE FACES] Support for selecting multiple reference photos per character (angles, profiles, diverse lighting, expressions) to dramatically boost recall across dynamic footage.",
+        "[MATCHING ENGINE] Frame candidates match against the complete reference set for both Real Faces (multi-encoding) and Anime (multi-feature histogram, dHash & ORB descriptors).",
+        "[ENHANCED REFERENCE UI] Modern action button group: multi-file selection, add more photos across folders, and quick clear with detailed status.",
+        "[STANDARDS & CLI] Full backward compatibility for single-image inputs and CLI -i/--image multi-path support."
+      ]
+    },
+    {
+      "version": "v2.2.0",
+      "date": "2026-09-21",
+      "title": "Auto-Crop Letterbox, Premiere/DaVinci Timeline & Editor Compatibility Suite",
+      "points": [
+        "[AUTO-CROP LETTERBOX] Multi-point frame sampling automatically detects cinematic 2.39:1/2.35:1 black bars with night-scene safety guards.",
+        "[TIMELINE XML EXPORT] Standard Apple FCPXML v4 timeline export allows instant drag-and-drop cut import into Premiere Pro, DaVinci Resolve, and Final Cut Pro.",
+        "[COMPATIBILITY SPEC] Automatic technical specification report ({stem}_info.txt) verifying CFR 24fps, Studio 320k audio, and Rec.709 color matrix."
+      ]
+    },
+    {
+      "version": "v2.1.0",
+      "date": "2026-09-21",
+      "title": "411 Scenepack Standards, HDR Tone-Mapping & Studio Audio Pipeline",
+      "points": [
+        "[COLOR / HDR] Automatic HDR10 / Dolby Vision / HLG BT.2020 to Rec.709 SDR tone-mapping filter graph.",
+        "[AUDIO] Studio-grade 320 kbps AAC stereo audio pipeline at 48 kHz.",
+        "[CLIPS FOLDER] Option to export individual scene cuts into a dedicated {stem}_clips/ folder with faststart streaming.",
+        "[NAMING] 411 / Scene standard filename generator '{Character} - {Title} ({Year}) {Season} - [{Res} {Source}] - Focus.mp4'."
+      ]
+    },
+    {
+      "version": "v2.0.1",
+      "date": "2026-09-17",
+      "title": "Zero-Dependency Standalone Release & Diagnostics",
+      "points": [
+        "[STANDALONE] Fully self-contained macOS distribution bundling static Apple Silicon FFmpeg/FFprobe and embedded engine.",
+        "[RUNTIME] Zero configuration: runs on fresh macOS without Python or Homebrew dependencies.",
+        "[DIAGNOSTICS] Added runtime diagnostics status reporting in Settings to verify bundled binaries."
+      ]
+    },
+    {
       "version": "v2.0.0",
       "date": "2026-09-07",
       "title": "Native macOS SwiftUI 6 Engine, Liquid Glass UI & Unified Settings Hub",
@@ -840,6 +882,48 @@
     }
   ],
   "pl": [
+    {
+      "version": "v2.3.0",
+      "date": "2026-09-21",
+      "title": "Wielokrotne Zdjęcia Referencyjne Twarzy & Zwiększona Dokładność Detekcji",
+      "points": [
+        "[MULTI-REFERENCE FACES] Dodano możliwość wyboru wielu zdjęć referencyjnych dla jednej postaci (różne kąty widzenia, profil, oświetlenie, uśmiech, dynamiczna mimika).",
+        "[MATCHING ENGINE] Dopasowywanie kandydatów do pełnego zbioru wektorów cech zarówno w trybie Real Faces, jak i 2D Animation / Anime.",
+        "[NOWY INTERFEJS REFERENCJI] Wprowadzono ergonomiczne przyciski: wybór wielu plików naraz, przycisk dołączania kolejnych zdjęć oraz szybki reset.",
+        "[STANDARDS & CLI] Pełna kompatybilność wsteczna dla pojedynczych zdjęć oraz obsługa wielu ścieżek w CLI."
+      ]
+    },
+    {
+      "version": "v2.2.0",
+      "date": "2026-09-21",
+      "title": "Automatyczne Kadrowanie Letterbox, Eksport Osi Czasu Premiere/DaVinci & Pakiet Zgodności NLE",
+      "points": [
+        "[LETTERBOX AUTO-CROP] Automatyczne próbkowanie klatek i wykrywanie kinowych czarnych pasów (2.39:1 / letterboxing / pillarboxing) z ochroną przed ciemnymi scenami.",
+        "[PREMIERE & RESOLVE XML] Generowanie standardowego pliku osi czasu Apple FCPXML (xmeml v4) umożliwiającego natychmiastowe przeciągnięcie scen do Premiere Pro i DaVinci Resolve.",
+        "[SPEC INFO & BADGE] Automatyczny raport specyfikacji technicznej {stem}_info.txt dokumentujący framerate CFR 24fps, dźwięk Studio 320k oraz matrycę Rec.709."
+      ]
+    },
+    {
+      "version": "v2.1.0",
+      "date": "2026-09-21",
+      "title": "Standard Nazewnictwa Scen 411, Dynamiczny Bitrate Headroom & Eksport Folderu Scen",
+      "points": [
+        "[COLOR / HDR] Automatyczne mapowanie kolorów HDR (BT.2020) do SDR (Rec.709) eliminujące wyblakłe kolory.",
+        "[AUDIO] Jakość dźwięku Studio 320 kbps AAC Stereo przy próbkowaniu 48 kHz.",
+        "[CLIPS FOLDER] Równoległy eksport poszczególnych ujęć do dedykowanego folderu {stem}_clips/ z flagą faststart.",
+        "[NAMING 411] Generator nazw plików zgodny ze standardem scenepacków '{Postać} - {Tytuł} ({Rok}) {Sezon} - [{Rozdzielczość} {Źródło}] - Focus.mp4'."
+      ]
+    },
+    {
+      "version": "v2.0.1",
+      "date": "2026-09-17",
+      "title": "Samodzielne Wydanie Zero-Dependency & Diagnostyka",
+      "points": [
+        "[STANDALONE] Samodzielna paczka macOS z wbudowanym statycznym FFmpeg/FFprobe dla Apple Silicon.",
+        "[RUNTIME] Brak wymagań zewnętrznych instalacji Pythona lub Homebrew.",
+        "[DIAGNOSTYKA] Weryfikacja gotowości statycznych binariów i silnika w czasie rzeczywistym."
+      ]
+    },
     {
       "version": "v2.0.0",
       "date": "2026-09-07",

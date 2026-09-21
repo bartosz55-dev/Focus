@@ -88,7 +88,15 @@ public struct MediaDropZone: View {
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 10) {
-                        if let imgURL = appState.referenceImageURL,
+                        if !appState.referenceImageURLs.isEmpty,
+                           let first = appState.referenceImageURLs.first,
+                           let nsImg = NSImage(contentsOf: first) {
+                            Image(nsImage: nsImg)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 32, height: 32)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        } else if let imgURL = appState.referenceImageURL,
                            let nsImg = NSImage(contentsOf: imgURL) {
                             Image(nsImage: nsImg)
                                 .resizable()
@@ -110,7 +118,15 @@ public struct MediaDropZone: View {
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
-                            if let imgURL = appState.referenceImageURL {
+                            if appState.referenceImageURLs.count > 1 {
+                                Text("\(appState.referenceImageURLs.count) Reference Faces")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .lineLimit(1)
+                                Text(appState.referenceImageURLs.map { $0.lastPathComponent }.joined(separator: ", "))
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            } else if let imgURL = appState.referenceImageURL {
                                 Text(imgURL.lastPathComponent)
                                     .font(.system(size: 12, weight: .medium))
                                     .lineLimit(1)
@@ -127,11 +143,33 @@ public struct MediaDropZone: View {
 
                         Spacer()
 
-                        Button("Select...") {
-                            chooseReferenceImage()
+                        if !appState.referenceImageURLs.isEmpty || appState.referenceImageURL != nil || appState.selectedCharacterProfile != nil {
+                            Button(action: {
+                                chooseReferenceImage(append: true)
+                            }) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .help("Add another reference face image")
+
+                            Button(action: {
+                                appState.referenceImageURLs.removeAll()
+                                appState.referenceImageURL = nil
+                                appState.selectedCharacterProfile = nil
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Button("Select...") {
+                                chooseReferenceImage(append: false)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
                     }
                     .padding(8)
                     .contentShape(Rectangle())
@@ -144,7 +182,7 @@ public struct MediaDropZone: View {
                             )
                     )
                     .onTapGesture {
-                        chooseReferenceImage()
+                        chooseReferenceImage(append: false)
                     }
                     .onDrop(of: [.fileURL], isTargeted: $isImageTargeted) { providers in
                         handleDrop(providers: providers, isVideo: false)
@@ -212,17 +250,30 @@ public struct MediaDropZone: View {
         }
     }
 
-    private func chooseReferenceImage() {
+    private func chooseReferenceImage(append: Bool = false) {
         let panel = NSOpenPanel()
-        panel.title = "Select Character Reference Image"
+        panel.title = "Select Character Reference Images"
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
+        panel.allowsMultipleSelection = true
         panel.allowedContentTypes = [.image]
-        if panel.runModal() == .OK, let url = panel.url {
-            appState.referenceImageURL = url
+        if panel.runModal() == .OK {
+            let valid = panel.urls.filter { ["png", "jpg", "jpeg", "webp"].contains($0.pathExtension.lowercased()) }
+            guard !valid.isEmpty else { return }
+            if append {
+                for u in valid where !appState.referenceImageURLs.contains(u) {
+                    appState.referenceImageURLs.append(u)
+                }
+            } else {
+                appState.referenceImageURLs = valid
+                appState.referenceImageURL = valid.first
+            }
             appState.selectedCharacterProfile = nil
-            appState.showToast("Reference face selected: \(url.lastPathComponent)", icon: "person.crop.circle.badge.checkmark")
+            if appState.referenceImageURLs.count > 1 {
+                appState.showToast("\(appState.referenceImageURLs.count) reference faces selected", icon: "person.crop.circle.badge.checkmark")
+            } else if let first = appState.referenceImageURLs.first {
+                appState.showToast("Reference face selected: \(first.lastPathComponent)", icon: "person.crop.circle.badge.checkmark")
+            }
         }
     }
 
@@ -256,9 +307,15 @@ public struct MediaDropZone: View {
                     if isVideo {
                         self.appState.addVideoURLs([url])
                     } else {
-                        self.appState.referenceImageURL = url
-                        self.appState.selectedCharacterProfile = nil
-                        self.appState.showToast("Reference face selected: \(url.lastPathComponent)", icon: "person.crop.circle.badge.checkmark")
+                        let ext = url.pathExtension.lowercased()
+                        if ["png", "jpg", "jpeg", "webp"].contains(ext) {
+                            if !self.appState.referenceImageURLs.contains(url) {
+                                self.appState.referenceImageURLs.append(url)
+                            }
+                            self.appState.referenceImageURL = self.appState.referenceImageURLs.first
+                            self.appState.selectedCharacterProfile = nil
+                            self.appState.showToast("Reference face added: \(url.lastPathComponent)", icon: "person.crop.circle.badge.checkmark")
+                        }
                     }
                 }
             }

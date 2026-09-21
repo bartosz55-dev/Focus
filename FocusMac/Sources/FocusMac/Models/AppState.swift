@@ -42,7 +42,19 @@ public enum SettingsSubTab: String, CaseIterable, Identifiable, Sendable {
 public final class AppState: ObservableObject {
     // Media selections
     @Published public var selectedVideoURLs: [URL] = []
-    @Published public var referenceImageURL: URL?
+    @Published public var referenceImageURLs: [URL] = []
+    public var referenceImageURL: URL? {
+        get { referenceImageURLs.first }
+        set {
+            if let val = newValue {
+                if !referenceImageURLs.contains(val) {
+                    referenceImageURLs = [val]
+                }
+            } else {
+                referenceImageURLs = []
+            }
+        }
+    }
     @Published public var selectedCharacterProfile: CharacterProfile?
     @Published public var outputURL: URL?
 
@@ -133,7 +145,7 @@ public final class AppState: ObservableObject {
             }
         }
         if self.logLines.isEmpty {
-            self.logLines.append("[INFO] Focus v2.0.0 Diagnostic Engine ready. Awaiting scan or render events.")
+            self.logLines.append("[INFO] Focus v2.3.0 Diagnostic Engine ready. Awaiting scan or render events.")
         }
     }
 
@@ -300,8 +312,9 @@ public final class AppState: ObservableObject {
             "--audio-track", String(settings.audioTrackIndex),
             "--scan-only"
         ]
-        if let img = referenceImageURL {
-            args += ["-i", img.path]
+        if !referenceImageURLs.isEmpty {
+            let imgArg = referenceImageURLs.count > 1 ? referenceImageURLs.map { $0.path }.joined(separator: ";") : referenceImageURLs[0].path
+            args += ["-i", imgArg]
         } else if let char = selectedCharacterProfile {
             args += ["-i", char.cropPath]
         }
@@ -358,8 +371,9 @@ public final class AppState: ObservableObject {
         if settings.exportClipsFolder {
             args.append("--export-clips-folder")
         }
-        if let img = referenceImageURL {
-            args += ["-i", img.path]
+        if !referenceImageURLs.isEmpty {
+            let imgArg = referenceImageURLs.count > 1 ? referenceImageURLs.map { $0.path }.joined(separator: ";") : referenceImageURLs[0].path
+            args += ["-i", imgArg]
         } else if let char = selectedCharacterProfile {
             args += ["-i", char.cropPath]
         }

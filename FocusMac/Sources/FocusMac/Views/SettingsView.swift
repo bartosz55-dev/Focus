@@ -788,6 +788,17 @@ private func loadAllChangelog(lang: String) -> [ChangelogItem] {
 
 private let fallbackChangelogEntries: [ChangelogItem] = [
     ChangelogItem(
+        version: "v2.3.0",
+        date: "2026-09-21",
+        title: "Multi-Reference Face Recognition & Editor Features",
+        points: [
+            "Support multiple character reference faces (semicolon-separated) for robust multi-angle matching.",
+            "Smart multi-reference face selector with live badges and addition (+) button.",
+            "Full changelog integration with searchable history up to v2.3.0.",
+            "Updated macOS native engine and build metadata."
+        ]
+    ),
+    ChangelogItem(
         version: "v2.0.0",
         date: "2026-09-07",
         title: "Native macOS SwiftUI 6 Engine & Dual Ecosystem",
