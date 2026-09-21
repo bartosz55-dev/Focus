@@ -1,0 +1,78 @@
+Focus Source-Available Non-Commercial License
+Version 1.0, September 2026
+Copyright (c) 2026 Bartosz (GitHub: @Bartosz5500 / @bartosz55-dev)
+Repository: https://github.com/bartosz55-dev/Focus
+
+================================================================================
+PREAMBLE & INTENT
+================================================================================
+Focus is an open and transparent creative software project developed for the video 
+editing and creative community. The intent of this license is to ensure the software 
+remains 100% free and accessible to individuals, hobbyists, and creators for personal 
+use, while strictly and legally prohibiting any third party from commercializing, 
+selling, reselling, rebranding, or monetizing the software or its derivatives.
+
+================================================================================
+1. GRANT OF LICENSE (PERMITTED USES)
+================================================================================
+Permission is hereby granted, free of charge, to any person obtaining a copy of this 
+software and associated documentation files (the "Software"), to use, copy, modify, 
+merge, and run the Software, subject to the following conditions:
+
+  a. Non-Commercial & Personal Use: You may use the Software exclusively for personal, 
+     educational, research, non-profit, or individual creative purposes (such as 
+     generating scenepacks, editing anime/film videos, and personal publishing).
+  
+  b. Free Distribution: You may share or distribute unmodified or modified copies of 
+     the Software, provided that such distribution is completely free of charge and 
+     strictly conforms to all prohibitions outlined in Section 2.
+
+================================================================================
+2. COMMERCIAL PROHIBITIONS & RESTRICTIONS (STRICTLY FORBIDDEN)
+================================================================================
+Under no circumstances may you, directly or indirectly, perform any of the following 
+actions without prior express written authorization from the Copyright Holder:
+
+  a. NO RESALE OR COMMERCIAL DISTRIBUTION: You may NOT sell, resell, rent, lease, 
+     license, sublicense, or distribute the Software (including binary executables, 
+     installers, macOS .app bundles, Windows .exe packages, or source code) for money, 
+     cryptocurrency, subscription fees, digital tokens, or any financial compensation.
+
+  b. NO REBRANDING OR WHITE-LABELING: You may NOT remove, alter, or obscure any 
+     copyright notices, trademarks, author attributions ("Bartosz5500"), repository links, 
+     or project branding ("Focus"). You may NOT repackage the Software under a different 
+     name to present it as your own product or sell it on digital storefronts (such as 
+     Gumroad, Patreon, Ko-fi, Etsy, Discord, or web stores).
+
+  c. NO HOSTED OR CLOUD SERVICES (NO SaaS): You may NOT host, operate, or run the 
+     Software (or any derivative backend thereof) as a commercial Software-as-a-Service 
+     (SaaS), paywalled web app, hosted API, or automated bot service where users are 
+     charged fees for video processing, rendering, or access.
+
+  d. NO BUNDLING WITH PAID GOODS: You may NOT bundle or package the Software with any 
+     commercial product, paid course, paid preset pack, or paid subscription service.
+
+================================================================================
+3. ATTRIBUTION & PRESERVATION OF NOTICES
+================================================================================
+All copies, forks, or substantial portions of the Software must retain the above 
+copyright notice, this license document in its entirety, and prominent credit to the 
+original author: Bartosz (https://github.com/bartosz55-dev/Focus).
+
+================================================================================
+4. TERMINATION
+================================================================================
+Any use, copying, distribution, or monetization of the Software in violation of the 
+terms of this License automatically and immediately terminates all rights granted 
+hereunder, and constitutes copyright infringement under international copyright law 
+and the Berne Convention.
+
+================================================================================
+5. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY
+================================================================================
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
+CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE 
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

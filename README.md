@@ -141,11 +141,21 @@ Focus has evolved through 132 iterations from initial prototypes to a production
 
 ---
 
-## 📜 Legal Disclaimer & Copyright Notice
+## 📜 License & Legal Terms
 
-**Focus is a free and open-source video processing tool designed strictly for educational, research, and personal creative fair-use editing.**
+Focus is licensed under the **Focus Source-Available Non-Commercial License**.
 
-The developers and maintainers of Focus **DO NOT** host, distribute, or promote copyrighted media content. Users are solely responsible for ensuring they have legal rights or fair-use permissions for any video material processed through this software.
+* ✅ **100% Free for Creators:** You are free to download, inspect, modify, and use Focus for personal editing, creative projects, research, and educational purposes.
+* ❌ **Commercial Resale Prohibited:** You may **NOT** sell, resell, or distribute Focus (in source code or compiled binary form) for money, subscriptions, or paid downloads.
+* ❌ **No Rebranding:** You may **NOT** repackage or rebrand the software to sell it on digital storefronts (such as Gumroad, Patreon, Discord, or web shops).
+* ❌ **No Paid SaaS:** You may **NOT** host or operate Focus as a paid cloud service or commercial processing backend.
 
-**DISCLAIMER OF LIABILITY:**
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+For the full legal terms, see the official [LICENSE](LICENSE) file.
+
+---
+
+## ⚖️ Disclaimer of Liability
+
+Focus is a local video processing automation utility. The developers and maintainers **DO NOT** host, distribute, scrape, or promote copyrighted media content. Users are solely and independently responsible for ensuring they possess valid legal rights or fair-use permissions for any video material processed through this software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
