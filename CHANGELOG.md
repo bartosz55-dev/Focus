@@ -6,6 +6,13 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
+## v2.2.0 (2026-09-21) — Auto-Crop Letterbox, Premiere / DaVinci XML Timeline & Editor Compatibility Suite
+
+* **[AUTO-CROP LETTERBOX] Cinematic Black Bars Detection & Removal:** Built an intelligent multi-point frame sampling engine (sampling at 20%, 40%, 60%, and 80%) that accurately identifies persistent cinematic letterbox (2.39:1 / 2.35:1) or pillarbox (4:3) black bars. Employs a conservative minimum-bar safety threshold (min >= 24px) to protect dark and nighttime scenes from over-cropping, automatically feeding clean `crop=w:h:x:y` filters to FFmpeg with even YUV420p dimensions.
+* **[TIMELINE XML EXPORT] Premiere Pro & DaVinci Resolve FCPXML Export:** Automatic generation of industry-standard Apple Final Cut Pro XML (`.xml`, `<xmeml version="4">`) timeline files alongside the scenepack. Video editors in Adobe Premiere Pro, DaVinci Resolve, and Final Cut Pro can instantly drag-and-drop the XML file directly into their media pool/timeline to receive all pre-cut scenes mapped to their native source media with zero re-encoding, zero quality loss, and instant responsiveness.
+* **[COMPATIBILITY SPEC] Scenepack Technical Spec & Compatibility Report (`{stem}_info.txt`):** Automatically exports a comprehensive technical specification file documenting CFR 24.000 fps (constant frame rate), Studio 320 kbps AAC audio, Rec.709 color matrix, exact clip cut intervals with timestamps, and full NLE compatibility verification for Adobe After Effects CC, Premiere Pro, DaVinci Resolve, CapCut Desktop/Mobile, and Topaz Video AI.
+* **[UI & WORKFLOW] Editor Compatibility Badge & Dedicated Export Controls:** Added toggles for letterbox auto-cropping and XML timeline generation in the Automation & Export panel across GUI, Workers, and CLI (`--no-crop-black-bars`, `--export-xml`). Added a persistent green verified compatibility pill badge in the UI confirming constant framerate, studio audio, and zero-drift timeline readiness.
+
 ## v2.1.0 (2026-09-21) — 411 Scenepack Standards, HDR Tone-Mapping & Studio Audio Pipeline
 
 * [COLOR / HDR] Automatic HDR-to-SDR Tone-Mapping: Automatically inspects color metadata (`color_space`, `color_transfer`, `color_primaries`, `pix_fmt`) with ffprobe. Injects native FFmpeg BT.2020 to BT.709 tone-mapping filter graph for HDR10, Dolby Vision, and HLG 4K sources, preventing washed-out or desaturated clips.

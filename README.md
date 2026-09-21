@@ -1,7 +1,7 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v2.1.0)
+# Focus — AI-Powered Scenepack Generator & Video Studio (v2.2.0)
 
-[![Version](https://img.shields.io/badge/version-v2.1.0-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
-[![Changelog](https://img.shields.io/badge/changelog-132%20releases-success.svg?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.2.0-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
+[![Changelog](https://img.shields.io/badge/changelog-133%20releases-success.svg?style=for-the-badge)](CHANGELOG.md)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-SwiftUI%206%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -13,12 +13,17 @@
 
 **Focus** is a high-performance, AI-driven desktop video processing studio engineered for content creators, video editors, and anime/film clippers. It automates the tedious process of finding, tracking, cropping, and extracting character-specific scenes from full-length movies, anime series, or long-form videos—converting raw footage into high-quality, ready-to-edit scenepacks in minutes.
 
-By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Perceptual dHash Feature Matching**, **Intelligent Intro/Outro Removal**, **Auto Match Source Bitrate Engine**, **Voice Activity Detection (VAD)**, **Camera Shot Cut Snapping**, and multi-core **FFmpeg parallel rendering**, Focus scans entire video seasons and extracts strictly the exact moments that matter.
+By combining **Facial Recognition (Real Faces & Anime)**, **Zero-Lock Color & Perceptual dHash Feature Matching**, **Letterbox Auto-Cropping**, **Premiere/DaVinci FCPXML Timeline Export**, **Intelligent Intro/Outro Removal**, **Auto Match Source Bitrate Engine**, **Voice Activity Detection (VAD)**, **Camera Shot Cut Snapping**, and multi-core **FFmpeg parallel rendering**, Focus scans entire video seasons and extracts strictly the exact moments that matter.
 
 ---
 
-## ⚡ Key Features (v1.43)
+## ⚡ Key Features (v2.2.0)
 
+* **🎞️ Auto-Crop Letterbox (Black Bars Detection & Removal):** Multi-point frame sampling engine (20%, 40%, 60%, 80%) automatically detects cinematic 2.39:1 / 2.35:1 letterbox or 4:3 pillarbox black bars and generates clean cropped footage with night-scene safety guards and even dimensions.
+* **⏱️ Premiere Pro & DaVinci Resolve Timeline Export (`.xml` FCPXML):** Instantly outputs an industry-standard Apple Final Cut Pro XML v4 timeline alongside the scenepack. Editors can drag-and-drop cuts directly into their Premiere Pro or DaVinci Resolve timeline without waiting for video re-encoding!
+* **📋 Technical Specifications & Compatibility Report (`{stem}_info.txt`):** Auto-generates an editor specification sheet verifying constant frame rate (CFR 24.000 fps), Studio 320 kbps audio, Rec.709 color matrix, and zero-drift compatibility with Adobe After Effects CC and CapCut.
+* **🏷️ 411 / Scene Standard File Naming:** Automatically names exports according to community-accepted scenepack standards (`{Character} - {Show Title} ({Year}) {Season} - [{Resolution} {Source}] - Focus.mp4`).
+* **📁 Discrete Scene Clips Folder Export:** Export individual scene cuts as standalone faststart clips in `{stem}_clips/Scene_001.mp4` alongside the master consolidated scenepack.
 * **☕ Anti-Sleep Power Lock:** Automatically inhibits OS sleep, display sleep, and screen turn-off on macOS (`caffeinate`) and Windows (`SetThreadExecutionState`) while active scans or render jobs run.
 * **🎵 Multi-Audio Stream Preservation:** New option to keep all audio channels (`-map 0:a?` / `-map 0`), letting video editors choose or mix Japanese, English dub, and commentary tracks in Premiere / After Effects / DaVinci Resolve.
 * **⚡ Quick Presets & Custom Preset Manager:** Save and load personalized tuning profiles stored in `~/.focus_presets.json` with quick access directly from the generator header.

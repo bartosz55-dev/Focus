@@ -657,6 +657,8 @@ class FocusApp(QMainWindow):
                 "intro_duration": float(getattr(self, 'input_intro_duration', None) and self.input_intro_duration.text() or 90),
                 "auto_render": getattr(self, 'chk_auto_render', None) and self.chk_auto_render.isChecked(),
                 "export_clips_folder": getattr(self, 'chk_export_clips_folder', None) and self.chk_export_clips_folder.isChecked(),
+                "auto_crop_black_bars": getattr(self, 'chk_auto_crop', None) and self.chk_auto_crop.isChecked(),
+                "export_timeline_xml": getattr(self, 'chk_export_xml', None) and self.chk_export_xml.isChecked(),
                 "prevent_sleep": getattr(self, 'prevent_sleep_enabled', True),
                 "play_sound": self.settings.get("play_sound", True),
                 "appearance_mode": self.settings.get("appearance_mode", "Dark"),
@@ -1274,8 +1276,32 @@ class FocusApp(QMainWindow):
         self.chk_export_clips_folder.toggled.connect(self.save_current_settings)
         intro_box.addWidget(self.chk_export_clips_folder)
 
+        intro_box.addSpacing(14)
+        self.chk_auto_crop = QCheckBox(get_translation(self.current_lang, "auto_crop_enable"))
+        self.chk_auto_crop.setChecked(self.settings.get("auto_crop_black_bars", True))
+        self.chk_auto_crop.setToolTip(get_translation(self.current_lang, "tt_auto_crop"))
+        self.chk_auto_crop.toggled.connect(self.save_current_settings)
+        intro_box.addWidget(self.chk_auto_crop)
+
+        intro_box.addSpacing(14)
+        self.chk_export_xml = QCheckBox(get_translation(self.current_lang, "export_xml_enable"))
+        self.chk_export_xml.setChecked(self.settings.get("export_timeline_xml", True))
+        self.chk_export_xml.setToolTip(get_translation(self.current_lang, "tt_export_xml"))
+        self.chk_export_xml.toggled.connect(self.save_current_settings)
+        intro_box.addWidget(self.chk_export_xml)
+
         intro_box.addStretch()
         auto_layout.addLayout(intro_box)
+
+        # Editor Compatibility Badge Row
+        compat_row = QHBoxLayout()
+        compat_row.setContentsMargins(0, 8, 0, 0)
+        self.lbl_compat_badge = QLabel("✓ CapCut & After Effects Ready • CFR 24fps • Studio 320k Audio • Rec.709 SDR • XML Timeline Ready")
+        self.lbl_compat_badge.setObjectName("CompatBadge")
+        self.lbl_compat_badge.setToolTip("Standards-compliant video and audio pipeline guaranteeing zero audio desync and seamless NLE timeline editing.")
+        compat_row.addWidget(self.lbl_compat_badge)
+        compat_row.addStretch()
+        auto_layout.addLayout(compat_row)
         set_layout.addWidget(auto_group)
 
         # Sync initial visibility of custom duration
@@ -1789,6 +1815,15 @@ class FocusApp(QMainWindow):
             font-weight: bold;
             color: {primary};
         }}
+        QLabel#CompatBadge {{
+            background-color: rgba(16, 185, 129, 0.12);
+            border: 1px solid #10b981;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #10b981;
+        }}
         QProgressBar#EpisodeProgressBar {{
             background-color: {btn_bg};
             border: none;
@@ -1934,6 +1969,12 @@ class FocusApp(QMainWindow):
         if hasattr(self, "chk_export_clips_folder"):
             self.chk_export_clips_folder.setText(get_translation(lang_name, "export_clips_folder_enable"))
             self.chk_export_clips_folder.setToolTip(get_translation(lang_name, "tt_export_clips_folder"))
+        if hasattr(self, "chk_auto_crop"):
+            self.chk_auto_crop.setText(get_translation(lang_name, "auto_crop_enable"))
+            self.chk_auto_crop.setToolTip(get_translation(lang_name, "tt_auto_crop"))
+        if hasattr(self, "chk_export_xml"):
+            self.chk_export_xml.setText(get_translation(lang_name, "export_xml_enable"))
+            self.chk_export_xml.setToolTip(get_translation(lang_name, "tt_export_xml"))
         if hasattr(self, "btn_select_all"):
             self.btn_select_all.setText(f"✅ {get_translation(lang_name, 'select_all')}")
         if hasattr(self, "btn_deselect_all"):
@@ -2341,12 +2382,16 @@ class FocusApp(QMainWindow):
         generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
         export_quality = self.combo_export_quality.currentText()
         export_clips_folder = self.chk_export_clips_folder.isChecked() if hasattr(self, 'chk_export_clips_folder') else False
+        auto_crop_black_bars = self.chk_auto_crop.isChecked() if hasattr(self, 'chk_auto_crop') else True
+        export_timeline_xml = self.chk_export_xml.isChecked() if hasattr(self, 'chk_export_xml') else True
         self.render_worker = RenderWorker(
             generator_inst, self.video_path_str, selected_intervals,
             self.output_path_str, aspect_canonical, self.queue_proxy,
             audio_track_index=audio_track_idx,
             export_quality=export_quality,
-            export_clips_folder=export_clips_folder
+            export_clips_folder=export_clips_folder,
+            auto_crop_black_bars=auto_crop_black_bars,
+            export_timeline_xml=export_timeline_xml
         )
         self.render_worker.start()
 

@@ -134,6 +134,9 @@ def main():
     parser.add_argument("--intervals-json-file", type=str, help="Path to JSON file with reviewed clip intervals to render directly.")
     parser.add_argument("--get-audio-tracks", action="store_true", help="Query and print audio streams as JSON for video file.")
     parser.add_argument("--export-clips-folder", action="store_true", help="Export individual scene clips folder alongside master scenepack.")
+    parser.add_argument("--no-crop-black-bars", action="store_true", help="Disable automatic letterbox/pillarbox detection and cropping.")
+    parser.add_argument("--export-xml", action="store_true", default=True, help="Export Premiere Pro / DaVinci Resolve FCPXML timeline.")
+    parser.add_argument("--no-export-xml", dest="export_xml", action="store_false", help="Disable timeline XML export.")
 
     args = parser.parse_args()
 
@@ -187,7 +190,9 @@ def main():
                 aspect_ratio=args.aspect,
                 audio_track_index=args.audio_track,
                 export_quality=args.quality,
-                export_clips_folder=args.export_clips_folder
+                export_clips_folder=args.export_clips_folder,
+                auto_crop_black_bars=not args.no_crop_black_bars,
+                export_timeline_xml=args.export_xml
             )
             if args.json_stream:
                 print(json.dumps({"type": "render_complete", "output": str(output_path)}))
@@ -284,7 +289,9 @@ def main():
                 intro_mode=args.intro_mode,
                 intro_duration=args.intro_duration,
                 tolerance=args.tolerance,
-                export_clips_folder=args.export_clips_folder
+                export_clips_folder=args.export_clips_folder,
+                auto_crop_black_bars=not args.no_crop_black_bars,
+                export_timeline_xml=args.export_xml
             )
     except Exception as e:
         logging.error(f"Scenepack processing failed: {str(e)}")

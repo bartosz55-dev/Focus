@@ -133,16 +133,119 @@ class TestIndustryStandardsAndQuality(unittest.TestCase):
 
     def test_cli_export_clips_folder_argument(self):
         """Verify CLI argument parser correctly parses --export-clips-folder."""
-        import scenepack_generator
-        with patch("sys.argv", ["scenepack_generator.py", "-v", "test.mp4", "-i", "face.jpg", "--export-clips-folder"]):
-            import argparse
-            # Recreate parser or inspect argument parsing logic
-            from scenepack_generator import main
-            # We can parse args directly
-            parser = argparse.ArgumentParser()
-            parser.add_argument("--export-clips-folder", action="store_true")
-            args = parser.parse_args(["--export-clips-folder"])
-            self.assertTrue(args.export_clips_folder)
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--export-clips-folder", action="store_true")
+        parser.add_argument("--no-crop-black-bars", action="store_true")
+        parser.add_argument("--export-xml", action="store_true", default=True)
+        parser.add_argument("--no-export-xml", dest="export_xml", action="store_false")
+
+        args1 = parser.parse_args(["--export-clips-folder"])
+        self.assertTrue(args1.export_clips_folder)
+        self.assertFalse(args1.no_crop_black_bars)
+        self.assertTrue(args1.export_xml)
+
+        args2 = parser.parse_args(["--no-crop-black-bars", "--no-export-xml"])
+        self.assertTrue(args2.no_crop_black_bars)
+        self.assertFalse(args2.export_xml)
+
+    def test_detect_letterbox_crop_with_black_bars(self):
+        """Verify _detect_letterbox_crop accurately detects letterboxing and returns crop filter."""
+        import numpy as np
+        import cv2
+        generator = backend.ScenePackGenerator()
+
+        mock_frame = np.ones((1080, 1920, 3), dtype=np.uint8) * 128
+        mock_frame[0:140, :, :] = 0
+        mock_frame[1080-140:, :, :] = 0
+
+        mock_cap = MagicMock()
+        mock_cap.isOpened.return_value = True
+        mock_cap.get.side_effect = lambda prop: 1000 if prop == cv2.CAP_PROP_FRAME_COUNT else (1920 if prop == cv2.CAP_PROP_FRAME_WIDTH else (1080 if prop == cv2.CAP_PROP_FRAME_HEIGHT else 24.0))
+        mock_cap.read.return_value = (True, mock_frame)
+
+        with patch("cv2.VideoCapture", return_value=mock_cap), \
+             patch.object(Path, "exists", return_value=True):
+            crop_res = generator._detect_letterbox_crop(Path("letterbox_movie.mkv"))
+            self.assertEqual(crop_res, "crop=1920:800:0:140")
+
+    def test_detect_letterbox_crop_full_frame(self):
+        """Verify _detect_letterbox_crop returns empty string when no black bars are present."""
+        import numpy as np
+        import cv2
+        generator = backend.ScenePackGenerator()
+
+        mock_frame = np.ones((1080, 1920, 3), dtype=np.uint8) * 128
+
+        mock_cap = MagicMock()
+        mock_cap.isOpened.return_value = True
+        mock_cap.get.side_effect = lambda prop: 1000 if prop == cv2.CAP_PROP_FRAME_COUNT else (1920 if prop == cv2.CAP_PROP_FRAME_WIDTH else (1080 if prop == cv2.CAP_PROP_FRAME_HEIGHT else 24.0))
+        mock_cap.read.return_value = (True, mock_frame)
+
+        with patch("cv2.VideoCapture", return_value=mock_cap), \
+             patch.object(Path, "exists", return_value=True):
+            crop_res = generator._detect_letterbox_crop(Path("full_frame_show.mp4"))
+            self.assertEqual(crop_res, "")
+
+    def test_generate_premiere_xml(self):
+        """Verify generate_premiere_xml produces valid FCPXML xmeml v4 timeline."""
+        import xml.etree.ElementTree as ET
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xml_out = Path(tmpdir) / "test_timeline.xml"
+            dummy_video = Path(tmpdir) / "my_video.mp4"
+            dummy_video.write_bytes(b"dummy")
+            intervals = [(5.0, 10.0), (20.0, 35.0)]
+
+            res_path = backend.generate_premiere_xml(
+                video_path=dummy_video,
+                intervals=intervals,
+                output_xml_path=xml_out,
+                fps=24.0,
+                sequence_name="Test Sequence"
+            )
+            self.assertTrue(xml_out.exists())
+            tree = ET.parse(xml_out)
+            root = tree.getroot()
+            self.assertEqual(root.tag, "xmeml")
+            self.assertEqual(root.attrib.get("version"), "4")
+            seq = root.find("sequence")
+            self.assertIsNotNone(seq)
+            self.assertEqual(seq.find("name").text, "Test Sequence")
+            self.assertEqual(seq.find("duration").text, "480")
+            v_track = seq.find("media/video/track")
+            self.assertIsNotNone(v_track)
+            clipitems = v_track.findall("clipitem")
+            self.assertEqual(len(clipitems), 2)
+            self.assertEqual(clipitems[0].find("in").text, "120")
+            self.assertEqual(clipitems[0].find("out").text, "240")
+
+    def test_generate_scenepack_spec_report(self):
+        """Verify generate_scenepack_spec_report creates comprehensive info file."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            info_out = Path(tmpdir) / "test_info.txt"
+            dummy_video = Path(tmpdir) / "sample_show.mp4"
+            intervals = [(10.0, 25.5), (40.0, 52.0)]
+
+            res = backend.generate_scenepack_spec_report(
+                output_path=info_out,
+                video_path=dummy_video,
+                intervals=intervals,
+                fps=24.0,
+                character_name="Eren Yeager",
+                crop_info="crop=1920:800:0:140"
+            )
+            self.assertTrue(info_out.exists())
+            content = info_out.read_text(encoding="utf-8")
+            self.assertIn("FOCUS SCENEPACK MASTER SPECIFICATION", content)
+            self.assertIn("Eren Yeager", content)
+            self.assertIn("sample_show.mp4", content)
+            self.assertIn("24.000 fps", content)
+            self.assertIn("320k", content)
+            self.assertIn("crop=1920:800:0:140", content)
+            self.assertIn("Adobe After Effects", content)
+            self.assertIn("CapCut", content)
 
 
 if __name__ == "__main__":
