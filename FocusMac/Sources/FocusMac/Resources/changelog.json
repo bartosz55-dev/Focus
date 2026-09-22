@@ -1,6 +1,16 @@
 {
   "en": [
     {
+      "version": "v2.3.3",
+      "date": "2026-09-22",
+      "title": "Studio Master CRF 14 & Target-Volume Scratch Storage",
+      "points": [
+        "[QUALITY] Added 'Maximum (Master / CRF 14 / 35 Mbps)' export preset for studio-grade, visually lossless master exports.",
+        "[STABILITY] Scratch files are now allocated directly on the target drive volume to prevent internal boot drive space exhaustion.",
+        "[ENGINE] Fixed rate control string parsing for High and Medium presets."
+      ]
+    },
+    {
       "version": "v2.3.0",
       "date": "2026-09-21",
       "title": "Multi-Reference Face Photos & Enhanced Detection Recall",
@@ -882,6 +892,16 @@
     }
   ],
   "pl": [
+    {
+      "version": "v2.3.3",
+      "date": "2026-09-22",
+      "title": "Jakość Master CRF 14 & Render na Dysku Docelowym",
+      "points": [
+        "[JAKOŚĆ] Dodano profil 'Maximum (Master / CRF 14 / 35 Mbps)' dla bezstratnego eksportu w jakości studyjnej pod montaż.",
+        "[STABILNOŚĆ] Pliki tymczasowe rendera są tworzone bezpośrednio na dysku docelowym, zapobiegając zapełnieniu dysku systemowego Maca.",
+        "[SILNIK] Poprawiono parsowanie parametrów rate control dla profili High i Medium."
+      ]
+    },
     {
       "version": "v2.3.0",
       "date": "2026-09-21",

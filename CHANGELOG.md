@@ -6,6 +6,12 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
+## v2.3.3 (2026-09-22) — Studio Master CRF 14, Target-Volume Scratch & Rate Control Fixes
+
+* **[QUALITY] Maximum Master Preset (CRF 14 / 35-50 Mbps):** Expanded the video export quality selector in native FocusMac SwiftUI and Python backend with a dedicated "Maximum (Master / CRF 14 / 35 Mbps)" profile. Delivers visually lossless master-grade exports tailored for high-end video editors applying intensive color grading, sharp zoom, and Twixtor re-timing.
+* **[STABILITY] Target-Volume Scratch Storage:** Migrated temporary slice extraction directories directly to the target output volume (`output_path.parent`) instead of defaulting to the internal macOS boot drive (`/var/folders/.../T/`). Prevents `[Errno 28] No space left on device` crashes during massive multi-episode / full-season master scenepack exports (e.g. 1,800+ clips).
+* **[ENGINE] Rate Control & Quality Matching Fixes:** Corrected rate control string parsing in `scenepack_generator_backend.py` to ensure Medium (CRF 20) and High (CRF 16) presets map to their respective bitrates and CRF factors accurately.
+
 ## v2.3.0 (2026-09-21) — Multi-Reference Face Photos & Enhanced Detection Recall
 
 * **[MULTI-REFERENCE FACES] Support for Multiple Character Photos:** Users can now select and combine multiple reference photos for a single character (different camera angles, side profiles, diverse lighting conditions, smiling/laughing, and dynamic facial expressions). This resolves the #1 limitation of single-photo matching where dynamic camera angles or lighting shifts resulted in dropped scenes.
