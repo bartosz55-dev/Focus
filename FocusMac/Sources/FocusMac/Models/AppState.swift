@@ -238,8 +238,8 @@ public final class AppState: ObservableObject {
         if let aspStr = data["aspect"] as? String, let asp = AspectRatioOption(rawValue: aspStr) {
             settings.aspect = asp
         }
-        if let qStr = data["quality"] as? String, let q = ExportQualityOption(rawValue: qStr) {
-            settings.quality = q
+        if let qStr = data["quality"] as? String {
+            settings.quality = ExportQualityOption.parse(qStr)
         }
         showToast("Applied preset: \(name)", icon: "sparkles")
     }

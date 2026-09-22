@@ -1137,7 +1137,7 @@ class FocusApp(QMainWindow):
         self.combo_export_quality.addItems([
             "Auto (Match Source Bitrate)",
             "Maximum (Master / CRF 14 / 35 Mbps)",
-            "High (Crystal Clear / CRF 17 / 20 Mbps)",
+            "High (Crystal Clear / CRF 16 / 20 Mbps)",
             "Medium (Standard / CRF 20 / 10 Mbps)",
             "Draft / Fast (CRF 24 / 4 Mbps)"
         ])

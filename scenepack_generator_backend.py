@@ -3609,15 +3609,15 @@ class ScenePackGenerator:
                     buf_val = f"{int(target_bps * 2.0 / 1000)}k"
                     crf_val = '18'
                     q_val = None
-                elif "max" in quality_str or "master" in quality_str:
+                elif "max" in quality_str or "master" in quality_str or "14" in quality_str:
                     crf_val = '14'
                     q_val = '85'
                     b_val = '35M'
                     maxrate_val = '50M'
                     buf_val = '70M'
-                elif "high" in quality_str or "wysoka" in quality_str or "16" in quality_str or "17" in quality_str or "20" in quality_str:
-                    crf_val = '17'
-                    q_val = '72'
+                elif "high" in quality_str or "wysoka" in quality_str or "16" in quality_str or "17" in quality_str:
+                    crf_val = '16'
+                    q_val = '75'
                     b_val = '20M'
                     maxrate_val = '28M'
                     buf_val = '40M'

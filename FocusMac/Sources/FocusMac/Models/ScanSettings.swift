@@ -31,11 +31,33 @@ public enum AspectRatioOption: String, CaseIterable, Identifiable, Codable, Send
 
 public enum ExportQualityOption: String, CaseIterable, Identifiable, Codable, Sendable {
     case matchSource = "Auto (Match Source Bitrate)"
-    case high = "High (CRF 16)"
-    case medium = "Medium (CRF 20)"
-    case low = "Low (CRF 24)"
+    case maximum = "Maximum (Master / CRF 14 / 35 Mbps)"
+    case high = "High (Crystal Clear / CRF 16 / 20 Mbps)"
+    case medium = "Medium (Standard / CRF 20 / 10 Mbps)"
+    case draft = "Draft / Fast (CRF 24 / 4 Mbps)"
 
     public var id: String { rawValue }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = Self.parse(raw)
+    }
+
+    public static func parse(_ str: String) -> ExportQualityOption {
+        let lower = str.lowercased()
+        if lower.contains("max") || lower.contains("master") || lower.contains("14") {
+            return .maximum
+        } else if lower.contains("high") || lower.contains("16") || lower.contains("17") || lower.contains("crystal") {
+            return .high
+        } else if lower.contains("draft") || lower.contains("low") || lower.contains("24") || lower.contains("fast") {
+            return .draft
+        } else if lower.contains("medium") || lower.contains("standard") || lower.contains("20") {
+            return .medium
+        } else {
+            return .matchSource
+        }
+    }
 }
 
 public struct AudioTrackItem: Identifiable, Hashable, Codable, Sendable {
