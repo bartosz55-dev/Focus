@@ -6,11 +6,24 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
-## v2.3.3 (2026-09-22) — Studio Master CRF 14, Target-Volume Scratch & Rate Control Fixes
+## v2.3.3 (2026-09-22) — Studio Master CRF 14, Target-Volume Scratch & Resilient Checkpointing
 
 * **[QUALITY] Maximum Master Preset (CRF 14 / 35-50 Mbps):** Expanded the video export quality selector in native FocusMac SwiftUI and Python backend with a dedicated "Maximum (Master / CRF 14 / 35 Mbps)" profile. Delivers visually lossless master-grade exports tailored for high-end video editors applying intensive color grading, sharp zoom, and Twixtor re-timing.
 * **[STABILITY] Target-Volume Scratch Storage:** Migrated temporary slice extraction directories directly to the target output volume (`output_path.parent`) instead of defaulting to the internal macOS boot drive (`/var/folders/.../T/`). Prevents `[Errno 28] No space left on device` crashes during massive multi-episode / full-season master scenepack exports (e.g. 1,800+ clips).
+* **[RESILIENCE] Per-Episode Scan Checkpoints:** Added automatic incremental progress saving (`last_scan_checkpoint.json`) to macOS internal application support after every completed episode. Safeguards long multi-video batch scans against external drive disconnects.
 * **[ENGINE] Rate Control & Quality Matching Fixes:** Corrected rate control string parsing in `scenepack_generator_backend.py` to ensure Medium (CRF 20) and High (CRF 16) presets map to their respective bitrates and CRF factors accurately.
+
+## v2.3.2 (2026-09-22) — Dual-Timer Season ETA, Cv2 Auto-Resolver & Master Scenepack Badge
+
+* **[DUAL-TIMER ETA] Real-Time Multi-File Progress Display:** Implemented synchronized dual-timer ETA in native macOS GUI, computing both active episode remaining time and total season completion ETA with sub-second accuracy.
+* **[RUNTIME RESOLVER] Dynamic Cv2 Environment Resolver:** ProcessBridge now verifies and auto-repairs `cv2` runtime linkage before spawning background workers, eliminating launch failures across varied virtual environments.
+* **[UI & WORKFLOW] Consolidated Master Scenepack Badge:** Added dynamic UI badge and status notifications when multi-video batch jobs are consolidated into a single master scenepack.
+
+## v2.3.1 (2026-09-21) — Display Sleep Prevention, Theme Transition Glitch Fix & Final Cut XML
+
+* **[SYSTEM] Caffeinate Sleep Inhibitor:** Integrated automatic macOS system and display sleep inhibition during active batch scanning and rendering to prevent background stalls on unattended machines.
+* **[UI & POLISH] Theme Transition Stability:** Resolved visual flickering and contrast artifacts when transitioning between Light, Dark, and System Auto appearances.
+* **[TIMELINE] Native XML Export Toggle:** Embedded Premiere Pro & Final Cut Pro XML timeline generation directly into native macOS Tuning & Automation settings.
 
 ## v2.3.0 (2026-09-21) — Multi-Reference Face Photos & Enhanced Detection Recall
 

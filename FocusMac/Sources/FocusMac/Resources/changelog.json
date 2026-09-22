@@ -3,11 +3,32 @@
     {
       "version": "v2.3.3",
       "date": "2026-09-22",
-      "title": "Studio Master CRF 14 & Target-Volume Scratch Storage",
+      "title": "Studio Master CRF 14, Target-Volume Scratch & Resilient Checkpointing",
       "points": [
         "[QUALITY] Added 'Maximum (Master / CRF 14 / 35 Mbps)' export preset for studio-grade, visually lossless master exports.",
         "[STABILITY] Scratch files are now allocated directly on the target drive volume to prevent internal boot drive space exhaustion.",
+        "[RESILIENCE] Added per-episode auto-checkpointing (last_scan_checkpoint.json) to Mac internal storage to protect progress against external drive disconnects.",
         "[ENGINE] Fixed rate control string parsing for High and Medium presets."
+      ]
+    },
+    {
+      "version": "v2.3.2",
+      "date": "2026-09-22",
+      "title": "Dual-Timer Season ETA, Cv2 Auto-Resolver & Master Scenepack Badge",
+      "points": [
+        "[DUAL-TIMER ETA] Real-time Dual-Timer ETA displaying both Current Episode remaining time and Full Season estimated completion time simultaneously.",
+        "[RUNTIME RESOLVER] Dynamic cv2 runtime auto-resolver in ProcessBridge ensuring immediate subprocess execution across all venv configurations.",
+        "[UI & BATCH] Added 'Master Scenepack' consolidated output badge and multi-file sub-progress bars for season batches."
+      ]
+    },
+    {
+      "version": "v2.3.1",
+      "date": "2026-09-21",
+      "title": "Display Sleep Prevention, Theme Transition Glitch Fix & Final Cut XML",
+      "points": [
+        "[SYSTEM] Integrated macOS caffeinate sleep inhibitor to ensure uninterrupted overnight season scanning and rendering.",
+        "[UI & POLISH] Fixed theme transition flickering between Light, Dark, and System Auto appearances.",
+        "[TIMELINE] Integrated Premiere Pro & Final Cut XML timeline export toggle directly into native macOS UI."
       ]
     },
     {
@@ -895,11 +916,32 @@
     {
       "version": "v2.3.3",
       "date": "2026-09-22",
-      "title": "Jakość Master CRF 14 & Render na Dysku Docelowym",
+      "title": "Jakość Master CRF 14, Render na Dysku Docelowym & Auto-Zapis",
       "points": [
         "[JAKOŚĆ] Dodano profil 'Maximum (Master / CRF 14 / 35 Mbps)' dla bezstratnego eksportu w jakości studyjnej pod montaż.",
         "[STABILNOŚĆ] Pliki tymczasowe rendera są tworzone bezpośrednio na dysku docelowym, zapobiegając zapełnieniu dysku systemowego Maca.",
+        "[BEZPIECZEŃSTWO] Dodano automatyczny zapis postępu (checkpoint) po każdym odcinku na dysku Maca, chroniąc przed rozłączeniem dysków zewnętrznych.",
         "[SILNIK] Poprawiono parsowanie parametrów rate control dla profili High i Medium."
+      ]
+    },
+    {
+      "version": "v2.3.2",
+      "date": "2026-09-22",
+      "title": "Podwójny Timer Sezonu ETA, Auto-Resolver CV2 & Badge Master Scenepack",
+      "points": [
+        "[PODWÓJNY TIMER] Wprowadzono jednoczesne wyświetlanie ETA dla bieżącego odcinka oraz łącznego czasu dla całego sezonu.",
+        "[SILNIK] Dodano dynamiczny auto-resolver środowiska cv2 w ProcessBridge, eliminujący błędy uruchamiania w venv.",
+        "[INTERFEJS] Dodano oznaczenie 'Master Scenepack' oraz precyzyjne paski postępu dla każdego pliku w kolejce."
+      ]
+    },
+    {
+      "version": "v2.3.1",
+      "date": "2026-09-21",
+      "title": "Blokada Uśpienia Ekranu, Poprawki Motywów & Eksport XML",
+      "points": [
+        "[SYSTEM] Zintegrowano mechanizm caffeinate blokujący usypianie ekranu i systemu podczas nocnych renderów.",
+        "[INTERFEJS] Wyeliminowano mignięcia i glitche przy przełączaniu motywu Jasny / Ciemny / Auto.",
+        "[EKSPORT] Dodano przełącznik eksportu osi czasu XML dla Premiere Pro i DaVinci Resolve bezpośrednio w natywnym GUI."
       ]
     },
     {
