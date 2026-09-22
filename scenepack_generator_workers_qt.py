@@ -544,7 +544,11 @@ class MasterConcatWorker(QThread):
         import shutil
         import os
         try:
-            tmp_dir = Path(tempfile.mkdtemp(prefix="master_concat_"))
+            target_parent = self.master_out.parent if (hasattr(self, "master_out") and self.master_out and self.master_out.parent.exists()) else None
+            try:
+                tmp_dir = Path(tempfile.mkdtemp(prefix="master_concat_", dir=str(target_parent) if target_parent else None))
+            except Exception:
+                tmp_dir = Path(tempfile.mkdtemp(prefix="master_concat_"))
             concat_list = tmp_dir / "master_list.txt"
             self.engine_module.write_concat_list(self.valid_paths, concat_list)
             self.sg_engine = self.engine_module.ScenePackGenerator(log_queue=None)

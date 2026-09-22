@@ -3528,7 +3528,12 @@ class ScenePackGenerator:
             logging.warning("No scenes to extract.")
             return
 
-        temp_dir = Path(tempfile.mkdtemp(prefix="scenepack_tmp_"))
+        temp_parent = Path(output_path).parent if output_path and Path(output_path).parent.exists() else None
+        try:
+            temp_dir = Path(tempfile.mkdtemp(prefix="scenepack_tmp_", dir=str(temp_parent) if temp_parent else None))
+        except Exception as e:
+            logging.warning(f"Could not create temp dir on target volume ({e}), falling back to system temp.")
+            temp_dir = Path(tempfile.mkdtemp(prefix="scenepack_tmp_"))
         concat_list_path = temp_dir / "concat_list.txt"
 
         try:
