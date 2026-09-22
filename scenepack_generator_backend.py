@@ -4016,6 +4016,30 @@ class ScenePackGenerator:
                 else:
                     all_intervals.append((start, end, avg_x))
 
+            # Resilient checkpointing: Save progress to internal drive after every episode
+            try:
+                ckpt_dir = Path.home() / "Library" / "Application Support" / "Focus"
+                ckpt_dir.mkdir(parents=True, exist_ok=True)
+                ckpt_path = ckpt_dir / "last_scan_checkpoint.json"
+                with open(ckpt_path, "w", encoding="utf-8") as ckpt_f:
+                    json.dump({
+                        "completed_index": idx + 1,
+                        "total_videos": total_videos,
+                        "last_completed_file": v_path.name,
+                        "intervals_count": len(all_intervals),
+                        "intervals": [
+                            {
+                                "source": it[0] if total_videos > 1 else str(v_path),
+                                "start": it[1] if total_videos > 1 else it[0],
+                                "end": it[2] if total_videos > 1 else it[1],
+                                "avg_x": it[3] if len(it) > 3 else (it[2] if len(it) > 2 else 0.5)
+                            }
+                            for it in all_intervals
+                        ]
+                    }, ckpt_f)
+            except Exception as e:
+                logging.debug(f"Incremental checkpoint error: {e}")
+
         if not all_intervals:
             raise ValueError("Target face was not detected in any of the input videos. Ensure your reference image clearly shows the target face, or try lowering detection strictness.")
 
