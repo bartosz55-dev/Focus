@@ -213,6 +213,7 @@ class RenderWorker(QThread):
     """Background worker for extracting and concatenating selected video clips."""
     def __init__(self, generator_instance, video_path: str, intervals: List[Any],
                  output_path: str, aspect_ratio: str, queue_proxy: QtQueueProxy, audio_track_index: int = 0, export_quality: str = "Medium",
+                 video_codec: str = "auto", container_format: str = "auto",
                  export_clips_folder: bool = False, auto_crop_black_bars: bool = True, export_timeline_xml: bool = True):
         super().__init__()
         self.generator_instance = generator_instance
@@ -223,6 +224,8 @@ class RenderWorker(QThread):
         self.queue_proxy = queue_proxy
         self.audio_track_index = audio_track_index
         self.export_quality = export_quality
+        self.video_codec = video_codec
+        self.container_format = container_format
         self.export_clips_folder = export_clips_folder
         self.auto_crop_black_bars = auto_crop_black_bars
         self.export_timeline_xml = export_timeline_xml
@@ -237,6 +240,8 @@ class RenderWorker(QThread):
                 Path(self.video_path), self.intervals, Path(self.output_path),
                 aspect_ratio=self.aspect_ratio, audio_track_index=self.audio_track_index,
                 export_quality=self.export_quality,
+                video_codec=self.video_codec,
+                container_format=self.container_format,
                 export_clips_folder=self.export_clips_folder,
                 auto_crop_black_bars=self.auto_crop_black_bars,
                 export_timeline_xml=self.export_timeline_xml

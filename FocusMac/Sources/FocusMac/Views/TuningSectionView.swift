@@ -90,6 +90,42 @@ public struct TuningSectionView: View {
                             .pickerStyle(.menu)
                         }
                     }
+
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(appState.localized("video_codec"))
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $appState.settings.videoCodec) {
+                                ForEach(VideoCodecOption.allCases) { opt in
+                                    Text(opt.rawValue).tag(opt)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .onChange(of: appState.settings.videoCodec) { newCodec in
+                                if newCodec == .prores && appState.settings.containerFormat == .mp4 {
+                                    appState.settings.containerFormat = .mov
+                                    appState.updateOutputContainerExtension(.mov)
+                                    appState.showToast("ProRes: Container switched to QuickTime MOV", icon: "video.badge.checkmark")
+                                }
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(appState.localized("container_format"))
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $appState.settings.containerFormat) {
+                                ForEach(ContainerFormatOption.allCases) { opt in
+                                    Text(opt.rawValue).tag(opt)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .onChange(of: appState.settings.containerFormat) { newFormat in
+                                appState.updateOutputContainerExtension(newFormat)
+                            }
+                        }
+                    }
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

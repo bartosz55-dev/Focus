@@ -60,6 +60,70 @@ public enum ExportQualityOption: String, CaseIterable, Identifiable, Codable, Se
     }
 }
 
+public enum VideoCodecOption: String, CaseIterable, Identifiable, Codable, Sendable {
+    case auto = "Auto (Fastest Hardware H.264)"
+    case h264 = "H.264 / AVC (Universal Compatibility)"
+    case hevc = "H.265 / HEVC (High Efficiency)"
+    case av1 = "AV1 (Next-Gen Open Standard)"
+    case prores = "Apple ProRes (Editing Master)"
+
+    public var id: String { rawValue }
+
+    public var cliValue: String {
+        switch self {
+        case .auto: return "auto"
+        case .h264: return "h264"
+        case .hevc: return "hevc"
+        case .av1: return "av1"
+        case .prores: return "prores"
+        }
+    }
+
+    public static func parse(_ str: String) -> VideoCodecOption {
+        let lower = str.lowercased()
+        if lower.contains("auto") {
+            return .auto
+        } else if lower.contains("hevc") || lower.contains("265") {
+            return .hevc
+        } else if lower.contains("av1") {
+            return .av1
+        } else if lower.contains("prores") {
+            return .prores
+        } else if lower.contains("264") || lower.contains("avc") {
+            return .h264
+        } else {
+            return .auto
+        }
+    }
+}
+
+public enum ContainerFormatOption: String, CaseIterable, Identifiable, Codable, Sendable {
+    case mp4 = "MP4 (.mp4)"
+    case mkv = "MKV (.mkv)"
+    case mov = "MOV (.mov)"
+
+    public var id: String { rawValue }
+
+    public var fileExtension: String {
+        switch self {
+        case .mp4: return "mp4"
+        case .mkv: return "mkv"
+        case .mov: return "mov"
+        }
+    }
+
+    public static func parse(_ str: String) -> ContainerFormatOption {
+        let lower = str.lowercased()
+        if lower.contains("mkv") {
+            return .mkv
+        } else if lower.contains("mov") {
+            return .mov
+        } else {
+            return .mp4
+        }
+    }
+}
+
 public struct AudioTrackItem: Identifiable, Hashable, Codable, Sendable {
     public let index: Int
     public let label: String
@@ -83,6 +147,8 @@ public struct ScanSettings: Codable, Sendable {
     public var introDuration: Double = 90.0
     public var aspect: AspectRatioOption = .original
     public var quality: ExportQualityOption = .matchSource
+    public var videoCodec: VideoCodecOption = .auto
+    public var containerFormat: ContainerFormatOption = .mp4
     public var audioTrackIndex: Int = 0
     public var autoRender: Bool = false
     public var exportClipsFolder: Bool = false

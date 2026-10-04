@@ -554,7 +554,7 @@ public actor ProcessBridge {
                 }
             }
 
-            proc.terminationHandler = { process in
+            proc.terminationHandler = { [weak self] process in
                 Task { [weak self] in
                     await self?.clearProcess()
                 }

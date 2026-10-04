@@ -285,8 +285,14 @@ public struct MediaDropZone: View {
     private func chooseSaveLocation() {
         let panel = NSSavePanel()
         panel.title = "Select Export Scenepack Location"
-        panel.allowedContentTypes = [.mpeg4Movie]
+        var types: [UTType] = [.mpeg4Movie, .quickTimeMovie]
+        if let mkvType = UTType(filenameExtension: "mkv") {
+            types.append(mkvType)
+        }
+        panel.allowedContentTypes = types
         panel.canCreateDirectories = true
+
+        let ext = appState.settings.containerFormat.fileExtension
         if let current = appState.outputURL {
             panel.directoryURL = current.deletingLastPathComponent()
             panel.nameFieldStringValue = current.lastPathComponent
@@ -294,17 +300,21 @@ public struct MediaDropZone: View {
             panel.directoryURL = first.deletingLastPathComponent()
             if appState.selectedVideoURLs.count > 1 {
                 let parent = first.deletingLastPathComponent().lastPathComponent
-                let name = (parent.isEmpty || parent == "/") ? "Master_Scenepack.mp4" : "\(parent) - Master Scenepack.mp4"
+                let name = (parent.isEmpty || parent == "/") ? "Master_Scenepack.\(ext)" : "\(parent) - Master Scenepack.\(ext)"
                 panel.nameFieldStringValue = name
             } else {
-                panel.nameFieldStringValue = "\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4"
+                panel.nameFieldStringValue = "\(first.deletingPathExtension().lastPathComponent)_scenepack.\(ext)"
             }
         } else {
             panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
-            panel.nameFieldStringValue = "scenepack.mp4"
+            panel.nameFieldStringValue = "scenepack.\(ext)"
         }
         if panel.runModal() == .OK, let targetURL = panel.url {
             appState.outputURL = targetURL
+            let pickedExt = targetURL.pathExtension.lowercased()
+            if !pickedExt.isEmpty {
+                appState.settings.containerFormat = ContainerFormatOption.parse(pickedExt)
+            }
             appState.showToast("Save location set: \(targetURL.lastPathComponent)", icon: "folder.badge.gearshape")
         }
     }

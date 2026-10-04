@@ -40,6 +40,8 @@ public enum PresetManager {
             "frame_skip": settings.frameSkip,
             "aspect": settings.aspect.rawValue,
             "quality": settings.quality.rawValue,
+            "video_codec": settings.videoCodec.rawValue,
+            "container_format": settings.containerFormat.rawValue,
             "vad_enabled": settings.vadEnabled,
             "vad_buffer": settings.vadBuffer,
             "vad_speaker": settings.vadSpeakerEnabled,

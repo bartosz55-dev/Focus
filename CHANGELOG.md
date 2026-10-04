@@ -6,6 +6,15 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
+## v2.4.0 (2026-10-04) — Multi-Codec Architecture, Container Selectors & Instant Scan Checkpoint Loader
+
+* **[CODECS] Multi-Codec Video Architecture:** Added custom `--video-codec` selection (`auto`, `h264`, `hevc`, `av1`, `prores`) across Python backend, CLI, PySide6 Qt GUI, and native macOS SwiftUI. Enables ultra-efficient AV1 exports, high-compatibility H.264, space-saving HEVC, and editing-grade Apple ProRes.
+* **[PRORES] 10-Bit Master Pixel Format & QuickTime MOV Auto-Switching:** Apple ProRes renders automatically employ `yuv422p10le` (10-bit 4:2:2) and enforce QuickTime `.mov` containers, preventing NLE import glitches in Premiere Pro, DaVinci Resolve, and Final Cut Pro.
+* **[CONTAINER] Dynamic Container Formats (.mp4, .mkv, .mov):** Support for `--container` flag with automatic file extension synchronization and dynamic save dialog filters.
+* **[CHECKPOINTS] Instant Scan & Checkpoint Loader:** Added "📂 Load Scan / Checkpoint..." action in both SwiftUI and PySide6 Qt GUI (`loadScanFromJSON` / `load_scan_from_file`). Instantly loads previously saved scan checkpoints (`last_scan_checkpoint.json`) or custom intervals without re-scanning.
+* **[PARITY] 100% Feature Parity:** PySide6 (Qt 6) GUI upgraded to full parity with macOS SwiftUI, including custom preset persistence and real-time codec/container binding.
+* **[OPTIMIZATION] Probing & Compiler Hygiene:** Eliminated SVT-AV1 preset redundancies, fixed Apple Silicon Swift concurrency capture warnings, and cached color metadata exceptions.
+
 ## v2.3.3 (2026-09-22) — Studio Master CRF 14, Target-Volume Scratch & Resilient Checkpointing
 
 * **[QUALITY] Maximum Master Preset (CRF 14 / 35-50 Mbps):** Expanded the video export quality selector in native FocusMac SwiftUI and Python backend with a dedicated "Maximum (Master / CRF 14 / 35 Mbps)" profile. Delivers visually lossless master-grade exports tailored for high-end video editors applying intensive color grading, sharp zoom, and Twixtor re-timing.

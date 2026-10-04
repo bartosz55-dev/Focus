@@ -241,7 +241,24 @@ public final class AppState: ObservableObject {
         if let qStr = data["quality"] as? String {
             settings.quality = ExportQualityOption.parse(qStr)
         }
+        if let vcStr = data["video_codec"] as? String {
+            settings.videoCodec = VideoCodecOption.parse(vcStr)
+        }
+        if let cfStr = data["container_format"] as? String {
+            settings.containerFormat = ContainerFormatOption.parse(cfStr)
+            updateOutputContainerExtension(settings.containerFormat)
+        }
         showToast("Applied preset: \(name)", icon: "sparkles")
+    }
+
+    public func updateOutputContainerExtension(_ format: ContainerFormatOption) {
+        if let current = outputURL {
+            let newURL = current.deletingPathExtension().appendingPathExtension(format.fileExtension)
+            if newURL != current {
+                self.outputURL = newURL
+                self.logLines.append("[INFO] Output container format changed to .\(format.fileExtension): \(newURL.lastPathComponent)")
+            }
+        }
     }
 
     public func addVideoURLs(_ urls: [URL]) {
@@ -270,12 +287,13 @@ public final class AppState: ObservableObject {
         if !foundVideos.isEmpty {
             self.selectedVideoURLs = foundVideos
             if self.outputURL == nil, let first = foundVideos.first {
+                let ext = settings.containerFormat.fileExtension
                 if foundVideos.count > 1 {
                     let parent = first.deletingLastPathComponent().lastPathComponent
-                    let name = (parent.isEmpty || parent == "/") ? "Master_Scenepack.mp4" : "\(parent) - Master Scenepack.mp4"
+                    let name = (parent.isEmpty || parent == "/") ? "Master_Scenepack.\(ext)" : "\(parent) - Master Scenepack.\(ext)"
                     self.outputURL = first.deletingLastPathComponent().appendingPathComponent(name)
                 } else {
-                    self.outputURL = first.deletingLastPathComponent().appendingPathComponent("\(first.deletingPathExtension().lastPathComponent)_scenepack.mp4")
+                    self.outputURL = first.deletingLastPathComponent().appendingPathComponent("\(first.deletingPathExtension().lastPathComponent)_scenepack.\(ext)")
                 }
             }
             showToast("Selected \(foundVideos.count) video(s)", icon: "film.stack")
@@ -294,6 +312,43 @@ public final class AppState: ObservableObject {
                     self.settings.audioTrackIndex = 0
                 }
             }
+        }
+    }
+
+    public func loadScanFromJSON(url: URL) {
+        do {
+            let data = try Data(contentsOf: url)
+            var rawList: [[String: Any]] = []
+            if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                rawList = jsonArray
+            } else if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let intervals = jsonObj["intervals"] as? [[String: Any]] {
+                rawList = intervals
+            }
+            guard !rawList.isEmpty else {
+                showToast("No clip intervals found in JSON.", icon: "exclamationmark.triangle")
+                return
+            }
+            var clips: [ClipInterval] = []
+            for (idx, item) in rawList.enumerated() {
+                let src = (item["source"] as? String) ?? ""
+                let s = (item["start"] as? Double) ?? Double(item["start"] as? Int ?? 0)
+                let e = (item["end"] as? Double) ?? Double(item["end"] as? Int ?? 0)
+                let avg = (item["avg_x"] as? Double) ?? 0.5
+                let thumb = (item["thumb_path"] as? String) ?? ""
+                clips.append(ClipInterval(id: idx + 1, source: src, start: s, end: e, duration: max(0.0, e - s), avgX: avg, thumbPath: thumb, isSelected: true))
+            }
+            self.detectedClips = clips
+            self.processingStatus = "Loaded \(clips.count) clips from scan file."
+            self.logLines.append("[INFO] Loaded \(clips.count) clip(s) from: \(url.lastPathComponent)")
+            showToast("Loaded \(clips.count) clips from scan!", icon: "checkmark.circle.fill")
+
+            let sources = Set(clips.map { $0.source }.filter { !$0.isEmpty })
+            if self.selectedVideoURLs.isEmpty && !sources.isEmpty {
+                self.selectedVideoURLs = sources.map { URL(fileURLWithPath: $0) }.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+            }
+        } catch {
+            showToast("Failed to load scan: \(error.localizedDescription)", icon: "xmark.octagon")
         }
     }
 
@@ -364,7 +419,8 @@ public final class AppState: ObservableObject {
             args.append("--prevent-sleep")
         }
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await ProcessBridge.shared.run(arguments: args) { [weak self] event in
                     guard let self else { return }
@@ -373,11 +429,13 @@ public final class AppState: ObservableObject {
                     }
                 }
             } catch {
-                self.isProcessing = false
-                self.processingStatus = "Error: \(error.localizedDescription)"
-                self.logLines.append("[ERROR] Scan execution failed: \(error.localizedDescription)")
-                SleepManager.shared.allowSleep()
-                self.showToast("Scan error: \(error.localizedDescription)", icon: "xmark.octagon")
+                await MainActor.run {
+                    self.isProcessing = false
+                    self.processingStatus = "Error: \(error.localizedDescription)"
+                    self.logLines.append("[ERROR] Scan execution failed: \(error.localizedDescription)")
+                    SleepManager.shared.allowSleep()
+                    self.showToast("Scan error: \(error.localizedDescription)", icon: "xmark.octagon")
+                }
             }
         }
     }
@@ -397,7 +455,8 @@ public final class AppState: ObservableObject {
             SleepManager.shared.preventSleep(reason: "Focus rendering scenepack")
         }
 
-        let out = outputURL ?? video.deletingPathExtension().appendingPathExtension("scenepack.mp4")
+        let ext = settings.containerFormat.fileExtension
+        let out = outputURL ?? video.deletingPathExtension().appendingPathExtension("scenepack.\(ext)")
         let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
         logLines.append("[INFO] Starting hardware-accelerated render of \(selected.count) clip(s) to: \(out.lastPathComponent)")
 
@@ -407,6 +466,8 @@ public final class AppState: ObservableObject {
             "--mode", mode.rawValue,
             "--aspect", settings.aspect.rawValue,
             "--quality", settings.quality.rawValue,
+            "--video-codec", settings.videoCodec.cliValue,
+            "--container", settings.containerFormat.fileExtension,
             "--audio-track", String(settings.audioTrackIndex)
         ]
         if settings.exportClipsFolder {
@@ -443,7 +504,8 @@ public final class AppState: ObservableObject {
             args += ["--intervals-json-file", tempJsonURL.path]
         }
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await ProcessBridge.shared.run(arguments: args) { [weak self] event in
                     guard let self else { return }
@@ -452,11 +514,13 @@ public final class AppState: ObservableObject {
                     }
                 }
             } catch {
-                self.isProcessing = false
-                self.processingStatus = "Render error: \(error.localizedDescription)"
-                self.logLines.append("[ERROR] Render execution failed: \(error.localizedDescription)")
-                SleepManager.shared.allowSleep()
-                self.showToast("Render failed: \(error.localizedDescription)", icon: "xmark.octagon")
+                await MainActor.run {
+                    self.isProcessing = false
+                    self.processingStatus = "Render error: \(error.localizedDescription)"
+                    self.logLines.append("[ERROR] Render execution failed: \(error.localizedDescription)")
+                    SleepManager.shared.allowSleep()
+                    self.showToast("Render failed: \(error.localizedDescription)", icon: "xmark.octagon")
+                }
             }
         }
     }

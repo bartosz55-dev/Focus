@@ -621,6 +621,7 @@ class FocusApp(QMainWindow):
             "vad_buffer": 300, "vad_speaker_enabled": True, "vad_speaker_threshold": 0.68,
             "skip_intro": True, "skip_outro": False, "intro_mode": "Auto Chapters (MKV/MP4)",
             "intro_duration": 90, "export_quality": "Auto (Match Source Bitrate)",
+            "video_codec": "Auto (Fastest Hardware H.264)", "container_format": "MP4 (.mp4)",
             "play_sound": True, "appearance_mode": "Dark", "theme": "violet",
             "language": "English", "default_mode": "Real Faces",
             "prevent_sleep": True, "auto_render": False, "export_clips_folder": False
@@ -646,6 +647,8 @@ class FocusApp(QMainWindow):
                 "min_scene_duration": float(self.input_min_scene.text() or 1.0),
                 "frame_skip": int(self.input_frame_skip.text() or 15),
                 "export_quality": self.combo_export_quality.currentText(),
+                "video_codec": getattr(self, 'combo_video_codec', None) and self.combo_video_codec.currentText() or "Auto (Fastest Hardware H.264)",
+                "container_format": getattr(self, 'combo_container', None) and self.combo_container.currentText() or "MP4 (.mp4)",
                 "aspect_ratio": self.combo_aspect.currentText(),
                 "vad_enabled": self.chk_vad.isChecked(),
                 "vad_buffer": int(self.input_vad_buffer.text() or 300),
@@ -1168,6 +1171,64 @@ class FocusApp(QMainWindow):
         detect_row.addLayout(box_eq)
 
         detect_layout.addLayout(detect_row)
+
+        # Codec & Container Row
+        codec_row = QHBoxLayout()
+        codec_row.setSpacing(16)
+
+        # Video Codec
+        box_vc = QHBoxLayout()
+        box_vc.setSpacing(6)
+        self.lbl_video_codec = QLabel(get_translation(self.current_lang, "video_codec"))
+        self.combo_video_codec = QComboBox()
+        self.combo_video_codec.addItems([
+            "Auto (Fastest Hardware H.264)",
+            "H.264 / AVC (Universal Compatibility)",
+            "H.265 / HEVC (High Efficiency)",
+            "AV1 (Next-Gen Open Standard)",
+            "Apple ProRes (Editing Master)"
+        ])
+        self.combo_video_codec.setFixedHeight(30)
+        saved_codec = self.settings.get("video_codec", "Auto (Fastest Hardware H.264)")
+        idx_codec = self.combo_video_codec.findText(saved_codec)
+        if idx_codec >= 0:
+            self.combo_video_codec.setCurrentIndex(idx_codec)
+        else:
+            for i in range(self.combo_video_codec.count()):
+                if saved_codec.lower() in self.combo_video_codec.itemText(i).lower():
+                    self.combo_video_codec.setCurrentIndex(i)
+                    break
+        self.combo_video_codec.currentTextChanged.connect(self._on_video_codec_changed)
+        box_vc.addWidget(self.lbl_video_codec)
+        box_vc.addWidget(self.combo_video_codec, 1)
+        codec_row.addLayout(box_vc)
+
+        # Container Format
+        box_cnt = QHBoxLayout()
+        box_cnt.setSpacing(6)
+        self.lbl_container = QLabel(get_translation(self.current_lang, "container_format"))
+        self.combo_container = QComboBox()
+        self.combo_container.addItems([
+            "MP4 (.mp4)",
+            "MKV (.mkv)",
+            "MOV (.mov)"
+        ])
+        self.combo_container.setFixedHeight(30)
+        saved_container = self.settings.get("container_format", "MP4 (.mp4)")
+        idx_cnt = self.combo_container.findText(saved_container)
+        if idx_cnt >= 0:
+            self.combo_container.setCurrentIndex(idx_cnt)
+        else:
+            for i in range(self.combo_container.count()):
+                if saved_container.lower() in self.combo_container.itemText(i).lower():
+                    self.combo_container.setCurrentIndex(i)
+                    break
+        self.combo_container.currentTextChanged.connect(self._on_container_format_changed)
+        box_cnt.addWidget(self.lbl_container)
+        box_cnt.addWidget(self.combo_container, 1)
+        codec_row.addLayout(box_cnt)
+
+        detect_layout.addLayout(codec_row)
         set_layout.addWidget(detect_group)
 
         for edit in (self.input_pad_before, self.input_pad_after, self.input_max_gap, self.input_min_scene, self.input_frame_skip):
@@ -1338,12 +1399,23 @@ class FocusApp(QMainWindow):
         action_layout.setContentsMargins(16, 14, 16, 14)
         action_layout.setSpacing(10)
 
+        action_btns_row = QHBoxLayout()
+        action_btns_row.setSpacing(10)
+
         self.btn_generate = QPushButton(get_translation(self.current_lang, "generate"))
         self.btn_generate.setObjectName("PrimaryActionBtn")
         self.btn_generate.setFixedHeight(46)
         self.btn_generate.setFont(get_system_font(13, QFont.Weight.Bold))
         self.btn_generate.clicked.connect(self.start_scan)
-        action_layout.addWidget(self.btn_generate)
+        action_btns_row.addWidget(self.btn_generate, 3)
+
+        self.btn_main_load_scan = QPushButton(get_translation(self.current_lang, "load_scan_btn"))
+        self.btn_main_load_scan.setFixedHeight(46)
+        self.btn_main_load_scan.setFont(get_system_font(11, QFont.Weight.Bold))
+        self.btn_main_load_scan.clicked.connect(self.load_scan_from_file)
+        action_btns_row.addWidget(self.btn_main_load_scan, 1)
+
+        action_layout.addLayout(action_btns_row)
 
         # Multi-Episode Badge (Hidden by default, shown during multi-video jobs)
         self.lbl_episode_badge = QLabel("🎬 Episode [1/1]: Ready")
@@ -1414,6 +1486,10 @@ class FocusApp(QMainWindow):
         rev_layout.addWidget(self.table_review)
 
         rev_btns = QHBoxLayout()
+        self.btn_load_scan = QPushButton(get_translation(self.current_lang, "load_scan_btn"))
+        self.btn_load_scan.clicked.connect(self.load_scan_from_file)
+        rev_btns.addWidget(self.btn_load_scan)
+
         self.btn_play_orig = QPushButton("Play Original Video")
         self.btn_play_orig.clicked.connect(self.play_original)
         rev_btns.addWidget(self.btn_play_orig)
@@ -1968,6 +2044,10 @@ class FocusApp(QMainWindow):
             self.lbl_aspect_title.setText(get_translation(lang_name, "aspect_label"))
         if hasattr(self, "lbl_quality_title"):
             self.lbl_quality_title.setText(get_translation(lang_name, "export_quality"))
+        if hasattr(self, "lbl_video_codec"):
+            self.lbl_video_codec.setText(get_translation(lang_name, "video_codec"))
+        if hasattr(self, "lbl_container"):
+            self.lbl_container.setText(get_translation(lang_name, "container_format"))
 
         if hasattr(self, "chk_vad"):
             self.chk_vad.setText(get_translation(lang_name, "vad_enable"))
@@ -1988,6 +2068,10 @@ class FocusApp(QMainWindow):
 
         if hasattr(self, "btn_generate"):
             self.btn_generate.setText(get_translation(lang_name, "generate"))
+        if hasattr(self, "btn_main_load_scan"):
+            self.btn_main_load_scan.setText(get_translation(lang_name, "load_scan_btn"))
+        if hasattr(self, "btn_load_scan"):
+            self.btn_load_scan.setText(get_translation(lang_name, "load_scan_btn"))
         if hasattr(self, "lbl_review_title"):
             self.lbl_review_title.setText(get_translation(lang_name, "review_title"))
         if hasattr(self, "btn_save_preset"):
@@ -2276,20 +2360,176 @@ class FocusApp(QMainWindow):
             if show_toast:
                 self.toast.show_toast(f"Loaded {count} reference face photos!", "👥", 3500)
 
+    def _get_selected_video_codec_cli(self) -> str:
+        text = self.combo_video_codec.currentText().lower() if hasattr(self, 'combo_video_codec') else "auto"
+        if "auto" in text:
+            return "auto"
+        elif "prores" in text:
+            return "prores"
+        elif "hevc" in text or "265" in text:
+            return "hevc"
+        elif "av1" in text:
+            return "av1"
+        elif "264" in text or "avc" in text:
+            return "h264"
+        return "auto"
+
+    def _get_selected_container_format_cli(self) -> str:
+        text = self.combo_container.currentText().lower() if hasattr(self, 'combo_container') else "mp4"
+        if "mkv" in text:
+            return "mkv"
+        elif "mov" in text:
+            return "mov"
+        return "mp4"
+
+    def _on_video_codec_changed(self, text: str):
+        codec_cli = self._get_selected_video_codec_cli()
+        if codec_cli == "prores":
+            idx = self.combo_container.findText("MOV (.mov)")
+            if idx >= 0 and self.combo_container.currentIndex() != idx:
+                self.combo_container.blockSignals(True)
+                self.combo_container.setCurrentIndex(idx)
+                self.combo_container.blockSignals(False)
+                self._update_output_path_extension("mov")
+        self.save_current_settings()
+
+    def _on_container_format_changed(self, text: str):
+        target_ext = self._get_selected_container_format_cli()
+        codec_cli = self._get_selected_video_codec_cli()
+        if codec_cli == "prores" and target_ext == "mp4":
+            idx = self.combo_container.findText("MOV (.mov)")
+            if idx >= 0:
+                self.combo_container.blockSignals(True)
+                self.combo_container.setCurrentIndex(idx)
+                self.combo_container.blockSignals(False)
+                target_ext = "mov"
+        self._update_output_path_extension(target_ext)
+        self.save_current_settings()
+
+    def _update_output_path_extension(self, target_ext: str):
+        if self.output_path_str:
+            p = Path(self.output_path_str)
+            if p.suffix.lower() != f".{target_ext}":
+                new_path = str(p.with_suffix(f".{target_ext}"))
+                self.output_path_str = new_path
+                self.lbl_output_path.setText(Path(new_path).name)
+
     def select_output(self):
         valid_paths = self.get_input_video_paths()
         v_stem = valid_paths[0].stem if valid_paths else "scenepack"
         first_img = self.image_path_str.split(";")[0].strip() if self.image_path_str else ""
         char_name = Path(first_img).stem if first_img else ""
         suggested_name = generate_scene_standard_filename(v_stem, character_name=char_name)
+        target_ext = self._get_selected_container_format_cli()
+        suggested_name = str(Path(suggested_name).with_suffix(f".{target_ext}"))
         default_dir = Path(self.output_path_str).parent if self.output_path_str else (valid_paths[0].parent if valid_paths else Path.home() / "Desktop")
         suggested_path = str(default_dir / suggested_name)
-        path, _ = QFileDialog.getSaveFileName(self, "Save Output As", suggested_path, "MP4 Video (*.mp4);;All Files (*.*)")
+        filter_str = f"Video Files (*.{target_ext});;MP4 Video (*.mp4);;QuickTime MOV (*.mov);;Matroska Video (*.mkv);;All Files (*.*)"
+        path, _ = QFileDialog.getSaveFileName(self, "Save Output As", suggested_path, filter_str)
         if path:
-            if not path.lower().endswith(".mp4"):
-                path += ".mp4"
+            if not any(path.lower().endswith(ext) for ext in [".mp4", ".mov", ".mkv"]):
+                path += f".{target_ext}"
             self.output_path_str = path
             self.lbl_output_path.setText(Path(path).name)
+
+    def load_scan_from_file(self):
+        """Loads a previously saved scan checkpoint JSON file and populates the review table."""
+        try:
+            start_dir = str(Path.home() / "Library" / "Application Support" / "Focus")
+            if not os.path.exists(start_dir):
+                start_dir = str(Path.home())
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select Saved Scan JSON / Checkpoint",
+                start_dir,
+                "JSON Files (*.json);;All Files (*.*)"
+            )
+            if not file_path:
+                return
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            raw_list = []
+            if isinstance(data, list):
+                raw_list = data
+            elif isinstance(data, dict):
+                raw_list = data.get("intervals", [])
+                if not self.video_path_str and data.get("video_path"):
+                    self.video_path_str = str(data["video_path"])
+                    self.lbl_video_path.setText(Path(self.video_path_str).name)
+
+            if not raw_list:
+                QMessageBox.warning(self, "Invalid Scan File", "No scene intervals found in the selected JSON file.")
+                return
+
+            normalized_intervals = []
+            source_videos = set()
+            for item in raw_list:
+                if isinstance(item, dict):
+                    src = item.get("source", self.video_path_str or "")
+                    s = float(item.get("start", 0.0))
+                    e = float(item.get("end", 0.0))
+                    avg = float(item.get("avg_x", 0.5))
+                    normalized_intervals.append((src, s, e, avg))
+                    if src:
+                        source_videos.add(src)
+                elif isinstance(item, (list, tuple)):
+                    if len(item) >= 4 and isinstance(item[0], str):
+                        normalized_intervals.append((str(item[0]), float(item[1]), float(item[2]), float(item[3])))
+                        source_videos.add(str(item[0]))
+                    elif len(item) >= 3:
+                        src = self.video_path_str or ""
+                        normalized_intervals.append((src, float(item[0]), float(item[1]), float(item[2])))
+                        if src:
+                            source_videos.add(src)
+                    elif len(item) == 2:
+                        src = self.video_path_str or ""
+                        normalized_intervals.append((src, float(item[0]), float(item[1]), 0.5))
+                        if src:
+                            source_videos.add(src)
+
+            if not self.video_path_str and source_videos:
+                self.video_path_str = ";".join(sorted(source_videos))
+                self.lbl_video_path.setText(f"{len(source_videos)} video(s) linked from scan")
+
+            caps = {}
+            thumbnails = []
+            try:
+                for it in normalized_intervals:
+                    v_src = it[0] if it[0] else self.video_path_str
+                    if v_src and os.path.exists(v_src):
+                        if v_src not in caps:
+                            caps[v_src] = cv2.VideoCapture(v_src)
+                        cap = caps[v_src]
+                        fps = cap.get(cv2.CAP_PROP_FPS) or 24.0
+                        mid = (it[1] + it[2]) / 2.0
+                        cap.set(cv2.CAP_PROP_POS_FRAMES, int(mid * fps))
+                        ret, frame = cap.read()
+                        if ret and frame is not None:
+                            h, w = frame.shape[:2]
+                            th_w = 120
+                            th_h = max(1, int(h * (th_w / max(1, w))))
+                            resized = cv2.resize(frame, (th_w, th_h))
+                            rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+                            thumbnails.append(Image.fromarray(rgb))
+                        else:
+                            thumbnails.append(None)
+                    else:
+                        thumbnails.append(None)
+            except Exception as e:
+                logging.debug(f"Thumbnail generation for loaded scan: {e}")
+                thumbnails = [None] * len(normalized_intervals)
+            finally:
+                for c in caps.values():
+                    c.release()
+
+            self._on_show_review_checklist(normalized_intervals, thumbnails)
+            self.toast.show_toast(f"Loaded {len(normalized_intervals)} scene(s) from scan file!", "📁", 3500)
+            logging.info(f"Loaded {len(normalized_intervals)} intervals from {file_path}")
+        except Exception as e:
+            logging.error(f"Failed to load scan file: {e}")
+            QMessageBox.critical(self, "Load Scan Error", f"Could not load scan checkpoint:\n{str(e)}")
 
     def apply_auto_tune(self):
         mode = canonicalize_mode(self.current_mode)
@@ -2435,11 +2675,14 @@ class FocusApp(QMainWindow):
             first_img = self.image_path_str.split(";")[0].strip() if self.image_path_str else ""
             char_name = Path(first_img).stem if first_img else ""
             default_name = generate_scene_standard_filename(v_stem, character_name=char_name)
+            target_ext = self._get_selected_container_format_cli()
+            default_name = str(Path(default_name).with_suffix(f".{target_ext}"))
             default_dir = valid_paths[0].parent if valid_paths else Path.home() / "Desktop"
-            path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", str(default_dir / default_name), "MP4 Video (*.mp4);;All Files (*.*)")
+            filter_str = f"Video Files (*.{target_ext});;MP4 Video (*.mp4);;QuickTime MOV (*.mov);;Matroska Video (*.mkv);;All Files (*.*)"
+            path, _ = QFileDialog.getSaveFileName(self, "Select Save Location", str(default_dir / default_name), filter_str)
             if path:
-                if not path.lower().endswith(".mp4"):
-                    path += ".mp4"
+                if not any(path.lower().endswith(ext) for ext in [".mp4", ".mov", ".mkv"]):
+                    path += f".{target_ext}"
                 self.output_path_str = path
                 self.lbl_output_path.setText(Path(path).name)
             else:
@@ -2466,6 +2709,8 @@ class FocusApp(QMainWindow):
         self._acquire_sleep_lock("Rendering Video Clips")
         generator_inst = getattr(self.scan_worker, "generator_instance", None) if self.scan_worker else ScenePackGenerator(log_queue=self.queue_proxy, mode=self.current_mode)
         export_quality = self.combo_export_quality.currentText()
+        video_codec = self._get_selected_video_codec_cli()
+        container_format = self._get_selected_container_format_cli()
         export_clips_folder = self.chk_export_clips_folder.isChecked() if hasattr(self, 'chk_export_clips_folder') else False
         auto_crop_black_bars = self.chk_auto_crop.isChecked() if hasattr(self, 'chk_auto_crop') else True
         export_timeline_xml = self.chk_export_xml.isChecked() if hasattr(self, 'chk_export_xml') else True
@@ -2474,6 +2719,8 @@ class FocusApp(QMainWindow):
             self.output_path_str, aspect_canonical, self.queue_proxy,
             audio_track_index=audio_track_idx,
             export_quality=export_quality,
+            video_codec=video_codec,
+            container_format=container_format,
             export_clips_folder=export_clips_folder,
             auto_crop_black_bars=auto_crop_black_bars,
             export_timeline_xml=export_timeline_xml
@@ -2608,6 +2855,12 @@ class FocusApp(QMainWindow):
                     if idx >= 0: self.combo_intro_mode.setCurrentIndex(idx)
                 if "intro_dur" in pdata and hasattr(self, 'input_intro_duration'):
                     self.input_intro_duration.setText(str(pdata["intro_dur"]))
+                if "video_codec" in pdata and hasattr(self, 'combo_video_codec'):
+                    idx = self.combo_video_codec.findText(pdata["video_codec"])
+                    if idx >= 0: self.combo_video_codec.setCurrentIndex(idx)
+                if "container_format" in pdata and hasattr(self, 'combo_container'):
+                    idx = self.combo_container.findText(pdata["container_format"])
+                    if idx >= 0: self.combo_container.setCurrentIndex(idx)
                 if "auto_render" in pdata and hasattr(self, 'chk_auto_render'):
                     self.chk_auto_render.setChecked(bool(pdata["auto_render"]))
                 self.save_current_settings()
@@ -2629,6 +2882,8 @@ class FocusApp(QMainWindow):
                 "frame_skip": self.input_frame_skip.text(),
                 "aspect": self.combo_aspect.currentText(),
                 "quality": self.combo_export_quality.currentText(),
+                "video_codec": self.combo_video_codec.currentText() if hasattr(self, 'combo_video_codec') else "Auto (Fastest Hardware H.264)",
+                "container_format": self.combo_container.currentText() if hasattr(self, 'combo_container') else "MP4 (.mp4)",
                 "vad_enabled": self.chk_vad.isChecked(),
                 "vad_buffer": self.input_vad_buffer.text(),
                 "vad_speaker": self.chk_speaker.isChecked(),

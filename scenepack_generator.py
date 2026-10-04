@@ -137,6 +137,8 @@ def main():
     parser.add_argument("--intro-duration", type=float, default=90.0, help="Fallback intro duration.")
     parser.add_argument("--aspect", type=str, default="16:9 Original", help="Output aspect ratio.")
     parser.add_argument("--quality", type=str, default="Auto (Match Source Bitrate)", help="Export video quality preset.")
+    parser.add_argument("--video-codec", type=str, default="auto", choices=["auto", "h264", "hevc", "h265", "av1", "prores"], help="Video compression codec (auto, h264, hevc, av1, prores).")
+    parser.add_argument("--container", type=str, default="auto", choices=["auto", "mp4", "mkv", "mov"], help="Output container format (mp4, mkv, mov).")
     parser.add_argument("--audio-track", type=int, default=0, help="Audio stream index to preserve (or -1 for all tracks).")
     parser.add_argument("--tolerance", type=float, default=0.6, help="Face recognition distance tolerance.")
     parser.add_argument("--json-stream", action="store_true", help="Emit real-time progress events as JSON lines on stdout.")
@@ -194,8 +196,15 @@ def main():
                 avg_x = float(item.get("avg_x", 0.5))
                 render_intervals.append((src_v, s, e, avg_x))
 
-            default_stem = Path(video_path).stem if isinstance(video_path, Path) else "scenepack"
-            output_path = Path(args.output).resolve() if args.output else (Path(video_path).parent / f"{default_stem}_scenepack.mp4" if isinstance(video_path, Path) else Path(f"{default_stem}_scenepack.mp4").resolve())
+            target_ext = args.container if (args.container and args.container != "auto") else "mp4"
+            if args.output:
+                output_path = Path(args.output).resolve()
+                if args.container and args.container != "auto" and output_path.suffix.lower() != f".{target_ext}":
+                    output_path = output_path.with_suffix(f".{target_ext}")
+            else:
+                default_stem = Path(video_path).stem if isinstance(video_path, Path) else "scenepack"
+                parent_dir = Path(video_path).parent if isinstance(video_path, Path) else Path.cwd()
+                output_path = (parent_dir / f"{default_stem}_scenepack.{target_ext}").resolve()
 
             logging.info(f"Direct rendering {len(render_intervals)} reviewed clips to: {output_path}")
             generator.extract_and_concat(
@@ -205,6 +214,8 @@ def main():
                 aspect_ratio=args.aspect,
                 audio_track_index=args.audio_track,
                 export_quality=args.quality,
+                video_codec=args.video_codec,
+                container_format=args.container,
                 export_clips_folder=args.export_clips_folder,
                 auto_crop_black_bars=not args.no_crop_black_bars,
                 export_timeline_xml=args.export_xml
@@ -285,7 +296,13 @@ def main():
             else:
                 print(json.dumps({"type": "review_ready", "intervals": normalized_intervals}))
         else:
-            output_path = Path(args.output).resolve() if args.output else video_path.parent / f"{video_path.stem}_scenepack.mp4"
+            target_ext = args.container if (args.container and args.container != "auto") else "mp4"
+            if args.output:
+                output_path = Path(args.output).resolve()
+                if args.container and args.container != "auto" and output_path.suffix.lower() != f".{target_ext}":
+                    output_path = output_path.with_suffix(f".{target_ext}")
+            else:
+                output_path = (video_path.parent / f"{video_path.stem}_scenepack.{target_ext}").resolve()
             generator.generate(
                 video_path=video_path,
                 ref_image_path=ref_image_path,
@@ -297,6 +314,8 @@ def main():
                 aspect_ratio=args.aspect,
                 audio_track_index=args.audio_track,
                 export_quality=args.quality,
+                video_codec=args.video_codec,
+                container_format=args.container,
                 vad_enabled=args.vad,
                 vad_buffer=args.vad_buffer,
                 vad_speaker_enabled=args.vad_speaker,

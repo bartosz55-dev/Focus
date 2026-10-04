@@ -299,7 +299,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.3.3"
+APP_VERSION = "v2.4.0"
 STUDIO_AUDIO_BITRATE = "320k"
 
 
@@ -563,6 +563,8 @@ def generate_scenepack_spec_report(
     character_name: Optional[str] = None,
     crop_info: Optional[str] = None,
     color_matrix: str = "Rec.709 (BT.709 SDR)",
+    video_codec: str = "H.264 / AVC",
+    container_format: str = "mp4"
 ) -> str:
     """
     Generates a professional specifications & compatibility report for editors ({stem}_info.txt).
@@ -591,6 +593,7 @@ def generate_scenepack_spec_report(
     dur_str = f"{tot_hr}h {tot_min}m {tot_sec_rem}s" if tot_hr else f"{tot_min}m {tot_sec_rem}s"
 
     crop_display = crop_info if (crop_info and crop_info != "None") else "None (Full Frame / Passthrough)"
+    clean_ext = container_format.lower().lstrip('.')
 
     content = (
         "================================================================================\n"
@@ -604,9 +607,10 @@ def generate_scenepack_spec_report(
         f"  • Total Duration    : {dur_str} ({total_sec:.2f} seconds)\n\n"
         "[VIDEO STREAM SPECIFICATIONS]\n"
         f"  • Framerate (CFR)   : {fps:.3f} fps (Constant Framerate, CapCut & After Effects Ready)\n"
-        f"  • Codec & Profile   : H.264 / AVC (High Profile, Keyframe Interval g=24)\n"
+        f"  • Codec & Encoder   : {video_codec} (Keyframe Interval g=24)\n"
+        f"  • Container Format  : .{clean_ext}\n"
         f"  • Color Primaries   : {color_matrix}\n"
-        f"  • Pixel Format      : yuv420p (8-bit SDR)\n"
+        f"  • Pixel Format      : {'yuv422p10le (10-bit Master)' if 'prores' in video_codec.lower() else 'yuv420p (8-bit SDR)'}\n"
         f"  • Letterbox AutoCrop: {crop_display}\n\n"
         "[AUDIO STREAM SPECIFICATIONS]\n"
         "  • Codec             : AAC-LC\n"
@@ -876,6 +880,9 @@ TRANSLATIONS = {
         "frame_skip": "Frame Skip Interval:",
         "aspect_label": "Aspect Ratio & Framing:",
         "export_quality": "Export Quality:",
+        "video_codec": "Video Codec:",
+        "container_format": "Container Format:",
+        "load_scan_btn": "📂 Load Scan / Checkpoint...",
         "vad_enable": "Smart Dialogue Protection (VAD / Lip-Sync)",
         "vad_buffer": "Silence Snapping Buffer (ms):",
         "vad_speaker_enable": "Target Speaker Voice Matching (Filter Background/Narrator)",
@@ -1038,6 +1045,9 @@ TRANSLATIONS = {
         "frame_skip": "Krok Analizy Klatek:",
         "aspect_label": "Format i Kadrowanie:",
         "export_quality": "Jakość Renderowania:",
+        "video_codec": "Kodek Wideo:",
+        "container_format": "Format Kontenera:",
+        "load_scan_btn": "📂 Wczytaj Skan / Checkpoint...",
         "vad_enable": "Inteligentna Ochrona Dialogów (VAD / Lip-Sync)",
         "vad_buffer": "Bufor Ciszy (ms):",
         "vad_speaker_enable": "Dopasowanie Głosu Postaci (Filtr Tła)",
@@ -2381,6 +2391,9 @@ class ScenePackGenerator:
         except Exception as e:
             logging.warning(f"Could not probe color metadata with ffprobe: {e}")
 
+        if not hasattr(self, "_color_meta_cache"):
+            self._color_meta_cache = {}
+        self._color_meta_cache[cache_key] = default_meta
         return default_meta
 
     def get_video_chapters(self, video_path: Any) -> List[dict]:
@@ -2523,44 +2536,109 @@ class ScenePackGenerator:
         logging.info(f"Hardware Benchmark Complete: {cpu_cores} CPU cores, GPU codec '{gpu_codec}' ({elapsed_ms}ms)")
         return res
 
-    def _get_best_video_codec_and_args(self) -> Tuple[str, List[str]]:
-        """Probes FFmpeg for available hardware video encoders and returns the fastest supported codec and its optimal speed arguments."""
-        if hasattr(self, "_cached_best_vcodec") and self._cached_best_vcodec is not None:
-            return self._cached_best_vcodec
+    def _get_best_video_codec_and_args(self, selected_codec: str = "auto") -> Tuple[str, List[str]]:
+        """Probes FFmpeg for available hardware or software video encoders matching requested codec and returns optimal encoder and speed arguments."""
+        sel = (selected_codec or "auto").lower().strip()
+        cache_key = f"_cached_vcodec_{sel}"
+        if hasattr(self, cache_key) and getattr(self, cache_key) is not None:
+            return getattr(self, cache_key)
 
-        if PlatformManager.is_macos():
+        is_mac = PlatformManager.is_macos()
+        is_win = PlatformManager.is_windows()
+
+        if sel in ("h264", "avc", "x264"):
+            if is_mac:
+                candidates = [
+                    ("h264_videotoolbox", []),
+                    ("libx264", ["-preset", "veryfast"])
+                ]
+            elif is_win:
+                candidates = [
+                    ("h264_nvenc", ["-preset", "fast"]),
+                    ("h264_qsv", ["-preset", "veryfast"]),
+                    ("h264_amf", []),
+                    ("h264_mf", []),
+                    ("libx264", ["-preset", "veryfast"])
+                ]
+            else:
+                candidates = [
+                    ("h264_nvenc", ["-preset", "fast"]),
+                    ("h264_vaapi", []),
+                    ("h264_qsv", ["-preset", "veryfast"]),
+                    ("h264_amf", []),
+                    ("libx264", ["-preset", "veryfast"])
+                ]
+        elif sel in ("hevc", "h265", "x265"):
+            if is_mac:
+                candidates = [
+                    ("hevc_videotoolbox", ["-tag:v", "hvc1"]),
+                    ("libx265", ["-preset", "veryfast", "-tag:v", "hvc1"])
+                ]
+            elif is_win:
+                candidates = [
+                    ("hevc_nvenc", ["-preset", "fast", "-tag:v", "hvc1"]),
+                    ("hevc_qsv", ["-preset", "veryfast", "-tag:v", "hvc1"]),
+                    ("hevc_amf", ["-tag:v", "hvc1"]),
+                    ("hevc_mf", ["-tag:v", "hvc1"]),
+                    ("libx265", ["-preset", "veryfast", "-tag:v", "hvc1"])
+                ]
+            else:
+                candidates = [
+                    ("hevc_nvenc", ["-preset", "fast", "-tag:v", "hvc1"]),
+                    ("hevc_vaapi", []),
+                    ("hevc_qsv", ["-preset", "veryfast", "-tag:v", "hvc1"]),
+                    ("hevc_amf", ["-tag:v", "hvc1"]),
+                    ("libx265", ["-preset", "veryfast", "-tag:v", "hvc1"])
+                ]
+        elif sel in ("av1", "svtav1"):
             candidates = [
-                ("h264_videotoolbox", []),
-                ("hevc_videotoolbox", []),
-                ("libx264", ["-preset", "veryfast"])
+                ("av1_nvenc", ["-preset", "fast"]),
+                ("av1_qsv", ["-preset", "veryfast"]),
+                ("av1_amf", []),
+                ("av1_videotoolbox", []),
+                ("libsvtav1", [])
             ]
-        elif PlatformManager.is_windows():
-            candidates = [
-                ("h264_nvenc", ["-preset", "fast"]),
-                ("hevc_nvenc", ["-preset", "fast"]),
-                ("h264_amf", []),
-                ("hevc_amf", []),
-                ("h264_mf", []),
-                ("hevc_mf", []),
-                ("h264_qsv", ["-preset", "veryfast"]),
-                ("hevc_qsv", ["-preset", "veryfast"]),
-                ("libx264", ["-preset", "veryfast"])
-            ]
-        else:
-            candidates = [
-                ("h264_nvenc", ["-preset", "fast"]),
-                ("hevc_nvenc", ["-preset", "fast"]),
-                ("h264_amf", []),
-                ("h264_vaapi", []),
-                ("h264_qsv", ["-preset", "veryfast"]),
-                ("libx264", ["-preset", "veryfast"])
-            ]
+        elif sel in ("prores", "prores_ks"):
+            if is_mac:
+                candidates = [
+                    ("prores_videotoolbox", []),
+                    ("prores_ks", [])
+                ]
+            else:
+                candidates = [
+                    ("prores_ks", []),
+                    ("prores", [])
+                ]
+        else: # "auto"
+            if is_mac:
+                candidates = [
+                    ("h264_videotoolbox", []),
+                    ("hevc_videotoolbox", []),
+                    ("libx264", ["-preset", "veryfast"])
+                ]
+            elif is_win:
+                candidates = [
+                    ("h264_nvenc", ["-preset", "fast"]),
+                    ("hevc_nvenc", ["-preset", "fast"]),
+                    ("h264_amf", []),
+                    ("hevc_amf", []),
+                    ("h264_mf", []),
+                    ("hevc_mf", []),
+                    ("h264_qsv", ["-preset", "veryfast"]),
+                    ("hevc_qsv", ["-preset", "veryfast"]),
+                    ("libx264", ["-preset", "veryfast"])
+                ]
+            else:
+                candidates = [
+                    ("h264_nvenc", ["-preset", "fast"]),
+                    ("hevc_nvenc", ["-preset", "fast"]),
+                    ("h264_amf", []),
+                    ("h264_vaapi", []),
+                    ("h264_qsv", ["-preset", "veryfast"]),
+                    ("libx264", ["-preset", "veryfast"])
+                ]
 
         for codec, args in candidates:
-            if codec == "libx264":
-                self._cached_best_vcodec = (codec, args)
-                logging.info(f"Using CPU video encoder fallback: '{codec}'")
-                return codec, args
             try:
                 cmd = [
                     str(self.ffmpeg_path), "-hide_banner", "-loglevel", "error",
@@ -2569,14 +2647,16 @@ class ScenePackGenerator:
                 ] + args + ["-f", "null", "-"]
                 res = self.run_subprocess(cmd, capture_output=True, timeout=5)
                 if res.returncode == 0:
-                    self._cached_best_vcodec = (codec, args)
-                    logging.info(f"Hardware acceleration enabled: selected GPU video encoder '{codec}'")
+                    setattr(self, cache_key, (codec, args))
+                    logging.info(f"Video encoder probe: selected '{codec}' for request '{selected_codec}'")
                     return codec, args
             except Exception as e:
                 logging.debug(f"Codec probe failed for {codec}: {e}")
 
-        self._cached_best_vcodec = ("libx264", ["-preset", "veryfast"])
-        return self._cached_best_vcodec
+        fallback = ("libx264", ["-preset", "veryfast"])
+        setattr(self, cache_key, fallback)
+        logging.info(f"Using CPU video encoder fallback: '{fallback[0]}'")
+        return fallback
 
     def _extract_encodings_list(self, ref_data: Any) -> List[Any]:
         if ref_data is None:
@@ -3375,7 +3455,7 @@ class ScenePackGenerator:
                 return None
 
             batch_size = 32
-            max_workers = min(8, max(2, (os.cpu_count() or 4) - 2))
+            max_workers = min(4, max(2, (os.cpu_count() or 4) - 2))
 
             current_idx = 0
             target_idx_set = set(target_indices)
@@ -3520,6 +3600,8 @@ class ScenePackGenerator:
         aspect_ratio: str = "16:9 Original",
         audio_track_index: int = 0,
         export_quality: str = "Auto (Match Source Bitrate)",
+        video_codec: str = "auto",
+        container_format: str = "auto",
         export_clips_folder: bool = False,
         auto_crop_black_bars: bool = True,
         export_timeline_xml: bool = True
@@ -3527,6 +3609,19 @@ class ScenePackGenerator:
         if not intervals:
             logging.warning("No scenes to extract.")
             return
+
+        target_ext = output_path.suffix.lower().lstrip('.') if (output_path and output_path.suffix) else "mp4"
+        if container_format and container_format.lower() != "auto":
+            target_ext = container_format.lower().lstrip('.')
+            if output_path and output_path.suffix.lower() != f".{target_ext}":
+                output_path = output_path.with_suffix(f".{target_ext}")
+
+        codec, extra_args = self._get_best_video_codec_and_args(selected_codec=video_codec)
+        if "prores" in codec.lower() and target_ext == "mp4":
+            logging.info("Apple ProRes requires QuickTime MOV or MKV container. Switching export to .mov.")
+            target_ext = "mov"
+            if output_path:
+                output_path = output_path.with_suffix(".mov")
 
         temp_parent = Path(output_path).parent if output_path and Path(output_path).parent.exists() else None
         try:
@@ -3536,11 +3631,18 @@ class ScenePackGenerator:
             temp_dir = Path(tempfile.mkdtemp(prefix="scenepack_tmp_"))
         concat_list_path = temp_dir / "concat_list.txt"
 
+        # Determine intermediate chunk file extension for lossless demuxing
+        if target_ext == "mkv":
+            chunk_ext = "mkv"
+        elif target_ext == "mov" or "prores" in codec.lower():
+            chunk_ext = "mov"
+        else:
+            chunk_ext = "mp4"
+
         try:
-            codec, extra_args = self._get_best_video_codec_and_args()
-            logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec}, audio track: {audio_track_index})...")
+            logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec}, format: {target_ext}, audio track: {audio_track_index})...")
             if hasattr(self, "log_queue") and self.log_queue:
-                self.log_queue.put(("log", f"Rendering with Hardware Acceleration: using video encoder '{codec}' (audio track: {audio_track_index + 1})."))
+                self.log_queue.put(("log", f"Rendering with Hardware Acceleration: using video encoder '{codec}' [Container: .{target_ext}] (audio track: {audio_track_index + 1})."))
 
             total_segments = len(intervals)
             completed_count = 0
@@ -3560,7 +3662,7 @@ class ScenePackGenerator:
                     end = float(interval[1])
                     avg_x = float(interval[2]) if len(interval) > 2 else 0.5
 
-                chunk_path = temp_dir / f"chunk_{i:04d}.ts"
+                chunk_path = temp_dir / f"chunk_{i:04d}.{chunk_ext}"
                 duration = end - start
 
                 src_fps = self._get_video_fps(src_video)
@@ -3639,7 +3741,28 @@ class ScenePackGenerator:
                     maxrate_val = '15M'
                     buf_val = '20M'
 
-                if codec == 'libx264':
+                if 'libsvtav1' in codec:
+                    if is_auto_source:
+                        rate_control_args = ['-crf', '24', '-preset', '7']
+                    elif "max" in quality_str or "master" in quality_str or "14" in quality_str:
+                        rate_control_args = ['-crf', '18', '-preset', '5']
+                    elif "high" in quality_str or "16" in quality_str:
+                        rate_control_args = ['-crf', '22', '-preset', '6']
+                    elif "low" in quality_str or "draft" in quality_str or "24" in quality_str:
+                        rate_control_args = ['-crf', '34', '-preset', '9']
+                    else:
+                        rate_control_args = ['-crf', '28', '-preset', '7']
+                elif 'prores' in codec:
+                    if "low" in quality_str or "draft" in quality_str:
+                        p_idx = '0'
+                    elif "medium" in quality_str:
+                        p_idx = '1'
+                    elif "max" in quality_str or "master" in quality_str:
+                        p_idx = '3'
+                    else:
+                        p_idx = '2'
+                    rate_control_args = ['-profile:v', p_idx]
+                elif codec == 'libx264' or codec == 'libx265':
                     rate_control_args = ['-crf', crf_val, '-maxrate', maxrate_val, '-bufsize', buf_val] if is_auto_source else ['-crf', crf_val]
                 elif 'videotoolbox' in codec:
                     if q_val is not None and not is_auto_source:
@@ -3656,6 +3779,7 @@ class ScenePackGenerator:
                 is_multi_audio = (audio_track_index in (-1, "-1", "all", "multi", "both"))
                 audio_map_args = ['-map', '0:a?'] if is_multi_audio else ['-map', f'0:a:{audio_track_index}?']
 
+                pix_fmt_val = 'yuv422p10le' if 'prores' in codec.lower() else 'yuv420p'
                 cmd.extend([
                     '-map', '0:v:0',
                 ] + audio_map_args + [
@@ -3665,7 +3789,7 @@ class ScenePackGenerator:
                     '-g', '24',
                     '-keyint_min', '24',
                     '-bf', '0',
-                    '-pix_fmt', 'yuv420p',
+                    '-pix_fmt', pix_fmt_val,
                     '-c:a', 'aac',
                     '-b:a', STUDIO_AUDIO_BITRATE,
                     '-ar', '48000',
@@ -3710,7 +3834,7 @@ class ScenePackGenerator:
 
                 return i, chunk_path
 
-            max_workers = min(6, os.cpu_count() or 4)
+            max_workers = min(4, os.cpu_count() or 4)
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(executor.map(process_segment, enumerate(intervals)))
 
@@ -3727,12 +3851,16 @@ class ScenePackGenerator:
                 '-safe', '0',
                 '-i', str(concat_list_path),
                 '-c', 'copy',
-                '-map', '0',
+                '-map', '0:v',
+                '-map', '0:a?',
                 '-bsf:a', 'aac_adtstoasc',
-                '-fflags', '+genpts+discardcorrupt',
-                '-movflags', '+faststart',
-                str(output_path)
+                '-fflags', '+genpts+discardcorrupt'
             ]
+            if target_ext in ('mp4', 'mov', 'm4v'):
+                concat_cmd.extend(['-movflags', '+faststart'])
+            if 'hevc' in codec.lower() and target_ext in ('mp4', 'mov', 'm4v'):
+                concat_cmd.extend(['-tag:v', 'hvc1'])
+            concat_cmd.append(str(output_path))
 
             concat_result = self.run_subprocess(concat_cmd, cwd=temp_dir, capture_output=True, text=True)
             if concat_result.returncode != 0:
@@ -3744,15 +3872,18 @@ class ScenePackGenerator:
                 clips_dir = output_path.parent / f"{output_path.stem}_clips"
                 clips_dir.mkdir(parents=True, exist_ok=True)
                 for idx, cp in enumerate(chunk_paths):
-                    dest_clip = clips_dir / f"Scene_{idx+1:03d}.mp4"
+                    dest_clip = clips_dir / f"Scene_{idx+1:03d}.{target_ext}"
                     remux_cmd = [
                         str(self.ffmpeg_path), '-y',
                         '-hide_banner', '-loglevel', 'error',
                         '-i', str(cp),
-                        '-c', 'copy',
-                        '-movflags', '+faststart',
-                        str(dest_clip)
+                        '-c', 'copy'
                     ]
+                    if target_ext in ('mp4', 'mov', 'm4v'):
+                        remux_cmd.extend(['-movflags', '+faststart'])
+                    if 'hevc' in codec.lower() and target_ext in ('mp4', 'mov', 'm4v'):
+                        remux_cmd.extend(['-tag:v', 'hvc1'])
+                    remux_cmd.append(str(dest_clip))
                     self.run_subprocess(remux_cmd, capture_output=True, text=True)
                 logging.info(f"Successfully exported {len(chunk_paths)} individual scene clips to:\n{clips_dir.name}")
                 if hasattr(self, "log_queue") and self.log_queue:
@@ -3791,7 +3922,9 @@ class ScenePackGenerator:
                     intervals=raw_intervals,
                     fps=info_fps,
                     audio_bitrate=STUDIO_AUDIO_BITRATE,
-                    crop_info=detected_crop
+                    crop_info=detected_crop,
+                    video_codec=codec,
+                    container_format=target_ext
                 )
                 logging.info(f"Generated Scenepack Spec Report: {info_path.name}")
                 if hasattr(self, "log_queue") and self.log_queue:
@@ -4057,6 +4190,8 @@ class ScenePackGenerator:
         aspect_ratio: str = "16:9 Original",
         audio_track_index: int = 0,
         export_quality: str = "Auto (Match Source Bitrate)",
+        video_codec: str = "auto",
+        container_format: str = "auto",
         vad_enabled: bool = False,
         vad_buffer: int = 300,
         vad_buffer_ms: Optional[int] = None,
@@ -4117,6 +4252,8 @@ class ScenePackGenerator:
             aspect_ratio=aspect_ratio,
             audio_track_index=audio_track_index,
             export_quality=export_quality,
+            video_codec=video_codec,
+            container_format=container_format,
             export_clips_folder=export_clips_folder,
             auto_crop_black_bars=auto_crop_black_bars,
             export_timeline_xml=export_timeline_xml

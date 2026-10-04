@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 public struct ProgressCardView: View {
     @ObservedObject var appState: AppState
@@ -47,6 +49,37 @@ public struct ProgressCardView: View {
                     }
                     .buttonStyle(AppleSpringButtonStyle())
                     .disabled(appState.isProcessing)
+
+                    if !appState.isProcessing {
+                        Button(action: {
+                            let panel = NSOpenPanel()
+                            panel.title = appState.currentLanguage == "Polski" ? "Wybierz plik zapisanego skanu JSON" : "Select Saved Scan JSON"
+                            panel.allowedContentTypes = [.json]
+                            panel.canChooseFiles = true
+                            panel.canChooseDirectories = false
+                            if panel.runModal() == .OK, let url = panel.url {
+                                appState.loadScanFromJSON(url: url)
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "folder.badge.gearshape")
+                                Text(appState.currentLanguage == "Polski" ? "Wczytaj Zapisany Skan..." : "Load Scan / Checkpoint...")
+                            }
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(AppleSpringButtonStyle())
+                    }
 
                     if appState.isProcessing {
                         Button(action: {
