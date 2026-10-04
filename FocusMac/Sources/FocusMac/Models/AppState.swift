@@ -153,6 +153,27 @@ public final class AppState: ObservableObject {
     ]
     @Published public var galleryProfiles: [CharacterProfile] = []
     @Published public var logLines: [String] = []
+
+    private static let logDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss,SSS"
+        return f
+    }()
+
+    public func appendLog(_ msg: String) {
+        let trimmed = msg.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let finalLine: String
+        if trimmed.range(of: #"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"#, options: .regularExpression) != nil {
+            finalLine = trimmed
+        } else {
+            let ts = Self.logDateFormatter.string(from: Date())
+            finalLine = "\(ts) \(trimmed)"
+        }
+        logLines.append(finalLine)
+    }
+
     @Published public var toastMessage: String?
     @Published public var toastIcon: String = "checkmark.circle"
     @Published public var previewClip: ClipInterval?
@@ -245,7 +266,7 @@ public final class AppState: ObservableObject {
             }
         }
         if self.logLines.isEmpty {
-            self.logLines.append("[INFO] Focus Studio v2.4.0 Diagnostic Engine ready. Awaiting scan or render events.")
+            self.appendLog("[INFO] Focus Studio v2.4.0 Diagnostic Engine ready. Awaiting scan or render events.")
         }
     }
 
@@ -333,7 +354,7 @@ public final class AppState: ObservableObject {
             let newURL = current.deletingPathExtension().appendingPathExtension(format.fileExtension)
             if newURL != current {
                 self.outputURL = newURL
-                self.logLines.append("[INFO] Output container format changed to .\(format.fileExtension): \(newURL.lastPathComponent)")
+                self.appendLog("[INFO] Output container format changed to .\(format.fileExtension): \(newURL.lastPathComponent)")
             }
         }
     }
@@ -417,7 +438,7 @@ public final class AppState: ObservableObject {
             }
             self.detectedClips = clips
             self.processingStatus = "Loaded \(clips.count) clips from scan file."
-            self.logLines.append("[INFO] Loaded \(clips.count) clip(s) from: \(url.lastPathComponent)")
+            self.appendLog("[INFO] Loaded \(clips.count) clip(s) from: \(url.lastPathComponent)")
             showToast("Loaded \(clips.count) clips from scan!", icon: "checkmark.circle.fill")
 
             let sources = Set(clips.map { $0.source }.filter { !$0.isEmpty })
@@ -459,14 +480,14 @@ public final class AppState: ObservableObject {
 
         let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
         let hw = SystemHardwareInfo.current()
-        logLines.append("[SYSTEM] Host: \(hw.cpuSummary) | \(hw.ramSummary) | macOS \(hw.osVersion)")
-        logLines.append("[SYSTEM] Storage: \(hw.diskSummary) | Accel: Apple VideoToolbox")
-        logLines.append("[CONFIG] Mode: \(mode.rawValue) | Codec: \(settings.videoCodec.cliValue) | Container: .\(settings.containerFormat.fileExtension) | Quality: \(settings.quality.rawValue)")
-        logLines.append("[CONFIG] Timing: In: \(String(format: "%.1f", settings.padBefore))s, Out: \(String(format: "%.1f", settings.padAfter))s, Gap: \(String(format: "%.1f", settings.maxGap))s, Min: \(String(format: "%.1f", settings.minScene))s, ScanStep: \(settings.frameSkip) frames")
+        appendLog("[SYSTEM] Host: \(hw.cpuSummary) | \(hw.ramSummary) | macOS \(hw.osVersion)")
+        appendLog("[SYSTEM] Storage: \(hw.diskSummary) | Accel: Apple VideoToolbox")
+        appendLog("[CONFIG] Mode: \(mode.rawValue) | Codec: \(settings.videoCodec.cliValue) | Container: .\(settings.containerFormat.fileExtension) | Quality: \(settings.quality.rawValue)")
+        appendLog("[CONFIG] Timing: In: \(String(format: "%.1f", settings.padBefore))s, Out: \(String(format: "%.1f", settings.padAfter))s, Gap: \(String(format: "%.1f", settings.maxGap))s, Min: \(String(format: "%.1f", settings.minScene))s, ScanStep: \(settings.frameSkip) frames")
         if settings.vadEnabled {
-            logLines.append("[CONFIG] Audio AI: VAD active (\(settings.vadBuffer)ms buffer)\(settings.vadSpeakerEnabled ? " + Speaker Filter (threshold: \(String(format: "%.2f", settings.vadSpeakerThreshold)))" : "")")
+            appendLog("[CONFIG] Audio AI: VAD active (\(settings.vadBuffer)ms buffer)\(settings.vadSpeakerEnabled ? " + Speaker Filter (threshold: \(String(format: "%.2f", settings.vadSpeakerThreshold)))" : "")")
         }
-        logLines.append("[INFO] Starting video analysis: \(video.lastPathComponent) [Mode: \(mode.rawValue)]")
+        appendLog("[INFO] Starting video analysis: \(video.lastPathComponent) [Mode: \(mode.rawValue)]")
 
         var args: [String] = [
             "-v", videoArg,
@@ -518,7 +539,7 @@ public final class AppState: ObservableObject {
                 await MainActor.run {
                     self.isProcessing = false
                     self.processingStatus = "Error: \(error.localizedDescription)"
-                    self.logLines.append("[ERROR] Scan execution failed: \(error.localizedDescription)")
+                    self.appendLog("[ERROR] Scan execution failed: \(error.localizedDescription)")
                     SleepManager.shared.allowSleep()
                     self.showToast("Scan error: \(error.localizedDescription)", icon: "xmark.octagon")
                 }
@@ -545,10 +566,10 @@ public final class AppState: ObservableObject {
         let out = outputURL ?? video.deletingPathExtension().appendingPathExtension("scenepack.\(ext)")
         let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
         let hw = SystemHardwareInfo.current()
-        logLines.append("[SYSTEM] Target: \(out.lastPathComponent) | Volume: \(hw.diskSummary)")
-        logLines.append("[CONFIG] Render Engine: Codec: \(settings.videoCodec.cliValue) | Container: .\(settings.containerFormat.fileExtension) | Quality: \(settings.quality.rawValue)")
-        logLines.append("[CONFIG] Automations: Snap Cuts: \(settings.snapCuts ? "ON" : "OFF") | Clips Folder: \(settings.exportClipsFolder ? "ON" : "OFF") | Timeline XML: \(settings.exportXml ? "ON" : "OFF")")
-        logLines.append("[INFO] Starting hardware-accelerated render of \(selected.count) clip(s) to: \(out.lastPathComponent)")
+        appendLog("[SYSTEM] Target: \(out.lastPathComponent) | Volume: \(hw.diskSummary)")
+        appendLog("[CONFIG] Render Engine: Codec: \(settings.videoCodec.cliValue) | Container: .\(settings.containerFormat.fileExtension) | Quality: \(settings.quality.rawValue)")
+        appendLog("[CONFIG] Automations: Snap Cuts: \(settings.snapCuts ? "ON" : "OFF") | Clips Folder: \(settings.exportClipsFolder ? "ON" : "OFF") | Timeline XML: \(settings.exportXml ? "ON" : "OFF")")
+        appendLog("[INFO] Starting hardware-accelerated render of \(selected.count) clip(s) to: \(out.lastPathComponent)")
 
         var args: [String] = [
             "-v", videoArg,
@@ -607,7 +628,7 @@ public final class AppState: ObservableObject {
                 await MainActor.run {
                     self.isProcessing = false
                     self.processingStatus = "Render error: \(error.localizedDescription)"
-                    self.logLines.append("[ERROR] Render execution failed: \(error.localizedDescription)")
+                    self.appendLog("[ERROR] Render execution failed: \(error.localizedDescription)")
                     SleepManager.shared.allowSleep()
                     self.showToast("Render failed: \(error.localizedDescription)", icon: "xmark.octagon")
                 }
@@ -632,7 +653,7 @@ public final class AppState: ObservableObject {
     private func handleBridgeEvent(_ event: BridgeEvent) {
         switch event {
         case .log(let msg):
-            logLines.append(msg)
+            appendLog(msg)
         case .progress(let val, let status):
             self.progressValue = val
             self.processingStatus = status
@@ -658,7 +679,7 @@ public final class AppState: ObservableObject {
             self.currentEpisodeEta = nil
             self.seasonBatchEta = nil
             self.processingStatus = "Scan complete! Found \(clips.count) clip(s)."
-            self.logLines.append("[INFO] Scan finished successfully with \(clips.count) candidate clip(s).")
+            self.appendLog("[INFO] Scan finished successfully with \(clips.count) candidate clip(s).")
             SleepManager.shared.allowSleep()
             if settings.autoRender && !clips.isEmpty {
                 startRender()
@@ -669,7 +690,7 @@ public final class AppState: ObservableObject {
             self.seasonBatchEta = nil
             self.progressValue = 1.0
             self.processingStatus = "Render complete! Saved to \(URL(fileURLWithPath: out).lastPathComponent)"
-            self.logLines.append("[SUCCESS] Scenepack successfully rendered: \(out)")
+            self.appendLog("[SUCCESS] Scenepack successfully rendered: \(out)")
             SleepManager.shared.allowSleep()
             NSSound(named: "Glass")?.play()
             showToast("Scenepack successfully rendered!", icon: "checkmark.seal.fill")

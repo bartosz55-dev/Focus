@@ -950,6 +950,47 @@ class SystemTelemetry:
         lines.append("================================================================================")
         return lines
 
+    @classmethod
+    def log_system_telemetry(cls, target_path: Optional[Path] = None, session_config: Optional[Dict[str, Any]] = None, queue: Any = None):
+        cpu = cls.get_cpu_brand()
+        ram = cls.get_ram_summary()
+        hw = cls.get_hardware_encoders()
+        disk = cls.get_disk_summary(target_path or ".")
+        os_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
+
+        sys_lines = [
+            f"[SYSTEM] Host Hardware: CPU: {cpu} | RAM: {ram} | Storage: {disk}",
+            f"[SYSTEM] Environment: OS: {os_info} | Hardware Encoders: {hw} | Python: {sys.version.split()[0]} | OpenCV: {cv2.__version__} | FFmpeg: {PlatformManager.get_ffmpeg_safe_path('ffmpeg')}"
+        ]
+        for sl in sys_lines:
+            logging.info(sl)
+            if queue:
+                try:
+                    queue.put(("log", sl))
+                except Exception:
+                    pass
+
+        if session_config:
+            cfg_lines = [
+                f"[CONFIG] Active Session Settings: Mode: {session_config.get('mode', 'Real Faces')} | Video: {session_config.get('video_name', 'N/A')} | Reference: {session_config.get('character_name', 'All Faces')}",
+                f"[CONFIG] Timing: In: {session_config.get('pad_before', 2.0)}s | Out: {session_config.get('pad_after', 2.0)}s | Gap: {session_config.get('max_gap', 1.5)}s | MinScene: {session_config.get('min_scene', 1.0)}s | Step: {session_config.get('frame_skip', 15)} frames | Tolerance: {session_config.get('tolerance', 0.6)}",
+                f"[CONFIG] Video Output: Codec: {session_config.get('video_codec', 'auto')} | Container: .{session_config.get('container', 'mp4')} | Quality: {session_config.get('quality', 'Auto')}",
+                f"[CONFIG] Audio AI: VAD: {'Enabled (' + str(session_config.get('vad_buffer', 300)) + 'ms buffer)' if session_config.get('vad') else 'Disabled'} | Speaker Match: {'Enabled (threshold: ' + str(session_config.get('vad_speaker_threshold', 0.68)) + ')' if session_config.get('vad_speaker') else 'Disabled'}",
+                f"[CONFIG] Automations: Snap Cuts: {'ON' if session_config.get('snap_cuts') else 'OFF'} | Skip Intro/Outro: {'ON' if session_config.get('skip_intro') or session_config.get('skip_outro') else 'OFF'} | Clips Folder: {'ON' if session_config.get('export_clips_folder') else 'OFF'} | Timeline XML: {'ON' if session_config.get('export_xml') else 'OFF'}"
+            ]
+            for cl in cfg_lines:
+                logging.info(cl)
+                if queue:
+                    try:
+                        queue.put(("log", cl))
+                    except Exception:
+                        pass
+
+
+# Startup diagnostic telemetry into focus_debug.log
+SystemTelemetry.log_system_telemetry()
+
+
 
 TRANSLATIONS = {
     "English": {
@@ -3802,6 +3843,18 @@ class ScenePackGenerator:
             chunk_ext = "mp4"
 
         try:
+            render_cfg = {
+                "mode": getattr(self, "mode", "Real Faces"),
+                "video_name": video_path.name if video_path else output_path.name,
+                "video_codec": codec,
+                "container": target_ext,
+                "quality": export_quality,
+                "aspect_ratio": aspect_ratio,
+                "audio_track": audio_track_index,
+                "export_xml": export_timeline_xml,
+                "export_clips_folder": export_clips_folder,
+            }
+            SystemTelemetry.log_system_telemetry(target_path=output_path.parent, session_config=render_cfg, queue=getattr(self, "log_queue", None))
             logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec}, format: {target_ext}, audio track: {audio_track_index})...")
             if hasattr(self, "log_queue") and self.log_queue:
                 self.log_queue.put(("log", f"Rendering with Hardware Acceleration: using video encoder '{codec}' [Container: .{target_ext}] (audio track: {audio_track_index + 1})."))
@@ -4178,6 +4231,27 @@ class ScenePackGenerator:
         all_intervals = []
         total_videos = len(video_paths)
         batch_start_time = time.time()
+
+        session_cfg = {
+            "mode": self.mode,
+            "video_name": ", ".join(p.name for p in video_paths),
+            "character_name": Path(ref_image_path).name if isinstance(ref_image_path, (str, Path)) else ("Target Reference Encodings" if ref_data is not None else "All Detected Faces"),
+            "pad_before": padding_before,
+            "pad_after": padding_after,
+            "max_gap": max_gap_tolerance,
+            "min_scene": min_scene_duration,
+            "frame_skip": self.frame_skip,
+            "tolerance": getattr(self, "tolerance", 0.6),
+            "vad": vad_enabled,
+            "vad_buffer": vad_buffer,
+            "vad_speaker": vad_speaker_enabled,
+            "vad_speaker_threshold": vad_speaker_threshold,
+            "snap_cuts": kwargs.get("snap_to_shots", True),
+            "skip_intro": skip_intro,
+            "skip_outro": skip_outro,
+        }
+        SystemTelemetry.log_system_telemetry(target_path=video_paths[0].parent, session_config=session_cfg, queue=getattr(self, "log_queue", None))
+
         for idx, v_path in enumerate(video_paths):
             if not v_path.is_file():
                 logging.warning(f"Video file not found: {v_path}, skipping.")
