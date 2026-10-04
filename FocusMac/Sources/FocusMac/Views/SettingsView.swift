@@ -760,12 +760,19 @@ private var cachedChangelogEN: [ChangelogItem]?
 
 private func loadAllChangelog(lang: String) -> [ChangelogItem] {
     let isPolish = (lang == "Polski")
-    if isPolish, let cached = cachedChangelogPL { return cached }
-    if !isPolish, let cached = cachedChangelogEN { return cached }
+    if isPolish, let cached = cachedChangelogPL, !cached.isEmpty { return cached }
+    if !isPolish, let cached = cachedChangelogEN, !cached.isEmpty { return cached }
 
     var urlsToTry: [URL] = []
+    if let moduleURL = Bundle.module.url(forResource: "changelog", withExtension: "json") {
+        urlsToTry.append(moduleURL)
+    }
+    if let mainURL = Bundle.main.url(forResource: "changelog", withExtension: "json") {
+        urlsToTry.append(mainURL)
+    }
     if let resURL = Bundle.main.resourceURL {
         urlsToTry.append(resURL.appendingPathComponent("changelog.json"))
+        urlsToTry.append(resURL.appendingPathComponent("Resources/changelog.json"))
     }
     let bundleURL = Bundle.main.bundleURL
     let projectDir = bundleURL.deletingLastPathComponent().deletingLastPathComponent()
@@ -795,6 +802,29 @@ private func loadAllChangelog(lang: String) -> [ChangelogItem] {
 }
 
 private let fallbackChangelogEntries: [ChangelogItem] = [
+    ChangelogItem(
+        version: "v2.4.0",
+        date: "2026-10-04",
+        title: "Multi-Codec Architecture, Container Selector & 10-bit ProRes Master",
+        points: [
+            "[VIDEO CODECS] Added multi-codec selector: Auto (Fastest Hardware H.264), Apple HEVC / H.265, AV1 Next-Gen, and Apple ProRes Master.",
+            "[PRORES 10-BIT] Full support for Apple ProRes 422 with native 10-bit color depth (yuv422p10le) for broadcast and Hollywood editing workflows.",
+            "[CONTAINERS] Added MP4, MKV, and QuickTime MOV container selector with automatic smart switching when ProRes is chosen.",
+            "[CHECKPOINTS] Instant scan checkpoint loader: load last_scan_checkpoint.json in 1 click to restore or re-render previous sessions without re-scanning.",
+            "[UI PARITY] Full feature and codec parity between native macOS SwiftUI and desktop PySide6 interfaces.",
+            "[UI REDESIGN] Re-engineered Studio Dashboard with balanced typography, eliminated wasted empty space, and intuitive video editing terminology."
+        ]
+    ),
+    ChangelogItem(
+        version: "v2.3.3",
+        date: "2026-09-22",
+        title: "Studio Master CRF 14, Target-Volume Scratch & Resilient Checkpointing",
+        points: [
+            "[QUALITY] Added 'Maximum (Master / CRF 14 / 35 Mbps)' export preset for studio-grade, visually lossless master exports.",
+            "[STABILITY] Scratch files are now allocated directly on the target drive volume to prevent internal boot drive space exhaustion.",
+            "[RESILIENCE] Added per-episode auto-checkpointing (last_scan_checkpoint.json) to Mac internal storage to protect progress against external drive disconnects."
+        ]
+    ),
     ChangelogItem(
         version: "v2.3.0",
         date: "2026-09-21",

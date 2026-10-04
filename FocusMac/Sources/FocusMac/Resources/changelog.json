@@ -1,6 +1,19 @@
 {
   "en": [
     {
+      "version": "v2.4.0",
+      "date": "2026-10-04",
+      "title": "Multi-Codec Architecture, Container Selector & 10-bit ProRes Studio Master",
+      "points": [
+        "[VIDEO CODECS] Added multi-codec selector: Auto (Fastest Hardware H.264), Apple HEVC / H.265, AV1 Next-Gen, and Apple ProRes Master.",
+        "[PRORES 10-BIT] Full support for Apple ProRes 422 with native 10-bit color depth (yuv422p10le) for broadcast and Hollywood editing workflows.",
+        "[CONTAINERS] Added MP4, MKV, and QuickTime MOV container selector with automatic smart switching when ProRes is chosen.",
+        "[CHECKPOINTS] Instant scan checkpoint loader: load last_scan_checkpoint.json in 1 click to restore or re-render previous sessions without re-scanning.",
+        "[UI PARITY] Full feature and codec parity between native macOS SwiftUI and desktop PySide6 interfaces.",
+        "[UI REDESIGN] Re-engineered Studio Dashboard with balanced typography, eliminated wasted empty space, and intuitive video editing terminology."
+      ]
+    },
+    {
       "version": "v2.3.3",
       "date": "2026-09-22",
       "title": "Studio Master CRF 14, Target-Volume Scratch & Resilient Checkpointing",
@@ -913,6 +926,19 @@
     }
   ],
   "pl": [
+    {
+      "version": "v2.4.0",
+      "date": "2026-10-04",
+      "title": "Wielokodekowa Architektura, Wybór Kontenera & 10-bitowy Master Apple ProRes",
+      "points": [
+        "[KODEKI WIDEO] Dodano zaawansowany wybór kodeka: Auto (Sprzętowy H.264), Apple HEVC / H.265, AV1 Nowej Generacji oraz Apple ProRes Master.",
+        "[PRORES 10-BIT] Pełna obsługa Apple ProRes 422 z natywną 10-bitową głębią kolorów (yuv422p10le) dla profesjonalnego montażu filmowego.",
+        "[KONTENERY] Wprowadzono wybór kontenera wyjściowego (MP4, MKV, QuickTime MOV) z automatycznym przełączaniem dla formatu ProRes.",
+        "[PUNKTY KONTROLNE] Błyskawiczny wczytywacz zapisanego skanu: wczytaj plik last_scan_checkpoint.json jednym kliknięciem bez ponownego skanowania wideo.",
+        "[PARZYSTOŚĆ] 100% zgodności funkcji i kodeków między natywnym interfejsem macOS SwiftUI a wersją PySide6.",
+        "[REORGANIZACJA UI] Przebudowano panel główny: usunięto puste przestrzenie, uporządkowano siatkę parametrów i wprowadzono precyzyjne nazewnictwo montażowe."
+      ]
+    },
     {
       "version": "v2.3.3",
       "date": "2026-09-22",

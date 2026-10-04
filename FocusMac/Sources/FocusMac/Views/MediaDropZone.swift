@@ -8,150 +8,118 @@ public struct MediaDropZone: View {
     @State private var isImageTargeted = false
 
     public var body: some View {
-        VStack(spacing: 12) {
-            // Row 1: Video selection drop zone
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appState.localized("input_footage"))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.secondary)
-
-                    HStack(spacing: 12) {
+        HStack(spacing: 10) {
+            // Tile 1: Input Video Footage
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    HStack(spacing: 5) {
                         Image(systemName: "film.stack")
-                            .font(.system(size: 20))
                             .foregroundColor(appState.accentColor)
-                            .frame(width: 32)
+                            .font(.system(size: 11, weight: .bold))
+                        Text(appState.localized("input_footage"))
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    Spacer()
+                    if !appState.selectedVideoURLs.isEmpty {
+                        Text(appState.selectedVideoURLs.count == 1 ? "1 Video" : "\(appState.selectedVideoURLs.count) Videos")
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(appState.accentColor.opacity(0.15)))
+                            .foregroundColor(appState.accentColor)
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            if let first = appState.selectedVideoURLs.first {
-                                if appState.selectedVideoURLs.count == 1 {
-                                    Text(first.lastPathComponent)
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .lineLimit(1)
-                                } else {
-                                    Text("\(appState.selectedVideoURLs.count) Videos Selected (\(first.lastPathComponent)...)")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .lineLimit(1)
-                                }
-                                Text(first.deletingLastPathComponent().path)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            } else {
-                                Text(appState.localized("drop_video"))
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
+                        Button(action: { appState.selectedVideoURLs.removeAll() }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 12))
                         }
-
-                        Spacer()
-
-                        Button("Browse...") {
-                            chooseVideoSource()
+                        .buttonStyle(.plain)
+                    } else {
+                        Button(action: { chooseVideoSource() }) {
+                            Text("Browse...")
+                                .font(.system(size: 10, weight: .semibold))
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.regular)
+                        .controlSize(.mini)
+                    }
+                }
 
-                        if !appState.selectedVideoURLs.isEmpty {
-                            Button(action: { appState.selectedVideoURLs.removeAll() }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                HStack(spacing: 8) {
+                    Image(systemName: "video.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(appState.selectedVideoURLs.isEmpty ? .secondary.opacity(0.6) : appState.accentColor)
+                        .frame(width: 24, height: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let first = appState.selectedVideoURLs.first {
+                            Text(first.lastPathComponent)
+                                .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Text(first.deletingLastPathComponent().path)
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } else {
+                            Text(appState.localized("drop_video"))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
                         }
-                    }
-                    .padding(10)
-                    .contentShape(Rectangle())
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isVideoTargeted ? appState.accentColor.opacity(0.15) : Color.primary.opacity(0.04))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isVideoTargeted ? appState.accentColor : Color.primary.opacity(0.08), lineWidth: 1)
-                            )
-                    )
-                    .onTapGesture {
-                        chooseVideoSource()
-                    }
-                    .onDrop(of: [.fileURL], isTargeted: $isVideoTargeted) { providers in
-                        handleDrop(providers: providers, isVideo: true)
                     }
                 }
             }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isVideoTargeted ? appState.accentColor.opacity(0.15) : Color.primary.opacity(0.03))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isVideoTargeted ? appState.accentColor : Color.primary.opacity(0.08), lineWidth: 1)
+                    )
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                chooseVideoSource()
+            }
+            .onDrop(of: [.fileURL], isTargeted: $isVideoTargeted) { providers in
+                handleDrop(providers: providers, isVideo: true)
+            }
 
-            // Row 2: Reference Face & Output Save Location (2-column layout)
-            HStack(spacing: 12) {
-                // Reference Face Card
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appState.localized("target_reference"))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.secondary)
-
-                    HStack(spacing: 10) {
-                        if !appState.referenceImageURLs.isEmpty,
-                           let first = appState.referenceImageURLs.first,
-                           let nsImg = NSImage(contentsOf: first) {
-                            Image(nsImage: nsImg)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 32, height: 32)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                        } else if let imgURL = appState.referenceImageURL,
-                           let nsImg = NSImage(contentsOf: imgURL) {
-                            Image(nsImage: nsImg)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 32, height: 32)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                        } else if let char = appState.selectedCharacterProfile,
-                                  let nsImg = NSImage(contentsOfFile: char.cropPath) {
-                            Image(nsImage: nsImg)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 32, height: 32)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                        } else {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                                .font(.system(size: 20))
-                                .foregroundColor(appState.accentColor)
-                                .frame(width: 32)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
+            // Tile 2: Target Character Reference
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    HStack(spacing: 5) {
+                        Image(systemName: "person.crop.circle")
+                            .foregroundColor(appState.accentColor)
+                            .font(.system(size: 11, weight: .bold))
+                        Text(appState.localized("target_reference"))
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    Spacer()
+                    if !appState.referenceImageURLs.isEmpty || appState.referenceImageURL != nil || appState.selectedCharacterProfile != nil {
+                        HStack(spacing: 4) {
                             if appState.referenceImageURLs.count > 1 {
-                                Text("\(appState.referenceImageURLs.count) Reference Faces")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .lineLimit(1)
-                                Text(appState.referenceImageURLs.map { $0.lastPathComponent }.joined(separator: ", "))
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            } else if let imgURL = appState.referenceImageURL {
-                                Text(imgURL.lastPathComponent)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .lineLimit(1)
-                            } else if let char = appState.selectedCharacterProfile {
-                                Text("Character #\(char.id) (\(char.count) detections)")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .lineLimit(1)
-                            } else {
-                                Text(appState.localized("drop_image"))
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
+                                Text("\(appState.referenceImageURLs.count) Faces")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(appState.accentColor.opacity(0.15)))
+                                    .foregroundColor(appState.accentColor)
                             }
-                        }
 
-                        Spacer()
-
-                        if !appState.referenceImageURLs.isEmpty || appState.referenceImageURL != nil || appState.selectedCharacterProfile != nil {
                             Button(action: {
                                 chooseReferenceImage(append: true)
                             }) {
                                 Image(systemName: "plus")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(.system(size: 10, weight: .bold))
                             }
                             .buttonStyle(.bordered)
-                            .controlSize(.small)
+                            .controlSize(.mini)
                             .help("Add another reference face image")
 
                             Button(action: {
@@ -161,85 +129,171 @@ public struct MediaDropZone: View {
                             }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.secondary)
+                                    .font(.system(size: 12))
                             }
                             .buttonStyle(.plain)
-                        } else {
-                            Button("Select...") {
-                                chooseReferenceImage(append: false)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
                         }
-                    }
-                    .padding(8)
-                    .contentShape(Rectangle())
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isImageTargeted ? appState.accentColor.opacity(0.15) : Color.primary.opacity(0.04))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isImageTargeted ? appState.accentColor : Color.primary.opacity(0.08), lineWidth: 1)
-                            )
-                    )
-                    .onTapGesture {
-                        chooseReferenceImage(append: false)
-                    }
-                    .onDrop(of: [.fileURL], isTargeted: $isImageTargeted) { providers in
-                        handleDrop(providers: providers, isVideo: false)
-                    }
-                }
-
-                // Output Destination Card
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appState.localized("save_location"))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.secondary)
-
-                    HStack(spacing: 10) {
-                        Image(systemName: "folder")
-                            .font(.system(size: 18))
-                            .foregroundColor(appState.accentColor)
-                            .frame(width: 32)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            if appState.selectedVideoURLs.count > 1 {
-                                Text("📦 Single Master Scenepack (\(appState.selectedVideoURLs.count) Episodes)")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(appState.accentColor)
-                            }
-                            if let out = appState.outputURL {
-                                Text(out.lastPathComponent)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .lineLimit(1)
-                            } else {
-                                Text(appState.localized("auto_desktop"))
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        Spacer()
-
-                        Button("Set...") {
-                            chooseSaveLocation()
+                    } else {
+                        Button(action: { chooseReferenceImage(append: false) }) {
+                            Text("Select...")
+                                .font(.system(size: 10, weight: .semibold))
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-                    .padding(8)
-                    .contentShape(Rectangle())
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.primary.opacity(0.04))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                            )
-                    )
-                    .onTapGesture {
-                        chooseSaveLocation()
+                        .controlSize(.mini)
                     }
                 }
+
+                HStack(spacing: 8) {
+                    if !appState.referenceImageURLs.isEmpty,
+                       let first = appState.referenceImageURLs.first,
+                       let nsImg = NSImage(contentsOf: first) {
+                        Image(nsImage: nsImg)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 24, height: 24)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    } else if let imgURL = appState.referenceImageURL,
+                       let nsImg = NSImage(contentsOf: imgURL) {
+                        Image(nsImage: nsImg)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 24, height: 24)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    } else if let char = appState.selectedCharacterProfile,
+                              let nsImg = NSImage(contentsOfFile: char.cropPath) {
+                        Image(nsImage: nsImg)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 24, height: 24)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    } else {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .frame(width: 24, height: 24)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if appState.referenceImageURLs.count > 1 {
+                            Text("\(appState.referenceImageURLs.count) Reference Faces")
+                                .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(1)
+                            Text(appState.referenceImageURLs.map { $0.lastPathComponent }.joined(separator: ", "))
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } else if let imgURL = appState.referenceImageURL {
+                            Text(imgURL.lastPathComponent)
+                                .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Text(imgURL.deletingLastPathComponent().path)
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } else if let char = appState.selectedCharacterProfile {
+                            Text("Character #\(char.id) (\(char.count) detections)")
+                                .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(1)
+                            Text("From Gallery Scan")
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text(appState.localized("drop_image"))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isImageTargeted ? appState.accentColor.opacity(0.15) : Color.primary.opacity(0.03))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isImageTargeted ? appState.accentColor : Color.primary.opacity(0.08), lineWidth: 1)
+                    )
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                chooseReferenceImage(append: false)
+            }
+            .onDrop(of: [.fileURL], isTargeted: $isImageTargeted) { providers in
+                handleDrop(providers: providers, isVideo: false)
+            }
+
+            // Tile 3: Save Destination
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    HStack(spacing: 5) {
+                        Image(systemName: "folder")
+                            .foregroundColor(appState.accentColor)
+                            .font(.system(size: 11, weight: .bold))
+                        Text(appState.localized("save_location"))
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    Spacer()
+                    if appState.selectedVideoURLs.count > 1 {
+                        Text("Master")
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(appState.accentColor.opacity(0.15)))
+                            .foregroundColor(appState.accentColor)
+                    }
+                    Button(action: { chooseSaveLocation() }) {
+                        Text(appState.outputURL != nil ? "Change..." : "Set...")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
+
+                HStack(spacing: 8) {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(appState.outputURL == nil ? .secondary.opacity(0.6) : appState.accentColor)
+                        .frame(width: 24, height: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let out = appState.outputURL {
+                            Text(out.lastPathComponent)
+                                .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Text(out.deletingLastPathComponent().path)
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } else {
+                            Text(appState.localized("auto_desktop"))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.primary.opacity(0.03))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    )
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                chooseSaveLocation()
             }
         }
     }

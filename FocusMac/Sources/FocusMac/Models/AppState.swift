@@ -41,6 +41,10 @@ public enum SettingsSubTab: String, CaseIterable, Identifiable, Sendable {
 
 @MainActor
 public final class AppState: ObservableObject {
+    public static let appVersion: String = "v2.4.0"
+    public static let appVersionShort: String = "2.4.0"
+    public static let appBuild: String = "240"
+
     // Media selections
     @Published public var selectedVideoURLs: [URL] = []
     @Published public var referenceImageURLs: [URL] = []
