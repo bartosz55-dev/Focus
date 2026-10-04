@@ -468,18 +468,36 @@ public struct SettingsView: View {
     // MARK: - 4. Diagnostics & Logs Section
     private var diagnosticsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // System Hardware & Engine Cards
+            // System Hardware & Environment Cards
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                MetricCard(title: "Hardware Accel", val: "VideoToolbox", status: "Active", icon: "bolt.fill", color: .green)
                 MetricCard(
-                    title: "AI Engine",
-                    val: appState.engineDiagnostics.isReady ? "Standalone" : "Standby",
-                    status: appState.engineDiagnostics.isReady ? "Ready" : "Incomplete",
-                    icon: appState.engineDiagnostics.isReady ? "checkmark.seal.fill" : "exclamationmark.triangle.fill",
-                    color: appState.engineDiagnostics.isReady ? .green : .orange
+                    title: appState.currentLanguage == "Polski" ? "Procesor (CPU)" : "Processor (CPU)",
+                    val: appState.systemHardware.cpuModel,
+                    status: "\(appState.systemHardware.coreCount) Cores",
+                    icon: "cpu",
+                    color: .cyan
                 )
-                MetricCard(title: "Power Inhibit", val: appState.settings.preventSleep ? "IOKit Assert" : "Standard", status: appState.settings.preventSleep ? "Active" : "Off", icon: "power", color: appState.settings.preventSleep ? .orange : .secondary)
-                MetricCard(title: "Active Logs", val: "\(appState.logLines.count) Lines", status: "Real-time", icon: "terminal.fill", color: appState.accentColor)
+                MetricCard(
+                    title: appState.currentLanguage == "Polski" ? "Pamięć RAM" : "System Memory",
+                    val: appState.systemHardware.ramSummary,
+                    status: "Unified / Host",
+                    icon: "memorychip",
+                    color: .indigo
+                )
+                MetricCard(
+                    title: appState.currentLanguage == "Polski" ? "Akceleracja Wideo" : "Hardware Accel",
+                    val: "VideoToolbox",
+                    status: "H264 / HEVC / ProRes",
+                    icon: "bolt.fill",
+                    color: .green
+                )
+                MetricCard(
+                    title: appState.currentLanguage == "Polski" ? "Pamięć Masowa" : "Primary Storage",
+                    val: String(format: "%.0f GB Free", appState.systemHardware.diskFreeGB),
+                    status: String(format: "of %.0f GB", appState.systemHardware.diskTotalGB),
+                    icon: "internaldrive",
+                    color: .orange
+                )
             }
 
             // Engine Paths Info Box
@@ -503,7 +521,8 @@ public struct SettingsView: View {
 
                 Button(action: {
                     appState.refreshEngineDiagnostics()
-                    appState.showToast(appState.currentLanguage == "Polski" ? "Zweryfikowano silnik Focus" : "Verified Focus Engine", icon: "checkmark.circle")
+                    appState.refreshSystemHardware()
+                    appState.showToast(appState.currentLanguage == "Polski" ? "Zweryfikowano silnik i sprzęt" : "Verified Engine & Hardware", icon: "checkmark.circle")
                 }) {
                     Text(appState.currentLanguage == "Polski" ? "Weryfikuj" : "Verify")
                         .font(.system(size: 10, weight: .semibold))
@@ -529,11 +548,28 @@ public struct SettingsView: View {
 
                 Picker("", selection: $logFilter) {
                     Text(appState.currentLanguage == "Polski" ? "Wszystkie" : "All Logs").tag("ALL")
+                    Text("System").tag("SYSTEM")
+                    Text("Config").tag("CONFIG")
+                    Text("Perf").tag("PERF")
                     Text("Info").tag("INFO")
                     Text("Warnings").tag("WARNING")
                     Text("Errors").tag("ERROR")
                 }
                 .frame(width: 110)
+
+                Button(action: {
+                    let report = appState.generateFullDiagnosticReport()
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(report, forType: .string)
+                    appState.showToast(appState.currentLanguage == "Polski" ? "Skopiowano pełny raport diagnostyczny!" : "Full diagnostic report copied!", icon: "doc.on.clipboard.fill")
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.on.clipboard.fill")
+                        Text(appState.currentLanguage == "Polski" ? "Raport Diagnostyczny" : "Diagnostic Report")
+                    }
+                }
+                .help(appState.currentLanguage == "Polski" ? "Kopiuj pełną specyfikację maszyny, ustawienia sesji i logi" : "Copy full system specs, session configuration, and logs")
+                .controlSize(.small)
 
                 Button(action: {
                     appState.loadPersistentLogs()
@@ -553,7 +589,7 @@ public struct SettingsView: View {
                 .help(appState.currentLanguage == "Polski" ? "Otwórz katalog z logami w Finderze" : "Open logs folder in Finder")
                 .controlSize(.small)
 
-                Button(appState.currentLanguage == "Polski" ? "Kopiuj" : "Copy") {
+                Button(appState.currentLanguage == "Polski" ? "Kopiuj Logi" : "Copy Logs") {
                     let text = appState.logLines.joined(separator: "\n")
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
@@ -626,10 +662,30 @@ public struct SettingsView: View {
 
     private func logColor(_ line: String) -> Color {
         let upper = line.uppercased()
-        if upper.contains("ERROR") || upper.contains("FAILED") || upper.contains("EXCEPTION") { return .red }
-        if upper.contains("WARNING") { return .orange }
-        if upper.contains("VERIFIED") || upper.contains("SUCCESS") || upper.contains("COMPLETE") { return .green }
-        if upper.contains("PROGRESS") || upper.contains("INFO") { return Color(hex: "#38BDF8") }
+        if upper.contains("[ERROR]") || upper.contains("FAILED") || upper.contains("EXCEPTION") {
+            return Color(hex: "#EF4444") // Red
+        }
+        if upper.contains("[WARNING]") {
+            return Color(hex: "#F97316") // Orange
+        }
+        if upper.contains("[SYSTEM]") {
+            return Color(hex: "#06B6D4") // Cyan
+        }
+        if upper.contains("[CONFIG]") {
+            return Color(hex: "#C084FC") // Purple
+        }
+        if upper.contains("[PERF]") {
+            return Color(hex: "#10B981") // Mint / Emerald
+        }
+        if upper.contains("[SUMMARY]") || upper.contains("[SUCCESS]") || upper.contains("COMPLETE") {
+            return Color(hex: "#F59E0B") // Amber / Gold
+        }
+        if upper.contains("[INFO]") {
+            return Color(hex: "#38BDF8") // Sky Blue
+        }
+        if line.contains("====") || line.contains("----") {
+            return Color(hex: "#64748B") // Slate
+        }
         return .white.opacity(0.9)
     }
 }

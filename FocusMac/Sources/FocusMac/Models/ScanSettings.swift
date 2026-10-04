@@ -155,6 +155,7 @@ public struct ScanSettings: Codable, Sendable {
     public var exportXml: Bool = false
     public var snapCuts: Bool = true
     public var preventSleep: Bool = true
+    public var tolerance: Double = 0.6
 
     public init() {}
 }

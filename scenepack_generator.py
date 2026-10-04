@@ -18,7 +18,8 @@ from scenepack_generator_backend import (
     APP_VERSION,
     PlatformManager,
     parse_reference_image_paths,
-    SleepInhibitor
+    SleepInhibitor,
+    SystemTelemetry
 )
 
 CREATE_NO_WINDOW = PlatformManager.get_creation_flags()
@@ -181,6 +182,34 @@ def main():
         if args.prevent_sleep:
             SleepInhibitor.prevent_sleep()
         video_path = args.video if (";" in args.video or "," in args.video) else Path(args.video).resolve()
+
+        # Telemetry & Session Configuration Diagnostic Banner
+        session_config = {
+            "mode": args.mode,
+            "video_name": Path(args.video).name if args.video else "N/A",
+            "character_name": Path(args.image).name if args.image else ("Review Intervals List" if args.intervals_json_file else "All Faces"),
+            "pad_before": args.pad_before,
+            "pad_after": args.pad_after,
+            "max_gap": args.max_gap,
+            "min_scene": args.min_scene,
+            "frame_skip": args.skip_frames,
+            "video_codec": args.video_codec,
+            "container": args.container,
+            "quality": args.quality,
+            "vad": args.vad,
+            "vad_buffer": args.vad_buffer,
+            "vad_speaker": args.vad_speaker,
+            "vad_speaker_threshold": args.vad_speaker_threshold,
+            "snap_cuts": args.snap_cuts,
+            "skip_intro": args.skip_intro,
+            "skip_outro": args.skip_outro,
+            "export_clips_folder": args.export_clips_folder,
+            "export_xml": args.export_xml,
+        }
+        for bline in SystemTelemetry.format_session_banner(session_config):
+            logging.info(bline)
+            if queue:
+                queue.put(("log", bline))
 
         # 2. Direct Render from Reviewed Intervals (skips re-scanning!)
         if args.intervals_json_file:

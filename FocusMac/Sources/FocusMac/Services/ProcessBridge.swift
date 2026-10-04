@@ -505,6 +505,7 @@ public actor ProcessBridge {
         proc.standardError = stderrPipe
 
         currentProcess = proc
+        onEvent(.log("[SYSTEM] Dispatching engine: \(proc.executableURL?.lastPathComponent ?? "python3") (PID queued)"))
 
         let stdoutHandle = stdoutPipe.fileHandleForReading
         let stderrHandle = stderrPipe.fileHandleForReading

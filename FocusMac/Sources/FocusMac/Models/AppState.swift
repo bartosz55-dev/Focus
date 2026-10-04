@@ -2,6 +2,73 @@ import Foundation
 import SwiftUI
 import Combine
 import AppKit
+import Darwin
+
+public struct SystemHardwareInfo: Sendable {
+    public let cpuModel: String
+    public let coreCount: Int
+    public let ramTotalGB: Double
+    public let osVersion: String
+    public let diskFreeGB: Double
+    public let diskTotalGB: Double
+
+    public var cpuSummary: String {
+        "\(cpuModel) (\(coreCount) Cores)"
+    }
+
+    public var ramSummary: String {
+        String(format: "%.1f GB RAM", ramTotalGB)
+    }
+
+    public var diskSummary: String {
+        String(format: "Free: %.1f GB / %.1f GB", diskFreeGB, diskTotalGB)
+    }
+
+    public static func current() -> SystemHardwareInfo {
+        var size: size_t = 0
+        sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0)
+        var brand = ""
+        if size > 0 {
+            var buffer = [CChar](repeating: 0, count: size)
+            if sysctlbyname("machdep.cpu.brand_string", &buffer, &size, nil, 0) == 0 {
+                brand = String(cString: buffer).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        if brand.isEmpty {
+            #if arch(arm64)
+            brand = "Apple Silicon"
+            #else
+            brand = "Intel x86_64"
+            #endif
+        }
+
+        let cores = ProcessInfo.processInfo.activeProcessorCount
+        let ramBytes = ProcessInfo.processInfo.physicalMemory
+        let ramGB = Double(ramBytes) / (1024.0 * 1024.0 * 1024.0)
+        let os = ProcessInfo.processInfo.operatingSystemVersionString
+
+        var freeGB = 0.0
+        var totalGB = 0.0
+        let targetURL = URL(fileURLWithPath: NSHomeDirectory())
+        if let values = try? targetURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey]) {
+            if let free = values.volumeAvailableCapacityForImportantUsage {
+                freeGB = Double(free) / (1024.0 * 1024.0 * 1024.0)
+            }
+            if let tot = values.volumeTotalCapacity {
+                totalGB = Double(tot) / (1024.0 * 1024.0 * 1024.0)
+            }
+        }
+
+        return SystemHardwareInfo(
+            cpuModel: brand,
+            coreCount: cores,
+            ramTotalGB: ramGB,
+            osVersion: os,
+            diskFreeGB: freeGB,
+            diskTotalGB: totalGB
+        )
+    }
+}
 
 public enum SidebarTab: String, CaseIterable, Identifiable, Sendable {
     case generator = "Generator"
@@ -148,15 +215,21 @@ public final class AppState: ObservableObject {
     }
 
     @Published public var engineDiagnostics: ProcessBridge.EngineDiagnostics = ProcessBridge.checkEngineDiagnostics()
+    @Published public var systemHardware: SystemHardwareInfo = SystemHardwareInfo.current()
 
     public func refreshEngineDiagnostics() {
         self.engineDiagnostics = ProcessBridge.checkEngineDiagnostics()
+    }
+
+    public func refreshSystemHardware() {
+        self.systemHardware = SystemHardwareInfo.current()
     }
 
     public init() {
         refreshPresets()
         loadPersistentLogs()
         refreshEngineDiagnostics()
+        refreshSystemHardware()
         updateAppAppearance()
     }
 
@@ -172,7 +245,7 @@ public final class AppState: ObservableObject {
             }
         }
         if self.logLines.isEmpty {
-            self.logLines.append("[INFO] Focus v2.3.0 Diagnostic Engine ready. Awaiting scan or render events.")
+            self.logLines.append("[INFO] Focus Studio v2.4.0 Diagnostic Engine ready. Awaiting scan or render events.")
         }
     }
 
@@ -385,6 +458,14 @@ public final class AppState: ObservableObject {
         }
 
         let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
+        let hw = SystemHardwareInfo.current()
+        logLines.append("[SYSTEM] Host: \(hw.cpuSummary) | \(hw.ramSummary) | macOS \(hw.osVersion)")
+        logLines.append("[SYSTEM] Storage: \(hw.diskSummary) | Accel: Apple VideoToolbox")
+        logLines.append("[CONFIG] Mode: \(mode.rawValue) | Codec: \(settings.videoCodec.cliValue) | Container: .\(settings.containerFormat.fileExtension) | Quality: \(settings.quality.rawValue)")
+        logLines.append("[CONFIG] Timing: In: \(String(format: "%.1f", settings.padBefore))s, Out: \(String(format: "%.1f", settings.padAfter))s, Gap: \(String(format: "%.1f", settings.maxGap))s, Min: \(String(format: "%.1f", settings.minScene))s, ScanStep: \(settings.frameSkip) frames")
+        if settings.vadEnabled {
+            logLines.append("[CONFIG] Audio AI: VAD active (\(settings.vadBuffer)ms buffer)\(settings.vadSpeakerEnabled ? " + Speaker Filter (threshold: \(String(format: "%.2f", settings.vadSpeakerThreshold)))" : "")")
+        }
         logLines.append("[INFO] Starting video analysis: \(video.lastPathComponent) [Mode: \(mode.rawValue)]")
 
         var args: [String] = [
@@ -402,6 +483,7 @@ public final class AppState: ObservableObject {
             "--aspect", settings.aspect.rawValue,
             "--quality", settings.quality.rawValue,
             "--audio-track", String(settings.audioTrackIndex),
+            "--tolerance", String(settings.tolerance),
             "--scan-only"
         ]
         if !referenceImageURLs.isEmpty {
@@ -462,6 +544,10 @@ public final class AppState: ObservableObject {
         let ext = settings.containerFormat.fileExtension
         let out = outputURL ?? video.deletingPathExtension().appendingPathExtension("scenepack.\(ext)")
         let videoArg = selectedVideoURLs.count > 1 ? selectedVideoURLs.map { $0.path }.joined(separator: ";") : video.path
+        let hw = SystemHardwareInfo.current()
+        logLines.append("[SYSTEM] Target: \(out.lastPathComponent) | Volume: \(hw.diskSummary)")
+        logLines.append("[CONFIG] Render Engine: Codec: \(settings.videoCodec.cliValue) | Container: .\(settings.containerFormat.fileExtension) | Quality: \(settings.quality.rawValue)")
+        logLines.append("[CONFIG] Automations: Snap Cuts: \(settings.snapCuts ? "ON" : "OFF") | Clips Folder: \(settings.exportClipsFolder ? "ON" : "OFF") | Timeline XML: \(settings.exportXml ? "ON" : "OFF")")
         logLines.append("[INFO] Starting hardware-accelerated render of \(selected.count) clip(s) to: \(out.lastPathComponent)")
 
         var args: [String] = [
@@ -603,6 +689,77 @@ public final class AppState: ObservableObject {
             SleepManager.shared.allowSleep()
             showToast("Error: \(msg)", icon: "xmark.octagon")
         }
+    }
+
+    public func generateFullDiagnosticReport() -> String {
+        let hw = SystemHardwareInfo.current()
+        let diag = engineDiagnostics
+        let dateStr = ISO8601DateFormatter().string(from: Date())
+
+        let inputNames = selectedVideoURLs.map { $0.lastPathComponent }.joined(separator: ", ")
+        let inputStr = inputNames.isEmpty ? "None" : inputNames
+        let refNames = referenceImageURLs.map { $0.lastPathComponent }.joined(separator: ", ")
+        let refStr: String
+        if !refNames.isEmpty {
+            refStr = refNames
+        } else if let profile = selectedCharacterProfile {
+            refStr = "Character Profile #\(profile.id) (\(profile.count) sample frames)"
+        } else {
+            refStr = "All Detected Faces"
+        }
+
+        var report = """
+        ================================================================================
+        FOCUS AI STUDIO v2.4.0 — FULL SYSTEM & DIAGNOSTIC REPORT
+        Generated: \(dateStr)
+        ================================================================================
+
+        [HARDWARE & SYSTEM SPECIFICATIONS]
+        • Operating System     : macOS \(hw.osVersion)
+        • Processor (CPU)      : \(hw.cpuSummary)
+        • Physical Memory      : \(hw.ramSummary)
+        • Primary Storage      : \(hw.diskSummary)
+        • Hardware Accel       : Apple VideoToolbox (H.264 / HEVC / ProRes)
+
+        [RUNTIME & ENGINE ENVIRONMENT]
+        • Engine Type          : \(diag.engineType)
+        • Engine Ready         : \(diag.isReady ? "YES (Verified)" : "NO (Incomplete)")
+        • Python Executable    : \(diag.pythonPath)
+        • FFmpeg Binary Path   : \(diag.ffmpegPath ?? "Auto-Download / System")
+        • FFprobe Binary Path  : \(ProcessBridge.resolveFFprobeExecutable() ?? "Auto-Download / System")
+        • Power Sleep Inhibit  : \(settings.preventSleep ? "Active (IOKit Assertion)" : "Disabled")
+
+        [ACTIVE SESSION CONFIGURATION]
+        • Input Video(s)       : \(inputStr)
+        • Target Reference     : \(refStr)
+        • Detection Mode       : \(mode.rawValue) (\(mode.label))
+        • Timing Margins       : Lead-In: \(String(format: "%.1f", settings.padBefore))s | Lead-Out: \(String(format: "%.1f", settings.padAfter))s | Cut Gap: \(String(format: "%.1f", settings.maxGap))s
+        • Clip Duration Filter : Min Scene: \(String(format: "%.1f", settings.minScene))s | Scan Step: \(settings.frameSkip) frames
+        • Face Distance Tol.   : \(String(format: "%.2f", settings.tolerance))
+        • Video Compression    : Codec: \(settings.videoCodec.rawValue) | Container: .\(settings.containerFormat.fileExtension) | Quality: \(settings.quality.rawValue)
+        • Output Aspect Ratio  : \(settings.aspect.rawValue)
+        • Audio Track Index    : \(settings.audioTrackIndex == -1 ? "All Tracks (Multi-Audio)" : "Track \(settings.audioTrackIndex + 1)")
+        • Voice Activity (VAD) : \(settings.vadEnabled ? "ON (Buffer: \(settings.vadBuffer)ms)" : "OFF")
+        • Speaker Voice Filter : \(settings.vadSpeakerEnabled ? "ON (Cosine Threshold: \(String(format: "%.2f", settings.vadSpeakerThreshold)))" : "OFF")
+        • Snap to Shot Cuts    : \(settings.snapCuts ? "ON" : "OFF")
+        • Skip Intro / Outro   : Intro: \(settings.skipIntro ? "YES" : "NO") | Outro: \(settings.skipOutro ? "YES" : "NO") | Mode: \(settings.introMode)
+        • Export Timeline XML  : \(settings.exportXml ? "YES (Premiere Pro / DaVinci XML)" : "NO")
+        • Export Clips Folder  : \(settings.exportClipsFolder ? "YES (Individual Scenes)" : "NO")
+
+        [RECENT LOG CONSOLE BUFFER (\(logLines.count) Lines)]
+        """
+
+        let recentLogs = logLines.suffix(120)
+        if recentLogs.isEmpty {
+            report += "\n(No log lines recorded in current session)\n"
+        } else {
+            report += "\n"
+            for (idx, line) in recentLogs.enumerated() {
+                report += String(format: "%03d: %@\n", idx + 1, line)
+            }
+        }
+        report += "================================================================================\n"
+        return report
     }
 }
 

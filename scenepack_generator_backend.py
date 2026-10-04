@@ -826,6 +826,131 @@ def write_concat_list(chunk_paths: List[Path], concat_list_path: Path):
                 f.write(f"file '{safe_path}'\n")
 
 
+class SystemTelemetry:
+    """
+    Comprehensive system, hardware, toolchain, and configuration telemetrist.
+    Provides diagnostic profiling for log streams, crash reports, and studio banners.
+    """
+    @staticmethod
+    def get_cpu_brand() -> str:
+        try:
+            if sys.platform == "darwin":
+                brand = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], stderr=subprocess.DEVNULL).decode().strip()
+                cores = subprocess.check_output(["sysctl", "-n", "hw.ncpu"], stderr=subprocess.DEVNULL).decode().strip()
+                if brand and cores:
+                    return f"{brand} ({cores} Cores)"
+            elif sys.platform == "win32":
+                return f"{platform.processor()} ({os.cpu_count()} Cores)"
+        except Exception:
+            pass
+        return f"{platform.processor() or platform.machine()} ({os.cpu_count() or 1} Cores)"
+
+    @staticmethod
+    def get_ram_summary() -> str:
+        try:
+            if sys.platform == "darwin":
+                total = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"], stderr=subprocess.DEVNULL).decode().strip())
+                return f"{total / (1024**3):.1f} GB Total RAM"
+            elif sys.platform == "win32":
+                import ctypes
+                class MEMORYSTATUSEX(ctypes.Structure):
+                    _fields_ = [
+                        ("dwLength", ctypes.c_ulong),
+                        ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+                    ]
+                stat = MEMORYSTATUSEX()
+                stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+                if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                    total_gb = stat.ullTotalPhys / (1024**3)
+                    avail_gb = stat.ullAvailPhys / (1024**3)
+                    return f"{total_gb:.1f} GB Total ({avail_gb:.1f} GB Available)"
+        except Exception:
+            pass
+        return "N/A"
+
+    @staticmethod
+    def get_disk_summary(path: Union[str, Path] = ".") -> str:
+        try:
+            check_p = Path(path)
+            if not check_p.exists():
+                check_p = check_p.parent if check_p.parent.exists() else Path.home()
+            total, used, free = shutil.disk_usage(str(check_p))
+            free_gb = free / (1024**3)
+            tot_gb = total / (1024**3)
+            pct_free = (free / total) * 100 if total > 0 else 0
+            anchor = str(check_p.anchor or check_p)
+            return f"Free: {free_gb:.1f} GB / {tot_gb:.1f} GB ({pct_free:.1f}% free) on {anchor}"
+        except Exception:
+            return "Available"
+
+    @staticmethod
+    def get_hardware_encoders() -> str:
+        encoders = []
+        try:
+            ffmpeg = PlatformManager.get_ffmpeg_safe_path("ffmpeg")
+            out = subprocess.check_output([ffmpeg, "-encoders"], stderr=subprocess.DEVNULL).decode(errors="ignore")
+            for line in out.splitlines():
+                if "videotoolbox" in line:
+                    parts = line.split()
+                    if len(parts) >= 2 and parts[1] not in encoders:
+                        encoders.append(parts[1])
+                elif any(h in line for h in ["nvenc", "qsv", "amf"]):
+                    parts = line.split()
+                    if len(parts) >= 2 and parts[1] not in encoders:
+                        encoders.append(parts[1])
+        except Exception:
+            pass
+        if encoders:
+            return ", ".join(encoders)
+        return "None (CPU Software Encoding)"
+
+    @classmethod
+    def format_session_banner(cls, session_config: Optional[Dict[str, Any]] = None, target_path: Optional[Path] = None) -> List[str]:
+        cpu = cls.get_cpu_brand()
+        ram = cls.get_ram_summary()
+        hw = cls.get_hardware_encoders()
+        disk = cls.get_disk_summary(target_path or ".")
+        os_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
+
+        lines = [
+            "================================================================================",
+            f" FOCUS AI STUDIO {APP_VERSION} — SYSTEM & RUNTIME TELEMETRY REPORT",
+            "================================================================================",
+            "[SYSTEM & HARDWARE ENVIRONMENT]",
+            f"  • Operating System : {os_info}",
+            f"  • Processor (CPU)  : {cpu}",
+            f"  • System Memory    : {ram}",
+            f"  • Hardware Encoders: {hw}",
+            f"  • Storage Status   : {disk}",
+            "[TOOLCHAIN & RUNTIME]",
+            f"  • Python Runtime   : {sys.version.split()[0]} ({sys.executable})",
+            f"  • OpenCV Engine    : {cv2.__version__} (OpenCL: {'Active' if cv2.ocl.haveOpenCL() else 'Off'})",
+            f"  • FFmpeg Binary    : {PlatformManager.get_ffmpeg_safe_path('ffmpeg')}",
+        ]
+        if session_config:
+            lines.extend([
+                "[SESSION CONFIGURATION & PARAMETERS]",
+                f"  • Detection Mode   : {session_config.get('mode', 'Real Faces')}",
+                f"  • Input Video(s)   : {session_config.get('video_name', 'None')}",
+                f"  • Target Reference : {session_config.get('character_name', 'All Detected Faces')}",
+                f"  • Timing Margins   : Lead-In: {session_config.get('pad_before', 2.0)}s | Lead-Out: {session_config.get('pad_after', 2.0)}s | Cut Gap: {session_config.get('max_gap', 1.5)}s",
+                f"  • Min Clip Length  : {session_config.get('min_scene', 1.0)}s | Scan Step: {session_config.get('frame_skip', 15)} frames",
+                f"  • Video Output     : Codec: {session_config.get('video_codec', 'auto')} | Container: .{session_config.get('container', 'mp4')} | Quality: {session_config.get('quality', 'Auto')}",
+                f"  • Dialogue AI Sync : VAD: {'Active (Buffer: ' + str(session_config.get('vad_buffer', 300)) + 'ms)' if session_config.get('vad') else 'Disabled'}",
+                f"  • Speaker Filter   : {'Active (Threshold: ' + str(session_config.get('vad_speaker_threshold', 0.65)) + ')' if session_config.get('vad_speaker') else 'Disabled'}",
+                f"  • Automations      : Snap Cuts: {'ON' if session_config.get('snap_cuts') else 'OFF'} | Skip OP/ED: {'ON' if session_config.get('skip_intro') or session_config.get('skip_outro') else 'OFF'} | Clips Folder: {'ON' if session_config.get('export_clips_folder') else 'OFF'} | XML: {'ON' if session_config.get('export_xml') else 'OFF'}",
+            ])
+        lines.append("================================================================================")
+        return lines
+
+
 TRANSLATIONS = {
     "English": {
         "dashboard": "Dashboard",
@@ -3562,6 +3687,21 @@ class ScenePackGenerator:
         if excluded_ranges:
             merged_intervals = self.filter_excluded_intervals(merged_intervals, excluded_ranges)
 
+        # Performance and throughput telemetry
+        total_scanned = len(target_indices) if 'target_indices' in locals() else (total_frames // max(1, self.frame_skip))
+        scan_sec = max(0.001, time.time() - start_time)
+        scan_rate = total_scanned / scan_sec
+        v_dur = duration if (duration and duration > 0 and duration != float('inf')) else 1.0
+        realtime_x = v_dur / scan_sec
+        total_detected_dur = sum((it[1] - it[0]) if len(it) == 2 else (it[2] - it[1]) if len(it) >= 4 else (it[1] - it[0]) for it in merged_intervals)
+        perf_log = (
+            f"[PERF] Scan Complete: {total_scanned} frames processed in {scan_sec:.2f}s "
+            f"({scan_rate:.1f} fps, {realtime_x:.2f}x realtime) | Hits: {len(timestamps)} raw -> {len(merged_intervals)} scenes ({total_detected_dur:.1f}s total)"
+        )
+        logging.info(perf_log)
+        if hasattr(self, "log_queue") and self.log_queue:
+            self.log_queue.put(("log", perf_log))
+
         return merged_intervals
 
     def get_video_bitrate(self, video_path: Union[str, Path]) -> int:
@@ -3856,7 +3996,13 @@ class ScenePackGenerator:
 
                 return i, chunk_path
 
+            encode_start_time = time.time()
             max_workers = min(4, os.cpu_count() or 4)
+            encode_msg = f"[PERF] Parallel Encode: Launching {max_workers} worker threads for {total_segments} scene chunks (Encoder: {codec}, Format: .{target_ext})"
+            logging.info(encode_msg)
+            if hasattr(self, "log_queue") and self.log_queue:
+                self.log_queue.put(("log", encode_msg))
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(executor.map(process_segment, enumerate(intervals)))
 
@@ -3887,6 +4033,20 @@ class ScenePackGenerator:
             concat_result = self.run_subprocess(concat_cmd, cwd=temp_dir, capture_output=True, text=True)
             if concat_result.returncode != 0:
                 raise RuntimeError(f"FFmpeg concat failed: {concat_result.stderr}")
+
+            encode_duration = max(0.001, time.time() - encode_start_time)
+            sec_per_chunk = encode_duration / max(1, len(chunk_paths))
+            out_size_mb = (output_path.stat().st_size / (1024 * 1024)) if output_path.exists() else 0.0
+            perf_msg = (
+                f"[PERF] Encoding & Concat complete in {encode_duration:.2f}s "
+                f"({sec_per_chunk:.2f}s/chunk) | Output Size: {out_size_mb:.2f} MB | Codec: {codec}"
+            )
+            summary_msg = f"[SUMMARY] Scenepack Ready: '{output_path.name}' ({out_size_mb:.1f} MB, {len(chunk_paths)} clips, format .{target_ext})"
+            logging.info(perf_msg)
+            logging.info(summary_msg)
+            if hasattr(self, "log_queue") and self.log_queue:
+                self.log_queue.put(("log", perf_msg))
+                self.log_queue.put(("log", summary_msg))
 
             logging.info(f"Successfully saved scenepack to:\n{output_path.name}")
 
