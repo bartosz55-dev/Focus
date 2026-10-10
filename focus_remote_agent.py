@@ -53,6 +53,65 @@ KEYEVENTF_KEYUP = 0x0002
 KEYEVENTF_UNICODE = 0x0004
 
 
+def disable_quickedit():
+    """Disables QuickEdit mode in Windows console so mouse clicks never suspend Python."""
+    if sys.platform == "win32":
+        try:
+            kernel32 = ctypes.windll.kernel32
+            h_in = kernel32.GetStdHandle(-10)  # STD_INPUT_HANDLE
+            mode = wintypes.DWORD()
+            if kernel32.GetConsoleMode(h_in, ctypes.byref(mode)):
+                # Clear ENABLE_QUICK_EDIT_MODE (0x0040), set ENABLE_EXTENDED_FLAGS (0x0080)
+                new_mode = (mode.value & ~0x0040) | 0x0080
+                kernel32.SetConsoleMode(h_in, new_mode)
+                logging.info("[SYSTEM] Windows QuickEdit mode successfully disabled.")
+        except Exception as e:
+            logging.debug(f"disable_quickedit error: {e}")
+
+
+def minimize_console_window():
+    """Minimizes the black console window to keep it out of the testing area."""
+    if sys.platform == "win32":
+        try:
+            kernel32 = ctypes.windll.kernel32
+            hwnd = kernel32.GetConsoleWindow()
+            if hwnd:
+                user32.ShowWindow(hwnd, 6)  # SW_MINIMIZE = 6
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def bring_window_to_foreground(title_substr: str = "Focus") -> bool:
+    """Finds window by title substring and brings it to the foreground."""
+    if sys.platform != "win32" or not user32:
+        return False
+    found_hwnd = None
+    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+
+    def enum_windows_cb(hwnd, lparam):
+        nonlocal found_hwnd
+        if user32.IsWindowVisible(hwnd):
+            length = user32.GetWindowTextLengthW(hwnd)
+            if length > 0:
+                buf = ctypes.create_unicode_buffer(length + 1)
+                user32.GetWindowTextW(hwnd, buf, length + 1)
+                t = buf.value
+                if title_substr.lower() in t.lower() and "remote" not in t.lower() and "cmd" not in t.lower():
+                    found_hwnd = hwnd
+                    return False  # stop enum
+        return True
+
+    cb = WNDENUMPROC(enum_windows_cb)
+    user32.EnumWindows(cb, 0)
+    if found_hwnd:
+        user32.ShowWindow(found_hwnd, 9)  # SW_RESTORE
+        user32.SetForegroundWindow(found_hwnd)
+        return True
+    return False
+
+
 def get_screen_resolution():
     if user32:
         user32.SetProcessDPIAware()
@@ -211,6 +270,15 @@ class RemoteAgentHandler(BaseHTTPRequestHandler):
             logging.info(f"[ACTION] Typed text: '{txt}' -> ok={ok}")
             self._send_json({"success": ok, "length": len(txt)})
 
+        elif self.path == "/window/bring_to_front":
+            ok = bring_window_to_foreground("Focus")
+            logging.info(f"[ACTION] Brought Focus window to foreground -> {ok}")
+            self._send_json({"success": ok})
+
+        elif self.path == "/window/minimize_console":
+            ok = minimize_console_window()
+            self._send_json({"success": ok})
+
         elif self.path == "/exec":
             cmd = str(payload.get("cmd", ""))
             background = bool(payload.get("background", False))
@@ -248,6 +316,7 @@ def get_local_ip():
 
 
 def main():
+    disable_quickedit()
     port = 8765
     server_address = ("0.0.0.0", port)
     httpd = ThreadingHTTPServer(server_address, RemoteAgentHandler)
