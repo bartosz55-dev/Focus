@@ -8,7 +8,10 @@ import gc
 
 import cv2
 from PIL import Image
-import face_recognition
+try:
+    import face_recognition
+except ImportError:
+    face_recognition = None
 
 from scenepack_generator_backend import (
     safe_face_locations,
