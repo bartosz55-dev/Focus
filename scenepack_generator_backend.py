@@ -768,6 +768,10 @@ class PlatformManager:
         return ""
 
     @staticmethod
+    def get_app_data_dir() -> Path:
+        return get_app_dir()
+
+    @staticmethod
     def get_ffmpeg_safe_path(binary_name: str = "ffmpeg") -> str:
         exe_suffix = PlatformManager.get_exe_suffix()
         target_name = f"{binary_name}{exe_suffix}" if not binary_name.endswith(exe_suffix) else binary_name
@@ -787,8 +791,12 @@ class PlatformManager:
             candidates.append(base / target_name)
 
         # 3. Application Support / AppData directory
-        app_dir = PlatformManager.get_app_data_dir()
-        candidates.append(app_dir / "bin" / target_name)
+        try:
+            app_dir = get_app_dir()
+            candidates.append(app_dir / "bin" / target_name)
+            candidates.append(app_dir.parent / "bin" / target_name)
+        except Exception:
+            pass
 
         # 4. Adjacent bin directory or bundled Resources
         script_dir = Path(__file__).resolve().parent
