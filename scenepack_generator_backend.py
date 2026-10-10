@@ -22,6 +22,7 @@ import urllib.request
 import json
 import numpy as np
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image, ImageDraw
 import wave
 import re
@@ -2649,7 +2650,7 @@ class ScenePackGenerator:
         found_chapter_intro = False
         found_chapter_outro = False
 
-        mode_lower = (intro_mode or "").lower()
+        mode_lower = str(intro_mode or "").lower()
         use_chapters = "chapter" in mode_lower or "auto" in mode_lower or "rozdział" in mode_lower or mode_lower == ""
 
         if use_chapters and chapters:
@@ -3661,7 +3662,7 @@ class ScenePackGenerator:
             current_idx = 0
             target_idx_set = set(target_indices)
             
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 while current_idx < total_frames:
                     if getattr(self, 'is_cancelled', False):
                         logging.info("Scene extraction cancelled by user.")
@@ -4069,7 +4070,7 @@ class ScenePackGenerator:
             if hasattr(self, "log_queue") and self.log_queue:
                 self.log_queue.put(("log", encode_msg))
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(executor.map(process_segment, enumerate(intervals)))
 
             results.sort(key=lambda x: x[0])
@@ -4214,7 +4215,6 @@ class ScenePackGenerator:
         min_scene_duration: float = 1.0,
         vad_enabled: bool = False,
         vad_buffer: int = 300,
-        vad_buffer_ms: Optional[int] = None,
         vad_speaker_enabled: bool = True,
         vad_speaker_threshold: float = 0.68,
         skip_intro: bool = False,
@@ -4222,10 +4222,13 @@ class ScenePackGenerator:
         intro_mode: str = "Auto Chapters",
         intro_duration: float = 90.0,
         tolerance: Optional[float] = None,
+        vad_buffer_ms: Optional[int] = None,
         **kwargs: Any
     ) -> List[Any]:
         if vad_buffer_ms is not None:
             vad_buffer = vad_buffer_ms
+        elif "vad_buffer_ms" in kwargs:
+            vad_buffer = kwargs["vad_buffer_ms"]
         if tolerance is not None:
             self.tolerance = tolerance
         self._check_and_download_ffmpeg()

@@ -8,6 +8,7 @@ import gc
 
 import cv2
 from PIL import Image
+import traceback
 try:
     import face_recognition
 except ImportError:
@@ -139,11 +140,21 @@ class ScanWorker(QThread):
             )
             ref_arg = self.image_path
             scanned_intervals = self.generator_instance.scan_and_prepare(
-                self.video_path, ref_arg,
-                self.pad_before, self.pad_after, self.max_gap, self.min_scene,
-                self.vad_enabled, self.vad_buffer,
-                self.vad_speaker_enabled, self.vad_speaker_threshold,
-                self.skip_intro, self.skip_outro, self.intro_mode, self.intro_duration
+                video_path=self.video_path,
+                ref_image_path=ref_arg,
+                padding_before=self.pad_before,
+                padding_after=self.pad_after,
+                max_gap_tolerance=self.max_gap,
+                min_scene_duration=self.min_scene,
+                vad_enabled=self.vad_enabled,
+                vad_buffer=self.vad_buffer,
+                vad_speaker_enabled=self.vad_speaker_enabled,
+                vad_speaker_threshold=self.vad_speaker_threshold,
+                skip_intro=self.skip_intro,
+                skip_outro=self.skip_outro,
+                intro_mode=self.intro_mode,
+                intro_duration=self.intro_duration,
+                tolerance=self.tolerance,
             )
             logging.info(f"Finished Scanning! Found {len(scanned_intervals)} clips. Generating thumbnails...")
 
@@ -184,7 +195,8 @@ class ScanWorker(QThread):
             self.queue_proxy.put(("progress", 1.0, "Scan Complete"))
             self.queue_proxy.put(("show_review_checklist", (scanned_intervals, thumbnails)))
         except Exception as e:
-            logging.error(f"Error occurred during scan: {str(e)}")
+            tb = traceback.format_exc()
+            logging.error(f"Error occurred during scan: {str(e)}\n{tb}")
             self.queue_proxy.put(("error", str(e)))
             self.queue_proxy.put(("progress", 0.0, "Scan Error Occurred"))
             self.queue_proxy.put(("reset_btn", None))
@@ -269,7 +281,17 @@ class GalleryScanWorker(QThread):
         self.mode_raw = mode_raw
         self.queue_proxy = queue_proxy
         self.is_cancelled = False
-        self.anime_cascade_path = Path(tempfile.gettempdir()) / "lbpcascade_animeface.xml"
+        candidates = [
+            Path(__file__).resolve().parent / "models" / "lbpcascade_animeface.xml",
+            Path(__file__).resolve().parent.parent / "models" / "lbpcascade_animeface.xml",
+            Path(tempfile.gettempdir()) / "lbpcascade_animeface.xml"
+        ]
+        chosen = None
+        for c in candidates:
+            if c.exists() and c.stat().st_size > 0:
+                chosen = c
+                break
+        self.anime_cascade_path = chosen if chosen else (Path(tempfile.gettempdir()) / "lbpcascade_animeface.xml")
 
     def cancel(self):
         self.is_cancelled = True
@@ -528,7 +550,8 @@ class GalleryScanWorker(QThread):
                 self.queue_proxy.put(("gallery_results", merged_clusters))
 
         except Exception as e:
-            err_msg = f"Gallery scan failed: {e}"
+            tb = traceback.format_exc()
+            err_msg = f"Gallery scan failed: {e}\n{tb}"
             logging.error(err_msg)
             self.queue_proxy.put(("log", err_msg))
             self.queue_proxy.put(("gallery_error", err_msg))
