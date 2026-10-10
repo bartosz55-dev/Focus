@@ -1,7 +1,10 @@
 import sys
 import os
 import cv2
-import face_recognition
+try:
+    import face_recognition
+except ImportError:
+    face_recognition = None
 import subprocess
 from pathlib import Path
 import tempfile
@@ -32,7 +35,7 @@ DLIB_THREAD_LOCK = threading.Lock()
 
 
 def safe_face_locations(img, number_of_times_to_upsample=1, model="hog"):
-    if img is None or getattr(img, 'size', 0) == 0:
+    if not face_recognition or img is None or getattr(img, 'size', 0) == 0:
         return []
     with DLIB_THREAD_LOCK:
         try:
@@ -43,7 +46,7 @@ def safe_face_locations(img, number_of_times_to_upsample=1, model="hog"):
 
 
 def safe_face_encodings(face_image, known_face_locations=None, num_jitters=1, model="small"):
-    if face_image is None or getattr(face_image, 'size', 0) == 0:
+    if not face_recognition or face_image is None or getattr(face_image, 'size', 0) == 0:
         return []
     with DLIB_THREAD_LOCK:
         try:
@@ -54,7 +57,7 @@ def safe_face_encodings(face_image, known_face_locations=None, num_jitters=1, mo
 
 
 def safe_compare_faces(known_face_encodings, face_encoding_to_check, tolerance=0.6):
-    if not known_face_encodings or face_encoding_to_check is None:
+    if not face_recognition or not known_face_encodings or face_encoding_to_check is None:
         return []
     with DLIB_THREAD_LOCK:
         try:
@@ -65,7 +68,7 @@ def safe_compare_faces(known_face_encodings, face_encoding_to_check, tolerance=0
 
 
 def safe_face_landmarks(face_image, face_locations=None, model="large"):
-    if face_image is None or getattr(face_image, 'size', 0) == 0:
+    if not face_recognition or face_image is None or getattr(face_image, 'size', 0) == 0:
         return []
     with DLIB_THREAD_LOCK:
         try:
@@ -76,7 +79,7 @@ def safe_face_landmarks(face_image, face_locations=None, model="large"):
 
 
 def safe_face_distance(face_encodings, face_to_compare):
-    if not face_encodings or face_to_compare is None:
+    if not face_recognition or not face_encodings or face_to_compare is None:
         return np.empty(0)
     with DLIB_THREAD_LOCK:
         try:
@@ -2908,6 +2911,8 @@ class ScenePackGenerator:
                 raise FileNotFoundError(f"Reference image not found: {p}")
 
         if self.mode == "Real Faces":
+            if not face_recognition:
+                raise RuntimeError("Real Faces mode requires 'face_recognition' library. Please install it or switch to Anime mode.")
             all_encodings: List[np.ndarray] = []
             for p in paths:
                 logging.info(f"Loading reference face from '{p.name}'...")
