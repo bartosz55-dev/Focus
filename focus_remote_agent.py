@@ -121,12 +121,30 @@ def get_screen_resolution():
     return 1920, 1080
 
 
+try:
+    import pyautogui
+    pyautogui.FAILSAFE = False
+    HAS_PYAUTOGUI = True
+except ImportError:
+    HAS_PYAUTOGUI = False
+
 def native_click(x: int, y: int, button: str = "left"):
+    if HAS_PYAUTOGUI:
+        try:
+            if button == "double":
+                pyautogui.doubleClick(x, y)
+            elif button == "right":
+                pyautogui.rightClick(x, y)
+            else:
+                pyautogui.click(x, y)
+            return True
+        except Exception as e:
+            logging.debug(f"pyautogui click error: {e}")
+
     if not user32:
         return False
     user32.SetProcessDPIAware()
     sw, sh = get_screen_resolution()
-    # Move cursor
     user32.SetCursorPos(x, y)
     time.sleep(0.05)
 
@@ -150,6 +168,12 @@ def native_click(x: int, y: int, button: str = "left"):
 
 
 def native_type(text: str):
+    if HAS_PYAUTOGUI:
+        try:
+            pyautogui.write(text, interval=0.02)
+            return True
+        except Exception:
+            pass
     if not user32:
         return False
     for char in text:
