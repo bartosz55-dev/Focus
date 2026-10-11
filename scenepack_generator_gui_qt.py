@@ -32,7 +32,8 @@ import scenepack_generator_backend as sg_engine
 from scenepack_generator_backend import (
     ScenePackGenerator, get_translation, canonicalize_mode, APP_VERSION,
     get_changelog_text, get_app_dir, parse_video_paths, natural_sort_key,
-    SleepInhibitor, PresetManager, generate_scene_standard_filename
+    SleepInhibitor, PresetManager, generate_scene_standard_filename,
+    ThreadOptimizer, SystemTelemetry
 )
 from scenepack_generator_workers_qt import (
     QtLogHandler, QtQueueProxy, ScanWorker, RenderWorker, GalleryScanWorker, AudioTrackWorker, MasterConcatWorker
@@ -474,6 +475,16 @@ class PreferencesDialog(QDialog):
         lbl_gpu = QLabel(gpu_text)
         lbl_gpu.setStyleSheet("color: #10B981; font-weight: bold; font-size: 11px;" if has_gpu else "color: #F59E0B; font-size: 11px;")
         hw_layout.addWidget(lbl_gpu)
+
+        scan_threads = ThreadOptimizer.get_optimal_threads("cpu_scan")
+        render_hw_threads = ThreadOptimizer.get_optimal_threads("render_hardware")
+        if cur_lang == "Polski":
+            threads_text = f"• Automatyczne skalowanie: {scan_threads} wątków detekcji | {render_hw_threads} wątków GPU render"
+        else:
+            threads_text = f"• Auto Thread Scaling: {scan_threads} scan threads | {render_hw_threads} GPU render threads"
+        lbl_threads = QLabel(threads_text)
+        lbl_threads.setStyleSheet("color: #38BDF8; font-weight: bold; font-size: 11px;")
+        hw_layout.addWidget(lbl_threads)
 
         lbl_zero_rpm = QLabel(zero_rpm_text)
         lbl_zero_rpm.setWordWrap(True)
@@ -2683,6 +2694,7 @@ class FocusApp(QMainWindow):
             skip_intro, skip_outro, intro_mode, intro_duration,
             float(self.settings.get("tolerance", 0.6))
         )
+        self.queue_proxy.put(("log", f"[HARDWARE] {ThreadOptimizer.get_hardware_summary()}"))
         self.scan_worker.start()
 
     def start_render(self):
@@ -2761,6 +2773,7 @@ class FocusApp(QMainWindow):
             auto_crop_black_bars=auto_crop_black_bars,
             export_timeline_xml=export_timeline_xml
         )
+        self.queue_proxy.put(("log", f"[HARDWARE] {ThreadOptimizer.get_hardware_summary()}"))
         self.render_worker.start()
 
     def start_gallery_scan(self):
@@ -2776,6 +2789,7 @@ class FocusApp(QMainWindow):
 
         self._acquire_sleep_lock("Scanning Video Characters")
         self.gallery_worker = GalleryScanWorker(sg_engine, self.video_path_str, self.current_mode, self.queue_proxy)
+        self.queue_proxy.put(("log", f"[HARDWARE] {ThreadOptimizer.get_hardware_summary()}"))
         self.gallery_worker.start()
 
     def cancel_gallery_scan(self):

@@ -14,11 +14,15 @@ try:
 except ImportError:
     face_recognition = None
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 from scenepack_generator_backend import (
     safe_face_locations,
     safe_face_encodings,
     safe_face_distance,
-    parse_video_paths
+    parse_video_paths,
+    ThreadOptimizer
 )
 
 from PySide6.QtCore import QThread, Signal, QObject
@@ -368,55 +372,38 @@ class GalleryScanWorker(QThread):
                     shutil.rmtree(crops_dir, ignore_errors=True)
                 crops_dir.mkdir(parents=True, exist_ok=True)
 
-                while curr_frame < total_frames and not self.is_cancelled:
-                    if curr_frame > 0:
-                        # Fast-forward using grab() which is significantly faster on Windows than cap.set()
-                        skip_count = sample_step - 1
-                        for _ in range(skip_count):
-                            if not cap.grab():
-                                break
-                        curr_frame += skip_count
-                        
-                    ret = cap.grab()
-                    if not ret:
-                        break
-                    
-                    ret_ret, frame = cap.retrieve()
-                    if not ret_ret or frame is None:
-                        break
+                max_workers = ThreadOptimizer.get_optimal_threads("gallery_scan")
+                batch_size = max(24, max_workers * 3)
+                thread_local_data = threading.local()
 
-                    sampled_count += 1
-                    prog = min(1.0, curr_frame / float(total_frames))
-                    status_text = f"Scanning... {int(prog * 100)}% (Sampled {sampled_count} frames, Found {len(raw_candidates)} face candidate(s))"
-                    self.queue_proxy.put(("gallery_progress", prog, status_text))
+                def _process_gallery_batch_item(item):
+                    s_count, small_frame, pre_gray = item
+                    if small_frame is None or getattr(small_frame, 'size', 0) == 0:
+                        return []
 
-                    if sampled_count % 15 == 0 or sampled_count == 1:
-                        logging.info(status_text)
-                        self.queue_proxy.put(("log", status_text))
-                    
-                    if sampled_count % 200 == 0:
-                        gc.collect()
-
-                    h, w = frame.shape[:2]
-                    if w > 480:
-                        ratio = 480.0 / w
-                        new_h = int(h * ratio)
-                        small_frame = cv2.resize(frame, (480, new_h))
-                    else:
-                        small_frame = frame
+                    item_candidates = []
 
                     if mode == "Real Faces":
                         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                         face_locations = safe_face_locations(rgb_frame, model="hog")
 
-                        if not face_locations and profile_cascade and not profile_cascade.empty():
-                            gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                            profiles_right = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+                        if not hasattr(thread_local_data, 'profile_cascade'):
+                            if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                                p_path = os.path.join(cv2.data.haarcascades, 'haarcascade_profileface.xml')
+                                thread_local_data.profile_cascade = self.engine_module.get_cascade_classifier(p_path)
+                            else:
+                                thread_local_data.profile_cascade = None
+
+                        local_profile = thread_local_data.profile_cascade
+
+                        if not face_locations and local_profile and not local_profile.empty():
+                            gray = pre_gray if pre_gray is not None else cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+                            profiles_right = local_profile.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                             for (x, y, w, h) in profiles_right:
                                 face_locations.append((y, x+w, y+h, x))
 
                             flipped_gray = cv2.flip(gray, 1)
-                            profiles_left = profile_cascade.detectMultiScale(flipped_gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+                            profiles_left = local_profile.detectMultiScale(flipped_gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                             h_img, w_img = gray.shape
                             for (x, y, w, h) in profiles_left:
                                 x_real = w_img - (x + w)
@@ -431,22 +418,23 @@ class GalleryScanWorker(QThread):
                                     continue
 
                                 pil_crop = Image.fromarray(face_crop_rgb)
-                                crop_path = crops_dir / f"char_cand_{sampled_count}_{len(raw_candidates)}.png"
-                                pil_crop.save(crop_path)
-
-                                raw_candidates.append({
-                                    'crop_path': str(crop_path),
+                                item_candidates.append({
+                                    'pil_crop': pil_crop,
                                     'resolution': pil_crop.width * pil_crop.height,
                                     'encoding': encoding,
                                     'anime_feature': None
                                 })
 
                     elif mode == "Anime":
-                        if cascade is not None and hasattr(cascade, 'empty') and not cascade.empty():
-                            gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                            faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+                        if not hasattr(thread_local_data, 'anime_cascade'):
+                            thread_local_data.anime_cascade = self.engine_module.get_cascade_classifier(str(self.anime_cascade_path))
+                        local_anime_cascade = thread_local_data.anime_cascade
+
+                        if local_anime_cascade is not None and hasattr(local_anime_cascade, 'empty') and not local_anime_cascade.empty():
+                            gray = pre_gray if pre_gray is not None else cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+                            faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
                             if len(faces) == 0:
-                                faces = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
+                                faces = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=2, minSize=(20, 20))
                             for (x, y, fw, fh) in faces:
                                 crop_bgr = self.engine_module.make_square_crop(small_frame, y, x + fw, y + fh, x, pad_ratio=0.30)
                                 if crop_bgr is None or crop_bgr.size == 0:
@@ -454,12 +442,9 @@ class GalleryScanWorker(QThread):
 
                                 crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
                                 pil_crop = Image.fromarray(crop_rgb)
-                                crop_path = crops_dir / f"anime_cand_{sampled_count}_{len(raw_candidates)}.png"
-                                pil_crop.save(crop_path)
-
                                 feat = self.engine_module.extract_anime_face_features(crop_bgr)
-                                raw_candidates.append({
-                                    'crop_path': str(crop_path),
+                                item_candidates.append({
+                                    'pil_crop': pil_crop,
                                     'resolution': pil_crop.width * pil_crop.height,
                                     'encoding': None,
                                     'anime_feature': feat
@@ -474,19 +459,75 @@ class GalleryScanWorker(QThread):
                                     continue
 
                                 pil_crop = Image.fromarray(face_crop_rgb)
-                                crop_path = crops_dir / f"anime_cand_{sampled_count}_{len(raw_candidates)}.png"
-                                pil_crop.save(crop_path)
-
                                 bgr_crop = cv2.cvtColor(face_crop_rgb, cv2.COLOR_RGB2BGR)
                                 feat = self.engine_module.extract_anime_face_features(bgr_crop)
-                                raw_candidates.append({
-                                    'crop_path': str(crop_path),
+                                item_candidates.append({
+                                    'pil_crop': pil_crop,
                                     'resolution': pil_crop.width * pil_crop.height,
                                     'encoding': None,
                                     'anime_feature': feat
                                 })
 
-                    curr_frame += 1
+                    return item_candidates
+
+                scale_msg = f"[PERF] Character Discovery: Scaling {max_workers} worker threads (Batch Size: {batch_size})"
+                logging.info(scale_msg)
+                self.queue_proxy.put(("log", scale_msg))
+
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    while curr_frame < total_frames and not self.is_cancelled:
+                        batch_items = []
+                        while len(batch_items) < batch_size and curr_frame < total_frames and not self.is_cancelled:
+                            if curr_frame > 0:
+                                skip_count = sample_step - 1
+                                for _ in range(skip_count):
+                                    if not cap.grab():
+                                        break
+                                curr_frame += skip_count
+
+                            ret = cap.grab()
+                            if not ret:
+                                curr_frame = total_frames
+                                break
+
+                            ret_ret, frame = cap.retrieve()
+                            if not ret_ret or frame is None:
+                                curr_frame = total_frames
+                                break
+
+                            sampled_count += 1
+                            curr_frame += 1
+
+                            h, w = frame.shape[:2]
+                            target_w = 360
+                            if w > target_w:
+                                ratio = float(target_w) / float(w)
+                                new_h = int(h * ratio)
+                                small_frame = cv2.resize(frame, (target_w, new_h), interpolation=cv2.INTER_LINEAR)
+                            else:
+                                small_frame = frame
+
+                            pre_gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY) if mode == "Anime" else None
+                            batch_items.append((sampled_count, small_frame, pre_gray))
+
+                        if not batch_items:
+                            continue
+
+                        batch_results = list(executor.map(_process_gallery_batch_item, batch_items))
+                        for item_cands in batch_results:
+                            if item_cands:
+                                raw_candidates.extend(item_cands)
+
+                        prog = min(1.0, curr_frame / float(total_frames))
+                        status_text = f"Scanning... {int(prog * 100)}% (Sampled {sampled_count} frames, Found {len(raw_candidates)} face candidate(s))"
+                        self.queue_proxy.put(("gallery_progress", prog, status_text))
+
+                        if sampled_count % 30 == 0 or sampled_count == 1:
+                            logging.info(status_text)
+                            self.queue_proxy.put(("log", status_text))
+
+                        if sampled_count % 300 == 0:
+                            gc.collect()
             finally:
                 cap.release()
 
@@ -526,17 +567,28 @@ class GalleryScanWorker(QThread):
                     }
                     merged_clusters.append(new_cluster)
 
-            for mc in merged_clusters:
-                best_crop = max(mc['crops'], key=lambda item: item['resolution'])
-                mc['crop_path'] = best_crop['crop_path']
-                try:
-                    mc['pil_image'] = Image.open(best_crop['crop_path']).copy()
-                except Exception:
-                    mc['pil_image'] = None
-
             merged_clusters.sort(key=lambda x: x['count'], reverse=True)
             for idx, mc in enumerate(merged_clusters, 1):
                 mc['id'] = idx
+                best_crop = max(mc['crops'], key=lambda item: item['resolution'])
+                crop_path = crops_dir / f"character_{mc['id']}.png"
+                if 'pil_crop' in best_crop and best_crop['pil_crop'] is not None:
+                    best_crop['pil_crop'].save(crop_path, format="PNG")
+                    mc['crop_path'] = str(crop_path)
+                    mc['pil_image'] = best_crop['pil_crop'].copy()
+                elif 'crop_path' in best_crop and Path(best_crop['crop_path']).exists():
+                    mc['crop_path'] = best_crop['crop_path']
+                    try:
+                        mc['pil_image'] = Image.open(best_crop['crop_path']).copy()
+                    except Exception:
+                        mc['pil_image'] = None
+                else:
+                    mc['crop_path'] = str(crop_path)
+                    mc['pil_image'] = None
+
+                # Discard in-memory PIL crops from unselected candidates to release RAM
+                for c in mc['crops']:
+                    c.pop('pil_crop', None)
 
             if self.is_cancelled:
                 msg_cancel = f"Gallery pre-scan cancelled. Discovered {len(merged_clusters)} unique character profile(s)."

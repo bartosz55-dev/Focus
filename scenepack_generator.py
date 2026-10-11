@@ -19,7 +19,8 @@ from scenepack_generator_backend import (
     PlatformManager,
     parse_reference_image_paths,
     SleepInhibitor,
-    SystemTelemetry
+    SystemTelemetry,
+    ThreadOptimizer
 )
 
 CREATE_NO_WINDOW = PlatformManager.get_creation_flags()
@@ -153,8 +154,12 @@ def main():
     parser.add_argument("--snap-cuts", action="store_true", default=True, help="Snap clip boundaries to camera shot cuts.")
     parser.add_argument("--no-snap-cuts", dest="snap_cuts", action="store_false", help="Disable shot boundary snapping.")
     parser.add_argument("--prevent-sleep", action="store_true", default=False, help="Inhibit system & display sleep during processing.")
+    parser.add_argument("--threads", type=int, default=None, help="Number of worker threads (default: None for auto-tuned detection).")
 
     args = parser.parse_args()
+
+    if args.threads is not None:
+        ThreadOptimizer.set_thread_override(args.threads)
 
     # 1. Query Audio Tracks mode
     if args.get_audio_tracks:

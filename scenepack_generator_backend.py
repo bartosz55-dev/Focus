@@ -943,8 +943,9 @@ class SystemTelemetry:
             f"  • Storage Status   : {disk}",
             "[TOOLCHAIN & RUNTIME]",
             f"  • Python Runtime   : {sys.version.split()[0]} ({sys.executable})",
-            f"  • OpenCV Engine    : {cv2.__version__} (OpenCL: {'Active' if cv2.ocl.haveOpenCL() else 'Off'})",
+            f"  • OpenCV Engine    : {getattr(cv2, '__version__', 'N/A')} (OpenCL: {'Active' if hasattr(cv2, 'ocl') and hasattr(cv2.ocl, 'haveOpenCL') and cv2.ocl.haveOpenCL() else 'Off'})",
             f"  • FFmpeg Binary    : {PlatformManager.get_ffmpeg_safe_path('ffmpeg')}",
+            f"  • Worker Allocation: {ThreadOptimizer.get_hardware_summary()}",
         ]
         if session_config:
             lines.extend([
@@ -970,9 +971,11 @@ class SystemTelemetry:
         disk = cls.get_disk_summary(target_path or ".")
         os_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
 
+        cv_ver = getattr(cv2, '__version__', 'N/A')
         sys_lines = [
             f"[SYSTEM] Host Hardware: CPU: {cpu} | RAM: {ram} | Storage: {disk}",
-            f"[SYSTEM] Environment: OS: {os_info} | Hardware Encoders: {hw} | Python: {sys.version.split()[0]} | OpenCV: {cv2.__version__} | FFmpeg: {PlatformManager.get_ffmpeg_safe_path('ffmpeg')}"
+            f"[SYSTEM] Concurrency: {ThreadOptimizer.get_hardware_summary()}",
+            f"[SYSTEM] Environment: OS: {os_info} | Hardware Encoders: {hw} | Python: {sys.version.split()[0]} | OpenCV: {cv_ver} | FFmpeg: {PlatformManager.get_ffmpeg_safe_path('ffmpeg')}"
         ]
         for sl in sys_lines:
             logging.info(sl)
@@ -997,6 +1000,147 @@ class SystemTelemetry:
                         queue.put(("log", cl))
                     except Exception:
                         pass
+
+
+class ThreadOptimizer:
+    """
+    Intelligent hardware-aware worker thread and resource allocation engine.
+    Dynamically tunes thread pools across any machine architecture (from 2-core laptops
+    to 64-thread workstations) based on CPU cores, available RAM, GPU encoders, and workload.
+    """
+    _cached_cpu_cores: Optional[int] = None
+    _user_thread_override: Optional[int] = None
+
+    @classmethod
+    def get_cpu_cores(cls) -> int:
+        if cls._cached_cpu_cores is None:
+            count = os.cpu_count() or 4
+            cls._cached_cpu_cores = max(1, count)
+        return cls._cached_cpu_cores
+
+    @classmethod
+    def get_available_ram_gb(cls) -> float:
+        try:
+            if sys.platform == "win32":
+                import ctypes
+                class MEMORYSTATUSEX(ctypes.Structure):
+                    _fields_ = [
+                        ("dwLength", ctypes.c_ulong),
+                        ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+                    ]
+                stat = MEMORYSTATUSEX()
+                stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+                if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                    return stat.ullAvailPhys / (1024**3)
+            elif sys.platform == "darwin":
+                out = subprocess.check_output(["vm_stat"], stderr=subprocess.DEVNULL).decode(errors="ignore")
+                page_size = 4096
+                free_pages = 0
+                for line in out.splitlines():
+                    if "page size of" in line:
+                        m = re.search(r"(\d+)\s+bytes", line)
+                        if m:
+                            page_size = int(m.group(1))
+                    elif "Pages free:" in line or "Pages inactive:" in line:
+                        parts = line.split(":")
+                        if len(parts) >= 2:
+                            digits = re.sub(r"[^\d]", "", parts[1])
+                            if digits:
+                                free_pages += int(digits)
+                if free_pages > 0:
+                    return (free_pages * page_size) / (1024**3)
+            elif sys.platform.startswith("linux"):
+                if os.path.exists("/proc/meminfo"):
+                    with open("/proc/meminfo", "r") as f:
+                        for line in f:
+                            if line.startswith("MemAvailable:"):
+                                digits = re.sub(r"[^\d]", "", line)
+                                if digits:
+                                    return int(digits) / (1024 * 1024)
+        except Exception:
+            pass
+        return 8.0
+
+    @classmethod
+    def set_thread_override(cls, threads: Optional[int]) -> None:
+        """Allows user to manually override thread count, or set to None for Auto."""
+        cls._user_thread_override = max(1, threads) if threads is not None else None
+
+    @classmethod
+    def get_optimal_threads(cls, task_type: str = "cpu_scan") -> int:
+        """
+        Calculates optimal concurrency for the given task type:
+        - 'cpu_scan' / 'gallery_scan': CPU-bound computer vision (Haar cascade, HOG, face encodings)
+        - 'render_hardware': GPU hardware accelerated encoding (AMF, NVENC, QSV, VideoToolbox)
+        - 'render_software': CPU software encoding (libx264, libx265, libsvtav1, prores)
+        - 'io_bound': Audio extraction, probe passes
+        """
+        if cls._user_thread_override is not None:
+            return cls._user_thread_override
+
+        cores = cls.get_cpu_cores()
+        avail_ram = cls.get_available_ram_gb()
+
+        if task_type in ("cpu_scan", "gallery_scan"):
+            if cores <= 2:
+                workers = 1
+            elif cores <= 4:
+                workers = max(1, cores - 1)
+            elif cores <= 8:
+                workers = max(2, cores - 1)
+            elif cores <= 16:
+                workers = max(4, cores - 2)
+            elif cores <= 32:
+                workers = min(28, cores - 4)
+            else:
+                workers = min(32, cores - 8)
+
+            # RAM safety guard: throttle if system memory is low
+            if avail_ram < 1.5:
+                workers = min(2, workers)
+            elif avail_ram < 3.0:
+                workers = min(4, workers)
+
+            return max(1, workers)
+
+        elif task_type == "render_hardware":
+            if cores <= 4:
+                return max(2, cores)
+            elif cores <= 8:
+                return min(4, cores)
+            else:
+                return min(6, max(4, cores // 2))
+
+        elif task_type == "render_software":
+            if cores <= 4:
+                return max(1, cores - 1)
+            elif cores <= 8:
+                return max(2, cores // 2)
+            else:
+                return min(8, max(4, cores // 2))
+
+        elif task_type == "io_bound":
+            return min(8, max(2, cores // 2))
+
+        return max(1, min(cores, 8))
+
+    @classmethod
+    def get_hardware_summary(cls) -> str:
+        cores = cls.get_cpu_cores()
+        avail_ram = cls.get_available_ram_gb()
+        scan_threads = cls.get_optimal_threads("cpu_scan")
+        render_hw_threads = cls.get_optimal_threads("render_hardware")
+        return (
+            f"Hardware Topology: {cores} Cores | Available RAM: {avail_ram:.1f} GB | "
+            f"Auto-Tuned Workers -> Scan: {scan_threads} threads, Render (GPU): {render_hw_threads} threads"
+        )
 
 
 # Startup diagnostic telemetry into focus_debug.log
@@ -2230,6 +2374,8 @@ class ScenePackGenerator:
         self.current_lang = current_lang
         self.is_cancelled = False
         self._color_meta_cache = {}
+        self._scene_cuts_cache = {}
+        self._silences_cache = {}
 
         # Determine the directory where the script is located
         if PlatformManager.is_windows():
@@ -3306,6 +3452,20 @@ class ScenePackGenerator:
     def _detect_silences(self, video_path: Path, buffer_ms: int = 300, **kwargs) -> List[Tuple[float, float]]:
         if 'vad_buffer' in kwargs:
             buffer_ms = kwargs['vad_buffer']
+        try:
+            resolved_p = str(video_path.resolve())
+            mtime = os.path.getmtime(resolved_p)
+        except Exception:
+            resolved_p = str(video_path)
+            mtime = 0.0
+
+        cache_key = (resolved_p, int(buffer_ms), mtime)
+        if not hasattr(self, '_silences_cache'):
+            self._silences_cache = {}
+        if cache_key in self._silences_cache:
+            logging.info(f"[{video_path.name}] Loaded {len(self._silences_cache[cache_key])} cached silence interval(s).")
+            return self._silences_cache[cache_key]
+
         silences = []
         try:
             d_sec = buffer_ms / 1000.0
@@ -3324,6 +3484,7 @@ class ScenePackGenerator:
 
             for s, e in zip(starts, ends):
                 silences.append((float(s), float(e)))
+            self._silences_cache[cache_key] = silences
         except Exception as e:
             logging.error(f"VAD Silence Detection failed: {e}")
 
@@ -3544,18 +3705,14 @@ class ScenePackGenerator:
             thread_local_data = threading.local()
 
             def _process_single_frame(item):
-                target_idx, frame = item
-                if frame is None or frame.size == 0:
-                    return None
-
-                h, w = frame.shape[:2]
-                target_w = 480
-                if w > target_w:
-                    ratio = float(target_w) / float(w)
-                    new_h = int(h * ratio)
-                    small_frame = cv2.resize(frame, (target_w, new_h))
+                if len(item) == 3:
+                    target_idx, small_frame, pre_gray = item
                 else:
-                    small_frame = frame
+                    target_idx, small_frame = item
+                    pre_gray = None
+
+                if small_frame is None or getattr(small_frame, 'size', 0) == 0:
+                    return None
 
                 w_resized = small_frame.shape[1]
 
@@ -3573,7 +3730,7 @@ class ScenePackGenerator:
                     local_profile_cascade = thread_local_data.profile_cascade
 
                     if not face_locations and local_profile_cascade and hasattr(local_profile_cascade, 'empty') and not local_profile_cascade.empty():
-                        gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+                        gray = pre_gray if pre_gray is not None else cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
 
                         profiles_right = local_profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
                         for (x, y, w_box, h_box) in profiles_right:
@@ -3609,8 +3766,8 @@ class ScenePackGenerator:
                         
                     local_anime_cascade = thread_local_data.anime_cascade
                     faces = []
+                    gray = pre_gray if pre_gray is not None else cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
                     if local_anime_cascade is not None and hasattr(local_anime_cascade, 'empty') and not local_anime_cascade.empty():
-                        gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
                         detected = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.06, minNeighbors=3, minSize=(16, 16))
                         if len(detected) == 0:
                             detected = local_anime_cascade.detectMultiScale(gray, scaleFactor=1.04, minNeighbors=2, minSize=(14, 14))
@@ -3619,7 +3776,6 @@ class ScenePackGenerator:
 
                     # Robust fallback: if anime cascade missed a stylized face, profile, or heavy shadow, fall back to frontal and neural HOG
                     if len(faces) == 0:
-                        gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
                         if not hasattr(thread_local_data, 'face_cascade'):
                             if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
                                 p_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
@@ -3656,8 +3812,8 @@ class ScenePackGenerator:
 
                 return None
 
-            batch_size = 32
-            max_workers = min(8, max(2, (os.cpu_count() or 4) - 1))
+            max_workers = ThreadOptimizer.get_optimal_threads("cpu_scan")
+            batch_size = max(32, max_workers * 4)
 
             current_idx = 0
             target_idx_set = set(target_indices)
@@ -3678,7 +3834,16 @@ class ScenePackGenerator:
                         if current_idx in target_idx_set:
                             ret_ret, frame = cap.retrieve()
                             if ret_ret and frame is not None:
-                                batch_frames.append((current_idx, frame))
+                                h, w = frame.shape[:2]
+                                target_w = 360
+                                if w > target_w:
+                                    ratio = float(target_w) / float(w)
+                                    new_h = int(h * ratio)
+                                    small_frame = cv2.resize(frame, (target_w, new_h), interpolation=cv2.INTER_LINEAR)
+                                else:
+                                    small_frame = frame
+                                pre_gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY) if self.mode == "Anime" else None
+                                batch_frames.append((current_idx, small_frame, pre_gray))
                         current_idx += 1
 
                     if not batch_frames:
@@ -3872,6 +4037,22 @@ class ScenePackGenerator:
             logging.info(f"Extracting scenes in parallel via FFmpeg (codec: {codec}, format: {target_ext}, audio track: {audio_track_index})...")
             if hasattr(self, "log_queue") and self.log_queue:
                 self.log_queue.put(("log", f"Rendering with Hardware Acceleration: using video encoder '{codec}' [Container: .{target_ext}] (audio track: {audio_track_index + 1})."))
+
+            # Pre-warm metadata caches (fps, color space, letterbox crop, bitrate) before launching parallel threads
+            all_src_videos = set()
+            for it in intervals:
+                s_vid = it[0] if len(it) >= 4 and isinstance(it[0], (str, Path)) else video_path
+                if s_vid:
+                    all_src_videos.add(Path(s_vid))
+            for s_vid in all_src_videos:
+                try:
+                    self._get_video_fps(s_vid)
+                    self._probe_color_metadata(s_vid)
+                    self.get_video_bitrate(s_vid)
+                    if auto_crop_black_bars and "9:16" not in aspect_ratio:
+                        self._detect_letterbox_crop(s_vid)
+                except Exception:
+                    pass
 
             total_segments = len(intervals)
             completed_count = 0
@@ -4068,8 +4249,14 @@ class ScenePackGenerator:
                 return i, chunk_path
 
             encode_start_time = time.time()
-            max_workers = min(4, os.cpu_count() or 4)
-            encode_msg = f"[PERF] Parallel Encode: Launching {max_workers} worker threads for {total_segments} scene chunks (Encoder: {codec}, Format: .{target_ext})"
+            is_hw = any(hw in codec.lower() for hw in ("nvenc", "amf", "qsv", "videotoolbox"))
+            task_type = "render_hardware" if is_hw else "render_software"
+            max_workers = ThreadOptimizer.get_optimal_threads(task_type)
+            encode_msg = (
+                f"[PERF] Parallel Encode: Launching {max_workers} worker threads "
+                f"(Engine: {codec}, Acceleration: {'Hardware GPU' if is_hw else 'CPU Software'}) "
+                f"for {total_segments} scene chunks (Format: .{target_ext})"
+            )
             logging.info(encode_msg)
             if hasattr(self, "log_queue") and self.log_queue:
                 self.log_queue.put(("log", encode_msg))
@@ -4191,11 +4378,27 @@ class ScenePackGenerator:
             gc.collect()
 
     def _detect_scene_cuts(self, video_path: Path, threshold: float = 0.3) -> List[float]:
+        try:
+            resolved_p = str(video_path.resolve())
+            mtime = os.path.getmtime(resolved_p)
+        except Exception:
+            resolved_p = str(video_path)
+            mtime = 0.0
+
+        cache_key = (resolved_p, float(threshold), mtime)
+        if not hasattr(self, '_scene_cuts_cache'):
+            self._scene_cuts_cache = {}
+        if cache_key in self._scene_cuts_cache:
+            logging.info(f"[{video_path.name}] Loaded {len(self._scene_cuts_cache[cache_key])} cached scene cut(s).")
+            return self._scene_cuts_cache[cache_key]
+
         cuts = []
         try:
+            hwaccel_flags = self._get_hwaccel_args()
             cmd = [
                 str(self.ffmpeg_path),
-                '-hide_banner', '-loglevel', 'error',
+                '-hide_banner', '-loglevel', 'error'
+            ] + hwaccel_flags + [
                 '-i', str(video_path),
                 '-an', '-sn', '-dn',
                 '-vf', f"scale=320:-1,select='gt(scene,{threshold})',showinfo",
@@ -4205,6 +4408,7 @@ class ScenePackGenerator:
             output = result.stderr
             pts_times = re.findall(r'pts_time:\s*([\d\.]+)', output)
             cuts = [float(pt) for pt in pts_times]
+            self._scene_cuts_cache[cache_key] = cuts
         except Exception as e:
             logging.error(f"Scene cut detection failed: {e}")
         return cuts
