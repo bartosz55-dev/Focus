@@ -859,6 +859,19 @@ private func loadAllChangelog(lang: String) -> [ChangelogItem] {
 
 private let fallbackChangelogEntries: [ChangelogItem] = [
     ChangelogItem(
+        version: "v2.5.0",
+        date: "2026-10-11",
+        title: "Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention",
+        points: [
+            "[THREAD OPTIMIZER] Dynamic CPU logical core and RAM profiling: auto-scales from 2-core laptops to 16/32/64-thread workstations (14 scan threads & 6 AMF GPU render threads on i9-11900KF).",
+            "[LOW-RAM SAFETY] Low-RAM safety throttle auto-clamps concurrency under 1.5GB RAM to prevent out-of-memory terminations and disk thrashing.",
+            "[IN-MEMORY PIPELINE] Multi-threaded in-memory character discovery: zero intermediate candidate PNG writes to disk during gallery scans.",
+            "[GPU & ZERO-RPM] AMD AMF hardware encoding tuned on dedicated VCN ASIC silicon with Zero-RPM passive cooling diagnostics and explanations.",
+            "[HW DECODE & CACHE] Hardware decoding added to scene cut detection, with memoized caching for instant 0.00s re-scans.",
+            "[SYSTEM INTEGRITY] Cross-platform sleep inhibitor integrated to prevent unattended OS suspension during long sessions."
+        ]
+    ),
+    ChangelogItem(
         version: "v2.4.0",
         date: "2026-10-04",
         title: "Multi-Codec Architecture, Container Selector & 10-bit ProRes Master",

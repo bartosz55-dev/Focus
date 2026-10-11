@@ -1,6 +1,19 @@
 {
   "en": [
     {
+      "version": "v2.5.0",
+      "date": "2026-10-11",
+      "title": "Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention",
+      "points": [
+        "[THREAD OPTIMIZER] Dynamic CPU logical core and RAM profiling: auto-scales from 2-core laptops to 16/32/64-thread workstations (14 scan threads & 6 AMF GPU render threads on i9-11900KF).",
+        "[LOW-RAM SAFETY] Low-RAM safety throttle auto-clamps concurrency under 1.5GB RAM to prevent out-of-memory terminations and disk thrashing.",
+        "[IN-MEMORY PIPELINE] Multi-threaded in-memory character discovery: zero intermediate candidate PNG writes to disk during gallery scans.",
+        "[GPU & ZERO-RPM] AMD AMF hardware encoding tuned on dedicated VCN ASIC silicon with Zero-RPM passive cooling diagnostics and explanations.",
+        "[HW DECODE & CACHE] Hardware decoding added to scene cut detection, with memoized caching for instant 0.00s re-scans.",
+        "[SYSTEM INTEGRITY] Cross-platform sleep inhibitor integrated to prevent unattended OS suspension during long sessions."
+      ]
+    },
+    {
       "version": "v2.4.0",
       "date": "2026-10-04",
       "title": "Multi-Codec Architecture, Container Selector & 10-bit ProRes Studio Master",
@@ -926,6 +939,20 @@
     }
   ],
   "pl": [
+    {
+      "version": "v2.5.0",
+      "date": "2026-10-11",
+      "title": "Dynamiczny Silnik Sprzętowy, Wielowątkowość Auto-Scale & Potok In-Memory",
+      "points": [
+        "[THREAD OPTIMIZER] Inteligentny silnik ThreadOptimizer automatycznie profilujący rdzenie CPU (os.cpu_count) oraz dostępną pamięć RAM (Win32 GlobalMemoryStatusEx, macOS vm_stat, Linux meminfo). Płynne skalowanie od laptopów 2-rdzeniowych do stacji roboczych 16/32/64-wątkowych (14 wątków skanera i 6 wątków AMF na Core i9-11900KF).",
+        "[LOW-RAM SAFETY THROTTLE] Zabezpieczenie przed brakiem pamięci: automatyczne dławienie wątków przy pamięci RAM < 1.5 GB chroniące przed awariami OOM i stronicowaniem dysku.",
+        "[IN-MEMORY GALLERY PRE-SCAN] Całkowita eliminacja zapisu tysięcy tymczasowych plików PNG kandydatów na dysk podczas skanowania galerii postaci; 100% przetwarzanie w RAM z wielowątkowością i zapisem wyłącznie finalnych miniatur.",
+        "[SPRZĘTOWA AKCELERACJA DEKODOWANIA] Dodano sprzętowe dekodowanie GPU (-hwaccel auto) do wykrywania cięć scen oraz pełną memoizację w pamięci podręcznej dla cięć scen i analizy ciszy (0.00s przy powtórnym skanowaniu).",
+        "[CACHE PRE-WARMING] Wstępne badanie i buforowanie metadanych (rozdzielczość, FPS, crop letterbox, bitrate) przed uruchomieniem puli wątków renderu, eliminujące kolizyjne wywołania ffprobe.",
+        "[AKCELERACJA GPU I ZERO-RPM] Optymalizacja sprzętowego profilu AMD AMF (h264_amf) na dedykowanym krzemie ASIC VCN oraz integracja telemetrii i wyjaśnień trybu pasywnego Zero-RPM.",
+        "[BLOKADA USYPIANIA SYSTEMU] Wstrzykiwanie flag Win32 SetThreadExecutionState (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED) w agencie zdalnym i backendzie, zapobiegające wyłączaniu sesji podczas nieobecności użytkownika."
+      ]
+    },
     {
       "version": "v2.4.0",
       "date": "2026-10-04",

@@ -69,6 +69,19 @@ def disable_quickedit():
             logging.debug(f"disable_quickedit error: {e}")
 
 
+def prevent_windows_sleep():
+    """Prevents Windows from entering sleep, screen suspension, or standby while agent is active."""
+    if sys.platform == "win32":
+        try:
+            ES_CONTINUOUS = 0x80000000
+            ES_SYSTEM_REQUIRED = 0x00000001
+            ES_AWAYMODE_REQUIRED = 0x00000040
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)
+            logging.info("[SYSTEM] Windows Sleep & Standby prevention activated (SetThreadExecutionState).")
+        except Exception as e:
+            logging.debug(f"prevent_windows_sleep error: {e}")
+
+
 def minimize_console_window():
     """Minimizes the black console window to keep it out of the testing area."""
     if sys.platform == "win32":
@@ -341,6 +354,7 @@ def get_local_ip():
 
 def main():
     disable_quickedit()
+    prevent_windows_sleep()
     port = 8765
     server_address = ("0.0.0.0", port)
     httpd = ThreadingHTTPServer(server_address, RemoteAgentHandler)

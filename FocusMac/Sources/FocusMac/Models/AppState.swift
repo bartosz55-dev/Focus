@@ -108,9 +108,9 @@ public enum SettingsSubTab: String, CaseIterable, Identifiable, Sendable {
 
 @MainActor
 public final class AppState: ObservableObject {
-    public static let appVersion: String = "v2.4.0"
-    public static let appVersionShort: String = "2.4.0"
-    public static let appBuild: String = "240"
+    public static let appVersion: String = "v2.5.0"
+    public static let appVersionShort: String = "2.5.0"
+    public static let appBuild: String = "250"
 
     // Media selections
     @Published public var selectedVideoURLs: [URL] = []
@@ -266,7 +266,7 @@ public final class AppState: ObservableObject {
             }
         }
         if self.logLines.isEmpty {
-            self.appendLog("[INFO] Focus Studio v2.4.0 Diagnostic Engine ready. Awaiting scan or render events.")
+            self.appendLog("[INFO] Focus Studio v2.5.0 Diagnostic Engine ready. Awaiting scan or render events.")
         }
     }
 
@@ -731,7 +731,7 @@ public final class AppState: ObservableObject {
 
         var report = """
         ================================================================================
-        FOCUS AI STUDIO v2.4.0 — FULL SYSTEM & DIAGNOSTIC REPORT
+        FOCUS AI STUDIO v2.5.0 — FULL SYSTEM & DIAGNOSTIC REPORT
         Generated: \(dateStr)
         ================================================================================
 

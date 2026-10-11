@@ -305,7 +305,7 @@ class PreferencesDialog(QDialog):
         # Header
         header_layout = QVBoxLayout()
         header_layout.setSpacing(4)
-        self.lbl_title = QLabel("Focus Preferences")
+        self.lbl_title = QLabel(f"Focus Preferences ({APP_VERSION})")
         self.lbl_title.setFont(get_system_font(18, QFont.Weight.Bold))
         header_layout.addWidget(self.lbl_title)
         
@@ -492,6 +492,34 @@ class PreferencesDialog(QDialog):
         hw_layout.addWidget(lbl_zero_rpm)
 
         self.settings_layout.addWidget(card_hw)
+
+        # --- Card 6: Application Version & Release Information ---
+        card_ver = ModernCard(self)
+        ver_layout = QVBoxLayout(card_ver)
+        ver_layout.setContentsMargins(16, 14, 16, 14)
+        ver_layout.setSpacing(8)
+
+        lbl_ver_title = QLabel(f"ℹ️ Focus AI Studio {APP_VERSION}")
+        lbl_ver_title.setFont(get_system_font(11, QFont.Weight.Bold))
+        ver_layout.addWidget(lbl_ver_title)
+
+        ver_desc_text = (
+            "Wydanie v2.5.0 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
+            if cur_lang == "Polski" else
+            "Release v2.5.0 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
+        )
+        lbl_ver_desc = QLabel(ver_desc_text)
+        lbl_ver_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        ver_layout.addWidget(lbl_ver_desc)
+
+        btn_view_changelog = QPushButton("📜 " + ("Zobacz pełną historię zmian (Changelog)" if cur_lang == "Polski" else "View Full Changelog & Release Notes"))
+        btn_view_changelog.setCursor(Qt.PointingHandCursor)
+        btn_view_changelog.setStyleSheet("color: #38BDF8; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 6px 12px; font-weight: bold; font-size: 11px;")
+        if self.main_app and hasattr(self.main_app, "open_changelog"):
+            btn_view_changelog.clicked.connect(lambda: (self.accept(), self.main_app.open_changelog()))
+        ver_layout.addWidget(btn_view_changelog)
+
+        self.settings_layout.addWidget(card_ver)
 
         # Bottom Done Button
         btn_box = QHBoxLayout()
@@ -784,11 +812,16 @@ class FocusApp(QMainWindow):
 
         # Logo & App Title (Clean, professional typography without emojis)
         logo_box = QHBoxLayout()
-        logo_box.setSpacing(8)
+        logo_box.setSpacing(6)
         self.lbl_logo = QLabel("FOCUS")
         self.lbl_logo.setObjectName("LogoText")
         self.lbl_logo.setFont(get_system_font(20, QFont.Weight.Bold))
         logo_box.addWidget(self.lbl_logo)
+
+        self.lbl_ver_badge = QLabel(APP_VERSION)
+        self.lbl_ver_badge.setFont(get_system_font(10, QFont.Weight.Bold))
+        self.lbl_ver_badge.setStyleSheet("color: #38BDF8; background-color: rgba(56, 189, 248, 0.12); border-radius: 4px; padding: 2px 6px;")
+        logo_box.addWidget(self.lbl_ver_badge)
         logo_box.addStretch()
         sidebar_layout.addLayout(logo_box)
         sidebar_layout.addSpacing(14)
@@ -835,6 +868,11 @@ class FocusApp(QMainWindow):
         self.btn_settings.setObjectName("SidebarSettingsBtn")
         self.btn_settings.clicked.connect(self.open_preferences)
         sidebar_layout.addWidget(self.btn_settings)
+
+        self.lbl_sidebar_ver = QLabel(f"Focus Studio {APP_VERSION}")
+        self.lbl_sidebar_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_sidebar_ver.setStyleSheet("color: #64748B; font-size: 11px; margin-top: 6px;")
+        sidebar_layout.addWidget(self.lbl_sidebar_ver)
 
         main_layout.addWidget(self.sidebar)
 

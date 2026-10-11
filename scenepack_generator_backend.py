@@ -303,7 +303,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.4.0"
+APP_VERSION = "v2.5.0"
 STUDIO_AUDIO_BITRATE = "320k"
 
 
@@ -1668,6 +1668,14 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v2.5.0 (Dynamiczny Silnik Sprzętowy, Wielowątkowość Auto-Scale & Potok In-Memory):\n"
+            "  - [THREAD OPTIMIZER] Inteligentny silnik ThreadOptimizer automatycznie profilujący rdzenie CPU (os.cpu_count) oraz dostępną pamięć RAM (Win32 GlobalMemoryStatusEx, macOS vm_stat, Linux meminfo). Płynne skalowanie od laptopów 2-rdzeniowych do stacji roboczych 16/32/64-wątkowych (14 wątków skanera i 6 wątków AMF na Core i9-11900KF).\n"
+            "  - [LOW-RAM SAFETY THROTTLE] Zabezpieczenie przed brakiem pamięci: automatyczne dławienie wątków przy pamięci RAM < 1.5 GB chroniące przed awariami OOM i stronicowaniem dysku.\n"
+            "  - [IN-MEMORY GALLERY PRE-SCAN] Całkowita eliminacja zapisu tysięcy tymczasowych plików PNG kandydatów na dysk podczas skanowania galerii postaci; 100% przetwarzanie w RAM z wielowątkowością i zapisem wyłącznie finalnych miniatur.\n"
+            "  - [SPRZĘTOWA AKCELERACJA DEKODOWANIA] Dodano sprzętowe dekodowanie GPU (-hwaccel auto) do wykrywania cięć scen oraz pełną memoizację w pamięci podręcznej dla cięć scen i analizy ciszy (0.00s przy powtórnym skanowaniu).\n"
+            "  - [CACHE PRE-WARMING] Wstępne badanie i buforowanie metadanych (rozdzielczość, FPS, crop letterbox, bitrate) przed uruchomieniem puli wątków renderu, eliminujące kolizyjne wywołania ffprobe.\n"
+            "  - [AKCELERACJA GPU I ZERO-RPM] Optymalizacja sprzętowego profilu AMD AMF (h264_amf) na dedykowanym krzemie ASIC VCN oraz integracja telemetrii i wyjaśnień trybu pasywnego Zero-RPM.\n"
+            "  - [BLOKADA USYPIANIA SYSTEMU] Wstrzykiwanie flag Win32 SetThreadExecutionState (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED) w agencie zdalnym i backendzie, zapobiegające wyłączaniu sesji podczas nieobecności użytkownika.\n\n"
             "• v2.4.0 (Wielokodekowa Architektura, Wybór Kontenera & 10-bitowy Master Apple ProRes):\n"
             "  - [KODEKI WIDEO] Dodano zaawansowany wybór kodeka: Auto (Sprzętowy H.264), Apple HEVC / H.265, AV1 Nowej Generacji oraz Apple ProRes Master.\n"
             "  - [PRORES 10-BIT] Pełna obsługa Apple ProRes 422 z natywną 10-bitową głębią kolorów (yuv422p10le) dla profesjonalnego montażu filmowego.\n"
@@ -1958,6 +1966,14 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v2.5.0 (Dynamic Hardware Engine, Auto-Scale Multi-Threading & In-Memory Pipeline):\n"
+            "  - [THREAD OPTIMIZER] Intelligent ThreadOptimizer engine dynamically profiling CPU logical cores (os.cpu_count) and physical available RAM (Win32 GlobalMemoryStatusEx, macOS vm_stat, Linux meminfo). Seamlessly auto-scales across devices from 2-core laptops to 16/32/64-core workstations (14 scan workers and 6 AMF encode workers on Core i9-11900KF).\n"
+            "  - [LOW-RAM SAFETY THROTTLE] Out-of-memory safety guard automatically clamping thread pools when available RAM < 1.5 GB to prevent thrashing and OOM terminations.\n"
+            "  - [IN-MEMORY GALLERY PRE-SCAN] Completely eliminated disk I/O bottlenecks during character gallery discovery: candidate crops are analyzed 100% in RAM across parallel worker threads, persisting only the final winning profile cards (up to 24 miniatures).\n"
+            "  - [HARDWARE DECODE ACCELERATION] Added hardware-accelerated decoding (-hwaccel auto) to scene cut detection and memoized in-memory caching for scene cuts and audio silences (0.00s re-scan execution).\n"
+            "  - [RENDER CACHE PRE-WARMING] Pre-probes and caches video stream metadata (FPS, dimensions, letterbox crop, source bitrate) before spawning parallel render workers, eliminating hundreds of subprocess collisions.\n"
+            "  - [GPU ASIC ACCELERATION & ZERO-RPM] Tuned AMD AMF (h264_amf) encoder utilizing dedicated VCN ASIC silicon; added telemetry and clear explanations for GPU Zero-RPM fan behavior.\n"
+            "  - [SYSTEM SLEEP INHIBITOR] Injected Win32 SetThreadExecutionState (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED) into both remote agent and backend to prevent OS sleep during unattended runs.\n\n"
             "• v2.4.0 (Multi-Codec Architecture, Container Selector & 10-bit ProRes Master):\n"
             "  - [VIDEO CODECS] Added multi-codec selector: Auto (Fastest Hardware H.264), Apple HEVC / H.265, AV1 Next-Gen, and Apple ProRes Master.\n"
             "  - [PRORES 10-BIT] Full support for Apple ProRes 422 with native 10-bit color depth (yuv422p10le) for broadcast and Hollywood editing workflows.\n"
