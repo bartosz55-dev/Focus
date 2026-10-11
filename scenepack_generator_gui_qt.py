@@ -446,6 +446,42 @@ class PreferencesDialog(QDialog):
 
         self.settings_layout.addWidget(card_audio)
 
+        # --- Card 5: Hardware Acceleration & GPU Diagnostics ---
+        card_hw = ModernCard(self)
+        hw_layout = QVBoxLayout(card_hw)
+        hw_layout.setContentsMargins(16, 14, 16, 14)
+        hw_layout.setSpacing(8)
+
+        lbl_hw_title = QLabel("⚡ Hardware Acceleration & GPU" if cur_lang != "Polski" else "⚡ Akceleracja Sprzętowa & GPU")
+        lbl_hw_title.setFont(get_system_font(11, QFont.Weight.Bold))
+        hw_layout.addWidget(lbl_hw_title)
+
+        hw_encoders = SystemTelemetry.get_hardware_encoders()
+        cpu_name = SystemTelemetry.get_cpu_brand()
+
+        lbl_cpu = QLabel(f"• CPU: {cpu_name}")
+        lbl_cpu.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        hw_layout.addWidget(lbl_cpu)
+
+        has_gpu = hw_encoders and "None" not in hw_encoders
+        if cur_lang == "Polski":
+            gpu_text = f"• Aktywne enkodery GPU: {hw_encoders}" if has_gpu else "• Enkodery GPU: Brak (Używanie procesora CPU)"
+            zero_rpm_text = "ℹ️ Uwaga: Kodowanie wideo odbywa się w dedykowanym koprocesorze ASIC (NVENC / AMD AMF VCN), pobierając tylko ~10-15W. W nowoczesnych kartach wentylatory pozostają wyłączone (0 RPM) poniżej ~55°C."
+        else:
+            gpu_text = f"• Active GPU Encoders: {hw_encoders}" if has_gpu else "• GPU Encoders: None (Using CPU software encoding)"
+            zero_rpm_text = "ℹ️ Note: GPU video encoding runs on dedicated hardware ASICs (NVENC / AMD AMF VCN), consuming very low power (~10-15W). Modern GPU fans stay stopped (0 RPM) under ~55°C."
+
+        lbl_gpu = QLabel(gpu_text)
+        lbl_gpu.setStyleSheet("color: #10B981; font-weight: bold; font-size: 11px;" if has_gpu else "color: #F59E0B; font-size: 11px;")
+        hw_layout.addWidget(lbl_gpu)
+
+        lbl_zero_rpm = QLabel(zero_rpm_text)
+        lbl_zero_rpm.setWordWrap(True)
+        lbl_zero_rpm.setStyleSheet("color: #64748B; font-size: 10px; font-style: italic; line-height: 1.3;")
+        hw_layout.addWidget(lbl_zero_rpm)
+
+        self.settings_layout.addWidget(card_hw)
+
         # Bottom Done Button
         btn_box = QHBoxLayout()
         btn_box.addStretch()
@@ -3274,11 +3310,25 @@ class FocusApp(QMainWindow):
         self.btn_render.setEnabled(True)
         self.btn_render.setText(get_translation(self.current_lang, "btn_render"))
         self.progress_bar.setValue(1000)
-        self.lbl_eta.setText(f"Rendering complete! Saved to: {Path(out_path).name}")
+        hw_enc = SystemTelemetry.get_hardware_encoders()
+        has_gpu = hw_enc and "None" not in hw_enc
+        gpu_badge = (
+            f"\n\n⚡ Akceleracja Sprzętowa GPU: Aktywna ({hw_enc})"
+            if (self.current_lang == "Polski" and has_gpu)
+            else (f"\n\n⚡ GPU Hardware Acceleration: Active ({hw_enc})" if has_gpu else "")
+        )
+        gpu_eta_suffix = f" (GPU: {hw_enc})" if has_gpu else ""
+        self.lbl_eta.setText(f"Rendering complete! Saved to: {Path(out_path).name}{gpu_eta_suffix}")
         if self.settings.get("play_sound", True):
             QApplication.beep()
         if not self.is_batch_running:
-            QMessageBox.information(self, "Success", f"Scenepack successfully rendered and saved to:\n{out_path}")
+            title = "Sukces" if self.current_lang == "Polski" else "Success"
+            msg = (
+                f"Scenepack został pomyślnie wyrenderowany i zapisany do:\n{out_path}{gpu_badge}"
+                if self.current_lang == "Polski"
+                else f"Scenepack successfully rendered and saved to:\n{out_path}{gpu_badge}"
+            )
+            QMessageBox.information(self, title, msg)
         else:
             if hasattr(self, 'batch_rendered_outputs'):
                 self.batch_rendered_outputs.append(out_path)

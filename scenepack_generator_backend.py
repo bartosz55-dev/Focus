@@ -3657,7 +3657,7 @@ class ScenePackGenerator:
                 return None
 
             batch_size = 32
-            max_workers = min(4, max(2, (os.cpu_count() or 4) - 2))
+            max_workers = min(8, max(2, (os.cpu_count() or 4) - 1))
 
             current_idx = 0
             target_idx_set = set(target_indices)
@@ -4003,6 +4003,10 @@ class ScenePackGenerator:
                         rate_control_args = ['-cq', crf_val, '-b:v', b_val, '-maxrate', maxrate_val, '-bufsize', buf_val]
                     else:
                         rate_control_args = ['-b:v', b_val, '-maxrate', maxrate_val, '-bufsize', buf_val]
+                elif 'amf' in codec:
+                    # AMD Advanced Media Framework (VCN ASIC encoder)
+                    amf_quality = "speed" if ("draft" in quality_str or "low" in quality_str) else "quality"
+                    rate_control_args = ['-quality', amf_quality, '-b:v', b_val, '-maxrate', maxrate_val, '-bufsize', buf_val]
                 else:
                     rate_control_args = ['-b:v', b_val, '-maxrate', maxrate_val, '-bufsize', buf_val]
                 is_multi_audio = (audio_track_index in (-1, "-1", "all", "multi", "both"))
