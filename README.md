@@ -1,161 +1,132 @@
-# Focus — AI-Powered Scenepack Generator & Video Studio (v2.3.0)
+# Focus
 
-[![Version](https://img.shields.io/badge/version-v2.3.0-blueviolet.svg?style=for-the-badge)](https://github.com/Bartosz5500/Focus)
-[![Changelog](https://img.shields.io/badge/changelog-134%20releases-success.svg?style=for-the-badge)](CHANGELOG.md)
-[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![GUI Framework](https://img.shields.io/badge/GUI-SwiftUI%206%20%2F%20Qt%206-emerald.svg?style=for-the-badge&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%2011-orange.svg?style=for-the-badge)]()
+Focus is a desktop application for video editors and clippers that finds character appearances in movies, shows, or anime and cuts them into ready-to-edit scenepacks.
 
----
+It uses face recognition and anime feature matching to locate a chosen character, trims the surrounding footage with configurable margins, snaps cuts to scene boundaries, and exports the result as a single scenepack video, individual scene clips, or an XML timeline for Premiere Pro, DaVinci Resolve, and Final Cut Pro.
 
-## 🎬 About Focus
+Focus runs on macOS (native SwiftUI app or PySide6 Qt GUI) and Windows (PySide6 Qt GUI).
 
-**Focus** is a high-performance, AI-driven desktop video processing studio engineered for content creators, video editors, and anime/film clippers. It automates the tedious process of finding, tracking, cropping, and extracting character-specific scenes from full-length movies, anime series, or long-form videos—converting raw footage into high-quality, ready-to-edit scenepacks in minutes.
+## Features
 
-By combining **Multi-Reference Face Recognition (Real Faces & Anime)**, **Zero-Lock Color & Perceptual dHash Feature Matching**, **Letterbox Auto-Cropping**, **Premiere/DaVinci FCPXML Timeline Export**, **Intelligent Intro/Outro Removal**, **Auto Match Source Bitrate Engine**, **Voice Activity Detection (VAD)**, **Camera Shot Cut Snapping**, and multi-core **FFmpeg parallel rendering**, Focus scans entire video seasons and extracts strictly the exact moments that matter.
+### Character detection and matching
+* Real faces mode uses 68-point facial landmarks and deep embeddings to track human faces across varying angles and light.
+* Anime mode matches character art using OpenCV cascades, multi-region HSV color histograms, and perceptual dHash comparisons without GPU lock contention.
+* Multi-reference matching lets you pick several photos of the same character (different angles, lighting, or expressions) so the scanner matches more scenes accurately.
+* Character discovery gallery scans a video, groups unique faces into clusters, and displays them as cards so you can pick who to clip without providing your own image.
 
----
+### Editing and timeline integration
+* Timeline XML export generates an Apple FCPXML (version 4) file alongside the video. You can drag the XML directly into Adobe Premiere Pro, DaVinci Resolve, or Final Cut Pro to load all cut points without re-encoding.
+* Auto-crop letterbox samples video frames at multiple intervals, detects black bars (such as 2.39:1 letterbox or 4:3 pillarbox), and crops the output cleanly while protecting dark nighttime scenes.
+* Scene cut snapping aligns clip start and end points with camera shot changes detected via scene analysis.
+* Voice activity detection (VAD) keeps dialogue intact by extending clip margins up to 2.5 seconds when characters are speaking, avoiding cut-off words.
+* Intro and outro skipping skips opening and ending credits using MKV/MP4 chapter markers or set duration offsets.
+* 9:16 vertical crop reformats horizontal video for vertical platforms, tracking the subject or filling side borders with blurred video.
+* File naming follows scenepack archive conventions (`Character - Title (Year) Season - [Resolution Source] - Focus.mp4`).
 
-## ⚡ Key Features (v2.3.0)
+### Performance and video pipeline
+* Dynamic thread scaling profiles your CPU core count and available RAM on startup. On a 16-thread workstation, it runs 14 frame-scan threads and 6 GPU render workers; on laptops with 2 or 4 cores, it scales down to keep the system responsive. Concurrency clamps automatically if available RAM drops below 1.5 GB.
+* In-memory gallery scanning keeps intermediate candidate face crops in RAM instead of writing thousands of temporary PNG files to disk, persisting only the final profile cards.
+* Codec support covers Auto (fastest hardware encoder), H.264, HEVC (H.265), AV1, and 10-bit Apple ProRes 422 (`yuv422p10le`) with automatic container switching between MP4, MKV, and MOV.
+* Hardware acceleration detects and uses Apple VideoToolbox on macOS, NVIDIA NVENC, Intel QuickSync, or AMD AMF on Windows.
+* Target-volume scratch storage places temporary render chunks directly on the destination drive rather than filling up the internal boot disk.
+* Checkpoint loader lets you load previously saved scan results (`last_scan_checkpoint.json`) and render or adjust them without re-scanning the video.
+* Sleep prevention keeps macOS and Windows awake during long batch scans and encoding runs.
 
-* **👥 Multi-Reference Face Photos & Recall Boost:** Select and combine multiple reference photos for a character (different angles, profile shots, expressions, lighting conditions) to dramatically enhance detection recall across dynamic footage.
-* **🎞️ Auto-Crop Letterbox (Black Bars Detection & Removal):** Multi-point frame sampling engine (20%, 40%, 60%, 80%) automatically detects cinematic 2.39:1 / 2.35:1 letterbox or 4:3 pillarbox black bars and generates clean cropped footage with night-scene safety guards and even dimensions.
-* **⏱️ Premiere Pro & DaVinci Resolve Timeline Export (`.xml` FCPXML):** Instantly outputs an industry-standard Apple Final Cut Pro XML v4 timeline alongside the scenepack. Editors can drag-and-drop cuts directly into their Premiere Pro or DaVinci Resolve timeline without waiting for video re-encoding!
-* **📋 Technical Specifications & Compatibility Report (`{stem}_info.txt`):** Auto-generates an editor specification sheet verifying constant frame rate (CFR 24.000 fps), Studio 320 kbps audio, Rec.709 color matrix, and zero-drift compatibility with Adobe After Effects CC and CapCut.
-* **🏷️ 411 / Scene Standard File Naming:** Automatically names exports according to community-accepted scenepack standards (`{Character} - {Show Title} ({Year}) {Season} - [{Resolution} {Source}] - Focus.mp4`).
-* **📁 Discrete Scene Clips Folder Export:** Export individual scene cuts as standalone faststart clips in `{stem}_clips/Scene_001.mp4` alongside the master consolidated scenepack.
-* **☕ Anti-Sleep Power Lock:** Automatically inhibits OS sleep, display sleep, and screen turn-off on macOS (`caffeinate`) and Windows (`SetThreadExecutionState`) while active scans or render jobs run.
-* **🎵 Multi-Audio Stream Preservation:** New option to keep all audio channels (`-map 0:a?` / `-map 0`), letting video editors choose or mix Japanese, English dub, and commentary tracks in Premiere / After Effects / DaVinci Resolve.
-* **⚡ Quick Presets & Custom Preset Manager:** Save and load personalized tuning profiles stored in `~/.focus_presets.json` with quick access directly from the generator header.
-* **🎨 Custom Accent Color Picker & Modern Scrollbars:** Pick any custom `#HEX` accent color via native color picker. Features Apple-style floating 8px minimalist scrollbars with transparent tracks and responsive hover glow.
-* **⏩ Auto-Render & Bulk Review Controls:** Automatically render all detected clips without waiting, plus convenient **Select All** and **Deselect All** buttons in the review checklist.
-* **🎯 Reorganized Scene & Detection Tuning Hub:** Clean 4-column layout categorized into *Timing & Scene Margins*, *Scan Speed & Framing*, *Dialogue & Audio Protection*, and *Intro/Outro Automation* with explicit unit badges (`s`, `frames`, `ms`).
-* **💎 Unified Obsidian Glass Studio Icons:** Matching high-resolution macOS HIG dark squircle viewfinder icons across Windows (`.ico`), macOS (`.icns`), and Linux (`.png`).
-* **⚙️ Dedicated Modern Preferences & Settings Window:** Uncluttered studio sidebar with a dedicated Preferences modal for Appearance Mode (Dark, Light, System Auto), 8 circular accent color swatches + custom picker, dynamic language selection, and audio notification controls.
-* **☀️ Full Light & Dark Mode Engine:** Complete high-contrast design system with crisp typography, elevated cards, and responsive palette switching across all dialogs and cards.
-* **🎬 Multi-Season & Multi-Title Chronological Media Ordering (`S01E01 ➔ S01E12 ➔ S02E01 ➔ S02E12`):** Hierarchical metadata parser accurately detects and sorts files by Season and Episode first, even when seasons have different title conventions.
-* **✨ Intelligent Auto-Matching Source Bitrate:** Automatically inspects input stream bitrates using `ffprobe` to match source quality (+15% headroom). Keeps scenepack file sizes perfectly proportional without quality loss or file bloating.
-* **💎 Crystal Clear / Master Quality Video Rendering Engine:** Hardware-accelerated Apple Silicon VideoToolbox, NVENC, and QSV encoders configured with adaptive quality factors (`-q:v 72-85` / `CRF 14-17`) and high bitrate headroom (20M-35M). Eliminates all macroblocking and pixelation.
-* **🚀 PySide6 / Qt 6 Modern Studio Interface:** Built with a responsive, high-DPI studio layout with fluid animations, native system typography (`.AppleSystemUIFont` on macOS, `Segoe UI` on Windows), and zero visual lag.
-* **🛡️ Intelligent Intro & Outro Removal (Skip Opening/Ending):** Excludes opening themes and credits from scenepacks via automated MKV/MP4 chapter marker inspection with fallback to standard anime OP windows or custom durations.
-* **⚡ Zero-Lock Anime Recognition Engine (4,000x Faster):** Custom high-speed facial matching utilizing OpenCV cascades, multi-region hair/face NumPy HSV color histograms, and perceptual dHash correlation.
-* **🎯 Real Faces Deep Learning Detector:** Powered by 68-point facial landmark and deep CNN embeddings for human facial recognition in films and series.
-* **🎙️ Bounded Lip-Sync & Sentence Protection (VAD):** Voice Activity Detection (VAD) with maximum 2.5s sentence bounds prevents dialog from being chopped mid-word while completely preventing multi-minute scene bloating.
-* **📱 9:16 Vertical Cropping & Blurred Backgrounds:** Built for TikTok and YouTube Shorts. Automatically tracks subjects in vertical 9:16 aspect ratio or fills background borders with blurred video.
-* **✨ Character Discovery Gallery:** Automatically pre-scans and clusters unique characters across video files. Click any card to track that character.
-* **🎨 8 Studio Accent Themes & 8 Languages:** Fully localized in **Polski, English, Deutsch, Español, Français, Русский, Українська, 日本語** with custom accent theming.
+## System requirements
 
----
-
-## 🖥️ System & Hardware Requirements
-
-Focus is optimized to run smoothly across a wide range of hardware, from laptops to multi-core workstations.
-
-| Component | Minimum Requirements | Recommended Requirements |
+| Component | Minimum | Recommended |
 | :--- | :--- | :--- |
-| **OS** | Windows 10/11 (64-bit) or macOS 12+ (Monterey) | Windows 11 (64-bit) or macOS 14+ (Sonoma / Sequoia) |
-| **CPU** | Quad-Core CPU (Intel Core i5 / AMD Ryzen 5) | 8+ Core CPU (Apple Silicon M1/M2/M3/M4, Intel Core i7/i9, AMD Ryzen 7/9) |
-| **RAM** | 8 GB RAM | 16 GB – 32 GB RAM |
-| **GPU Acceleration** | Integrated Graphics (Intel HD/UHD, AMD Radeon Vega) | Dedicated GPU: NVIDIA RTX/GTX (NVENC), AMD Radeon (AMF), or Apple Silicon VideoToolbox |
-| **Storage** | 5 GB available SSD storage | High-speed NVMe SSD (for 4K video rendering) |
-| **Dependencies** | Python 3.10+, FFmpeg | Pre-configured via double-click launcher (`Focus.command` / `Uruchom_Focus_Windows.bat`) |
+| OS | Windows 10 (64-bit) or macOS 12 Monterey | Windows 11 (64-bit) or macOS 14 Sonoma / macOS 15 Sequoia |
+| CPU | Quad-core Intel or AMD processor | 8+ cores (Apple Silicon M-series, Intel Core i7/i9, AMD Ryzen 7/9) |
+| RAM | 8 GB | 16 GB to 32 GB |
+| GPU | Integrated graphics | Dedicated GPU (NVIDIA RTX/GTX, AMD Radeon, or Apple Silicon) |
+| Storage | 5 GB available disk space | NVMe SSD for high-bitrate 4K footage |
+| Software | Python 3.10+, FFmpeg | Bundled or set up automatically by launcher scripts |
 
-### 🚀 Hardware Acceleration Support
-Focus automatically detects and utilizes hardware encoders available on your system:
-* **Apple Silicon / macOS:** Hardware encoding via **Apple VideoToolbox** (`h264_videotoolbox`, `hevc_videotoolbox`).
-* **NVIDIA GPUs:** Hardware-accelerated decoding & encoding via **NVIDIA NVENC** (`h264_nvenc`, `hevc_nvenc`).
-* **Intel CPUs/GPUs:** Hardware encoding via **Intel QuickSync (QSV)** (`h264_qsv`).
-* **AMD GPUs:** Hardware encoding via **AMD AMF** (`h264_amf`, `h264_mf`).
+## Hardware encoders supported
 
----
+Focus checks your system at startup and enables the matching hardware encoder:
+* macOS: Apple VideoToolbox (`h264_videotoolbox`, `hevc_videotoolbox`, `prores_videotoolbox`)
+* Windows with NVIDIA: NVENC (`h264_nvenc`, `hevc_nvenc`, `av1_nvenc`)
+* Windows with AMD: AMF (`h264_amf`, `hevc_amf`, `av1_amf`)
+* Windows with Intel: QuickSync (`h264_qsv`, `hevc_qsv`, `av1_qsv`)
+* Fallback: multi-threaded CPU software encoding (`libx264`, `libx265`, `libsvtav1`, `prores_ks`)
 
-## 📥 Pre-Built Downloads & Releases
+## Installation and setup
 
-Pre-built binaries and releases are published on GitHub Releases:
+### Quick start with launch scripts
 
-👉 **[Download Latest Releases (Windows & macOS)](https://github.com/Bartosz5500/Focus/releases)**
+* macOS: double-click `Uruchom_Focus_Mac.command`. The script sets up the local virtual environment and starts the application.
+* Windows: double-click `Uruchom_Focus_Windows.bat`. The script checks Python dependencies, verifies FFmpeg (installing it via winget if missing), and opens the app.
 
-* **Windows (`Focus.exe` / `Uruchom_Focus_Windows.bat`):** Standalone executable with pre-configured PySide6 Qt 6 and OpenCV dependencies.
-* **macOS (`Focus.app` / `Focus.command`):** Native macOS application bundle optimized for Apple Silicon (M1/M2/M3/M4) and Intel Macs.
+### Manual setup via terminal
 
----
-
-## 🚀 Installation & Local Development
-
-We provide automated zero-terminal launchers:
-
-### Automatic Launchers
-* **macOS:** Double-click `Uruchom_Focus_Mac.command` (or `Focus.command` on Desktop). It automatically configures the Python virtual environment and launches Focus Studio.
-* **Windows:** Double-click `Uruchom_Focus_Windows.bat` in the project root. It verifies dependencies, checks FFmpeg (installing via winget if missing), and opens Focus Studio.
-
-### Manual Setup (CLI / Terminal)
 ```bash
-# 1. Clone the repository
-git clone https://github.com/Bartosz5500/Focus.git
+# Clone the repository
+git clone https://github.com/bartosz55-dev/Focus.git
 cd Focus
 
-# 2. Create and activate virtual environment
+# Create and activate a virtual environment
 python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# 3. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 4. Launch the application
+# Run the Qt application
 python3 scenepack_generator_gui_qt.py
 ```
 
-### Running Tests
+### Command line interface (CLI)
+
+Focus can run without a graphical interface:
+
+```bash
+# Scan a video for a character and export a scenepack
+python3 scenepack_generator.py -v episode1.mkv -i character_ref.jpg -o output_scenepack.mp4
+
+# Run in anime mode with letterbox cropping and XML timeline export
+python3 scenepack_generator.py -v anime_ep01.mp4 -i character.png --mode Anime --export-xml
+
+# Specify custom thread count and video codec
+python3 scenepack_generator.py -v input.mp4 -i ref.png --video-codec hevc --threads 12
+```
+
+### Running unit tests
+
 ```bash
 python3 -m unittest discover -s tests
 ```
 
----
+## Building standalone applications
 
-## 🔨 Building Standalone Executables (Dual Ecosystem)
-
-Focus features a dual-ecosystem architecture delivering first-class experiences across operating systems:
-
-### 🍎 macOS (Native Swift 6 / SwiftUI Studio)
-The native macOS app (`Focus.app`) is built in Swift 6 / SwiftUI targeting Apple Silicon and Intel, featuring ultra-fast startup (<100ms), low memory footprint (~50MB), native AVKit video preview, and Apple HIG design:
+### macOS native app (Swift 6 / SwiftUI)
 ```bash
 ./FocusMac/build_mac.sh
 ```
-Outputs the signed `Focus.app` bundle to `dist_mac/Focus.app`.
+Builds the standalone `Focus.app` bundle in `dist_mac/Focus.app`.
 
-### 🪟 Windows & Linux (PySide6 / Qt 6 Desktop Studio)
-The Windows / multi-platform app is built using PySide6 and PyInstaller:
+### Windows and cross-platform desktop app (PySide6 / PyInstaller)
 ```bash
 python3 build.py
 ```
-Outputs compiled binaries to the `dist/` directory.
+Outputs the compiled binary to the `dist/` directory.
 
----
+## Changelog
 
-## 📜 Changelog & Version History
+See [CHANGELOG.md](CHANGELOG.md) for the complete version history and release notes across all releases.
 
-Focus has evolved through 132 iterations from initial prototypes to a production dual-ecosystem studio. See the full version history and release notes:
+## License
 
-👉 **[Complete Project Changelog (v0.01 – v2.0.0)](CHANGELOG.md)**
+Focus is licensed under the Focus Source-Available Non-Commercial License.
 
----
+* Free for creators: you may download, inspect, modify, and use Focus for personal editing, creative projects, research, and educational purposes.
+* Commercial resale prohibited: you may not sell or redistribute Focus (in source or binary form) for money or subscriptions.
+* No rebranding: you may not repackage or rebrand the software for sale on digital storefronts (such as Gumroad, Patreon, or Discord).
+* No paid SaaS: you may not host or run Focus as a paid cloud service or commercial processing backend.
 
-## 📜 License & Legal Terms
+See the [LICENSE](LICENSE) file for the full license terms.
 
-Focus is licensed under the **Focus Source-Available Non-Commercial License**.
+## Disclaimer
 
-* ✅ **100% Free for Creators:** You are free to download, inspect, modify, and use Focus for personal editing, creative projects, research, and educational purposes.
-* ❌ **Commercial Resale Prohibited:** You may **NOT** sell, resell, or distribute Focus (in source code or compiled binary form) for money, subscriptions, or paid downloads.
-* ❌ **No Rebranding:** You may **NOT** repackage or rebrand the software to sell it on digital storefronts (such as Gumroad, Patreon, Discord, or web shops).
-* ❌ **No Paid SaaS:** You may **NOT** host or operate Focus as a paid cloud service or commercial processing backend.
-
-For the full legal terms, see the official [LICENSE](LICENSE) file.
-
----
-
-## ⚖️ Disclaimer of Liability
-
-Focus is a local video processing automation utility. The developers and maintainers **DO NOT** host, distribute, scrape, or promote copyrighted media content. Users are solely and independently responsible for ensuring they possess valid legal rights or fair-use permissions for any video material processed through this software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Focus is a local video processing automation utility. The developers do not host, distribute, or provide copyrighted media. Users are responsible for ensuring they have the legal right or permission to process their chosen video files.
