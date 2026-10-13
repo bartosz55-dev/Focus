@@ -859,7 +859,7 @@ private func loadAllChangelog(lang: String) -> [ChangelogItem] {
 
 private let fallbackChangelogEntries: [ChangelogItem] = [
     ChangelogItem(
-        version: "v2.5.0",
+        version: "v2.4.1",
         date: "2026-10-11",
         title: "Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention",
         points: [

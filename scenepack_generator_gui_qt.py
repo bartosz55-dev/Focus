@@ -504,9 +504,9 @@ class PreferencesDialog(QDialog):
         ver_layout.addWidget(lbl_ver_title)
 
         ver_desc_text = (
-            "Wydanie v2.5.0 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
+            "Wydanie v2.4.1 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
             if cur_lang == "Polski" else
-            "Release v2.5.0 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
+            "Release v2.4.1 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
         )
         lbl_ver_desc = QLabel(ver_desc_text)
         lbl_ver_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")

@@ -6,7 +6,7 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
-## v2.5.0 (2026-10-11) — Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention
+## v2.4.1 (2026-10-11) — Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention
 
 * **[THREAD OPTIMIZER] Dynamic Hardware-Aware Auto-Scaling Engine (`ThreadOptimizer`):**
   - Completely removed hardcoded thread counts across all platforms.
