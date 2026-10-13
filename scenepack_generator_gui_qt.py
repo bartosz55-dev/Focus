@@ -504,9 +504,9 @@ class PreferencesDialog(QDialog):
         ver_layout.addWidget(lbl_ver_title)
 
         ver_desc_text = (
-            "Wydanie v2.4.1 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
+            "Wydanie v2.4.2 • Multi-Core Frame Preprocessing, Fast-Seek Navigation & Font Stack Cleanup"
             if cur_lang == "Polski" else
-            "Release v2.4.1 • Dynamic Hardware Engine, Multi-Thread Auto-Scale & In-Memory Pipeline"
+            "Release v2.4.2 • Multi-Core Frame Preprocessing, Fast-Seek Navigation & Font Stack Cleanup"
         )
         lbl_ver_desc = QLabel(ver_desc_text)
         lbl_ver_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
@@ -1756,11 +1756,13 @@ class FocusApp(QMainWindow):
             log_text = "#38BDF8"
             dialog_bg = "#FFFFFF"
 
+        font_stack = "'.AppleSystemUIFont', 'Helvetica Neue', 'Arial'" if sys.platform == "darwin" else "'Segoe UI', 'Segoe UI Variable', 'Arial'"
+
         qss = f"""
         QMainWindow, QWidget {{
             background-color: {bg_main};
             color: {text_main};
-            font-family: 'Segoe UI', '.AppleSystemUIFont', 'Helvetica Neue', sans-serif;
+            font-family: {font_stack};
         }}
         /* Modern Minimalist Scrollbars */
         QScrollBar:vertical {{

@@ -1,6 +1,17 @@
 {
   "en": [
     {
+      "version": "v2.4.2",
+      "date": "2026-10-14",
+      "title": "Multi-core Frame Preprocessing, Fast-Seek Navigation & Font Stack Cleanup",
+      "points": [
+        "Distributed frame resizing and color conversion across worker threads in parallel, relieving main thread decoding bottlenecks.",
+        "Direct keyframe seeking when jumping over skipped intros, outros, or large scene gaps to speed up scan startup.",
+        "Optimized native system font stack in Qt stylesheet on macOS and Windows, eliminating font alias lookup delays.",
+        "Filtered QuickTime FourCC tags from MKV container chunks for clean remuxing."
+      ]
+    },
+    {
       "version": "v2.4.1",
       "date": "2026-10-11",
       "title": "Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention",
@@ -939,6 +950,17 @@
     }
   ],
   "pl": [
+    {
+      "version": "v2.4.2",
+      "date": "2026-10-14",
+      "title": "Wielowątkowe przetwarzanie klatek, szybki skok w wideo i optymalizacja czcionek",
+      "points": [
+        "Przeniesiono skalowanie klatek i konwersję kolorów do równoległych wątków roboczych, odciążając główny wątek dekodowania wideo.",
+        "Zaimplementowano bezpośrednie przeskakiwanie klatek kluczowych przy pomijaniu intro, outro i dużych przerw w detekcji.",
+        "Zoptymalizowano natywny stos czcionek w stylach Qt pod macOS i Windows, eliminując opóźnienia mapowania aliasów czcionek.",
+        "Oczyszczono flagi kontenera Matroska (MKV) z FourCC hvc1 dla bezbłędnego łączenia strumieni."
+      ]
+    },
     {
       "version": "v2.4.1",
       "date": "2026-10-11",

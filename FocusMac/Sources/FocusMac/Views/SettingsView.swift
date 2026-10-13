@@ -859,6 +859,17 @@ private func loadAllChangelog(lang: String) -> [ChangelogItem] {
 
 private let fallbackChangelogEntries: [ChangelogItem] = [
     ChangelogItem(
+        version: "v2.4.2",
+        date: "2026-10-14",
+        title: "Multi-core Frame Preprocessing, Fast-Seek Navigation & Font Stack Cleanup",
+        points: [
+            "Distributed frame resizing and color conversion across worker threads in parallel, relieving main thread decoding bottlenecks.",
+            "Direct keyframe seeking when jumping over skipped intros, outros, or large scene gaps to speed up scan startup.",
+            "Optimized native system font stack in Qt stylesheet on macOS and Windows, eliminating font alias lookup delays.",
+            "Filtered QuickTime FourCC tags from MKV container chunks for clean remuxing."
+        ]
+    ),
+    ChangelogItem(
         version: "v2.4.1",
         date: "2026-10-11",
         title: "Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention",

@@ -6,6 +6,13 @@ All notable changes, milestones, and release notes for **Focus AI Scenepack Gene
 
 ---
 
+## v2.4.2 (2026-10-14) - Multi-core frame preprocessing, fast-seek navigation, and font stack cleanup
+
+* Parallel frame preprocessing: moved frame downscaling and color conversion from the single-threaded video decode loop into worker threads, distributing resize computations across all available CPU cores.
+* Fast-seek navigation for skipped ranges: when skipping intros, outros, or intervals larger than 60 frames, the scanner uses direct frame seeking instead of sequential frame grabs, cutting scan startup delays on long videos.
+* Native font stack optimization: updated Qt stylesheet font stacks on macOS and Windows to use exact platform font family names, removing font alias query latency on app startup.
+* Matroska container flag hygiene: filtered out QuickTime FourCC tags when rendering MKV containers to keep intermediate and final muxing clean.
+
 ## v2.4.1 (2026-10-11) — Dynamic Hardware Auto-Scaling, In-Memory Pipeline & Windows Sleep Prevention
 
 * **[THREAD OPTIMIZER] Dynamic Hardware-Aware Auto-Scaling Engine (`ThreadOptimizer`):**

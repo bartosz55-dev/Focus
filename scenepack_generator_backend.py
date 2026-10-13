@@ -303,7 +303,7 @@ setup_crash_logger()
 # Initialize OpenCV OpenCL GPU Acceleration
 init_gpu_acceleration()
 
-APP_VERSION = "v2.4.1"
+APP_VERSION = "v2.4.2"
 STUDIO_AUDIO_BITRATE = "320k"
 
 
@@ -1668,6 +1668,11 @@ def get_changelog_text(lang_name: str = "English") -> str:
     if lang_name in ("Polski", "Polish"):
         return (
             f"=== Historia Wersji i Zmiany Projektu Focus ({APP_VERSION}) ===\n\n"
+            "• v2.4.2 (Wielowątkowe Przetwarzanie Klatek, Szybki Skok w Wideo i Optymalizacja Czcionek):\n"
+            "  - [PRZETWARZANIE RÓWNOLEGŁE] Przeniesiono skalowanie klatek w dół oraz konwersję barw z pojedynczego wątku odczytu wideo do równoległych wątków puli roboczej, eliminując wąskie gardło CPU.\n"
+            "  - [SZYBKI SKOK NA KLATKACH] Wprowadzono bezpośrednie przestawianie klatek kluczowych przy omijaniu intro, outro oraz dużych luk (>60 klatek) zamiast tysięcy sekwencyjnych pobrań.\n"
+            "  - [OPTYMALIZACJA CZCIONEK] Ujednolicono stos czcionek w arkuszu stylów Qt dla macOS i Windows, likwidując opóźnienia mapowania aliasów systemowych przy starcie.\n"
+            "  - [HIGIENA KONTENERA MKV] Odfiltrowano flagi FourCC QuickTime przy tworzeniu segmentów Matroska dla czystego łączenia strumieni.\n\n"
             "• v2.4.1 (Dynamiczny Silnik Sprzętowy, Wielowątkowość Auto-Scale & Potok In-Memory):\n"
             "  - [THREAD OPTIMIZER] Inteligentny silnik ThreadOptimizer automatycznie profilujący rdzenie CPU (os.cpu_count) oraz dostępną pamięć RAM (Win32 GlobalMemoryStatusEx, macOS vm_stat, Linux meminfo). Płynne skalowanie od laptopów 2-rdzeniowych do stacji roboczych 16/32/64-wątkowych (14 wątków skanera i 6 wątków AMF na Core i9-11900KF).\n"
             "  - [LOW-RAM SAFETY THROTTLE] Zabezpieczenie przed brakiem pamięci: automatyczne dławienie wątków przy pamięci RAM < 1.5 GB chroniące przed awariami OOM i stronicowaniem dysku.\n"
@@ -1966,6 +1971,11 @@ def get_changelog_text(lang_name: str = "English") -> str:
     else:
         return (
             f"=== Focus Project Changelog & Version History ({APP_VERSION}) ===\n\n"
+            "• v2.4.2 (Multi-core Frame Preprocessing, Fast-Seek Navigation & Font Stack Cleanup):\n"
+            "  - [PARALLEL PREPROCESSING] Offloaded frame resizing and color space conversions from the single-threaded video decode loop into worker threads, distributing resize overhead across all cores.\n"
+            "  - [FAST-SEEK NAVIGATION] Direct keyframe seeking across skipped intros, outros, and detection gaps over 60 frames, eliminating thousands of sequential grab calls.\n"
+            "  - [FONT STACK OPTIMIZATION] Configured platform-native font stacks for macOS and Windows in Qt stylesheets to remove font alias lookup latency.\n"
+            "  - [MKV REMUX HYGIENE] Filtered out QuickTime FourCC tags when producing MKV chunks to maintain clean Matroska streams.\n\n"
             "• v2.4.1 (Dynamic Hardware Engine, Auto-Scale Multi-Threading & In-Memory Pipeline):\n"
             "  - [THREAD OPTIMIZER] Intelligent ThreadOptimizer engine dynamically profiling CPU logical cores (os.cpu_count) and physical available RAM (Win32 GlobalMemoryStatusEx, macOS vm_stat, Linux meminfo). Seamlessly auto-scales across devices from 2-core laptops to 16/32/64-core workstations (14 scan workers and 6 AMF encode workers on Core i9-11900KF).\n"
             "  - [LOW-RAM SAFETY THROTTLE] Out-of-memory safety guard automatically clamping thread pools when available RAM < 1.5 GB to prevent thrashing and OOM terminations.\n"
@@ -3722,15 +3732,26 @@ class ScenePackGenerator:
 
             def _process_single_frame(item):
                 if len(item) == 3:
-                    target_idx, small_frame, pre_gray = item
+                    target_idx, raw_frame, pre_gray = item
                 else:
-                    target_idx, small_frame = item
+                    target_idx, raw_frame = item
                     pre_gray = None
 
-                if small_frame is None or getattr(small_frame, 'size', 0) == 0:
+                if raw_frame is None or getattr(raw_frame, 'size', 0) == 0:
                     return None
 
+                h, w = raw_frame.shape[:2]
+                target_w = 360
+                if w > target_w:
+                    ratio = float(target_w) / float(w)
+                    new_h = int(h * ratio)
+                    small_frame = cv2.resize(raw_frame, (target_w, new_h), interpolation=cv2.INTER_LINEAR)
+                else:
+                    small_frame = raw_frame
+
                 w_resized = small_frame.shape[1]
+                if pre_gray is None and self.mode == "Anime":
+                    pre_gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
 
                 if self.mode == "Real Faces":
                     rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
@@ -3833,7 +3854,8 @@ class ScenePackGenerator:
 
             current_idx = 0
             target_idx_set = set(target_indices)
-            
+            target_ptr = 0
+
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 while current_idx < total_frames:
                     if getattr(self, 'is_cancelled', False):
@@ -3842,24 +3864,26 @@ class ScenePackGenerator:
 
                     batch_frames = []
                     while len(batch_frames) < batch_size and current_idx < total_frames:
+                        # Advance target pointer to next target index
+                        while target_ptr < len(target_indices) and target_indices[target_ptr] < current_idx:
+                            target_ptr += 1
+
+                        # If next target is far ahead (e.g. skipped intro/outro or large gap), seek directly
+                        if target_ptr < len(target_indices):
+                            next_target = target_indices[target_ptr]
+                            if next_target - current_idx > 60:
+                                cap.set(cv2.CAP_PROP_POS_FRAMES, next_target)
+                                current_idx = next_target
+
                         ret = cap.grab()
                         if not ret:
                             current_idx = total_frames
                             break
-                        
+
                         if current_idx in target_idx_set:
                             ret_ret, frame = cap.retrieve()
                             if ret_ret and frame is not None:
-                                h, w = frame.shape[:2]
-                                target_w = 360
-                                if w > target_w:
-                                    ratio = float(target_w) / float(w)
-                                    new_h = int(h * ratio)
-                                    small_frame = cv2.resize(frame, (target_w, new_h), interpolation=cv2.INTER_LINEAR)
-                                else:
-                                    small_frame = frame
-                                pre_gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY) if self.mode == "Anime" else None
-                                batch_frames.append((current_idx, small_frame, pre_gray))
+                                batch_frames.append((current_idx, frame))
                         current_idx += 1
 
                     if not batch_frames:
@@ -4210,12 +4234,24 @@ class ScenePackGenerator:
                 audio_map_args = ['-map', '0:a?'] if is_multi_audio else ['-map', f'0:a:{audio_track_index}?']
 
                 pix_fmt_val = 'yuv422p10le' if 'prores' in codec.lower() else 'yuv420p'
+
+                clean_extra_args = []
+                skip_next = False
+                for arg in extra_args:
+                    if skip_next:
+                        skip_next = False
+                        continue
+                    if chunk_ext == "mkv" and arg == "-tag:v":
+                        skip_next = True
+                        continue
+                    clean_extra_args.append(arg)
+
                 cmd.extend([
                     '-map', '0:v:0',
                 ] + audio_map_args + [
                     '-af', 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,aresample=async=1,apad',
                     '-c:v', codec,
-                ] + extra_args + rate_control_args + [
+                ] + clean_extra_args + rate_control_args + [
                     '-g', '24',
                     '-keyint_min', '24',
                     '-bf', '0',
